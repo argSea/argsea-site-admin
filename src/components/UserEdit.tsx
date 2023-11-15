@@ -9,6 +9,7 @@ import {
   SimpleFormIterator,
 } from "react-admin";
 import { RichTextInput } from "ra-input-rich-text";
+import "../styles/userEdit.css";
 
 const UserEdit = (props: any) => {
   return (
@@ -20,13 +21,15 @@ const UserEdit = (props: any) => {
         <TextInput source="lastName" />
         <TextInput source="title" />
         <TextInput source="email" />
-        <ImageInput source="picture" />
+        <ImageInput source="picture">
+          <ImageField source="src" className="user-edit-me-avatar" />
+        </ImageInput>
         <RichTextInput source="about" />
-        <ArrayInput source="contacts">
-          <SimpleFormIterator>
-            <TextInput source="name" />
-            <TextInput source="link" />
-            <ImageInput source="icon" accept="image/*">
+        <ArrayInput source="contacts" className="user-edit-me-contacts">
+          <SimpleFormIterator inline>
+            <TextInput source="name" fullWidth={true} />
+            <TextInput source="link" fullWidth={true} />
+            <ImageInput source="icon" accept="image/*" >
               <ImageField source="src" />
             </ImageInput>
           </SimpleFormIterator>

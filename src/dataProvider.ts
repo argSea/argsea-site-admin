@@ -1,5 +1,9 @@
 import simpleRestProvider from "ra-data-simple-rest";
+import { withLifecycleCallbacks } from "react-admin";
 
-export const dataProvider = simpleRestProvider(
-  import.meta.env.VITE_SIMPLE_REST_URL
-);
+const dataProvider = withLifecycleCallbacks(simpleRestProvider(""), [
+  {
+    resource: "users",
+    
+  }
+]);
