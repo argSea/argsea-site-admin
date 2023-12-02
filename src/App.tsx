@@ -4,16 +4,12 @@ import restProvider from "ra-data-simple-rest";
 import { UserList } from "./components/UserList";
 import UserCreate from "./components/UserCreate";
 import UserEdit from "./components/UserEdit";
+import dataProvider from "./dataProvider";
 
 const userID = "6396d88feafa14a262f9915c";
 
-const dataProvider = restProvider("https://api.argsea.com/1");
-
 export const App = () => (
-  <Admin
-    authProvider={authProvider}
-    dataProvider={restProvider("https://api.argsea.com/1")}
-  >
+  <Admin authProvider={authProvider} dataProvider={dataProvider}>
     <Resource
       name="user"
       list={UserList}
