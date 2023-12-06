@@ -1,12 +1,4 @@
-import React from "react";
-import {
-  List,
-  Datagrid,
-  TextField,
-  EmailField,
-  EditButton,
-  DeleteButton,
-} from "react-admin";
+import { List, Datagrid, TextField, EmailField, EditButton, DeleteButton } from "react-admin";
 
 export const UserList = (props: any) => {
   return (
