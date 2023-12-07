@@ -11,9 +11,12 @@ import {
   SimpleFormIterator,
   Create,
   DateTimeInput,
+  AutocompleteInput,
 } from "react-admin";
 import { RichTextInput } from "ra-input-rich-text";
 import { getSkillChoices } from "./Skills";
+import { getRoleChoices } from "./Roles";
+import { getProjectTypeChoices } from "./ProjectTypes";
 
 const ProjectCreate = (props: any) => {
   const userID = "6396d88feafa14a262f9915c";
@@ -26,7 +29,7 @@ const ProjectCreate = (props: any) => {
             <TextInput source={""} label="UserID" />
           </SimpleFormIterator>
         </ArrayInput>
-        <TextInput source="projectType" />
+        <AutocompleteInput source="projectType" choices={getProjectTypeChoices()} />
         <TextInput source="name" />
         <TextInput source="shortName" />
         <TextInput source="slug" />
@@ -51,16 +54,7 @@ const ProjectCreate = (props: any) => {
         <BooleanInput source="isReleased" />
         <BooleanInput source="isHidden" />
         <AutocompleteArrayInput source="skills" autoHighlight={true} autoSelect={true} choices={skillChoices} ChipProps={{ color: "primary" }} />
-        <CheckboxGroupInput
-          source="roles"
-          choices={[
-            { id: "developer", name: "Developer" },
-            { id: "designer", name: "Designer" },
-            { id: "manager", name: "Manager" },
-            { id: "tester", name: "Tester" },
-            { id: "other", name: "Other" },
-          ]}
-        />
+        <CheckboxGroupInput source="roles" choices={getRoleChoices()} />
       </SimpleForm>
     </Create>
   );

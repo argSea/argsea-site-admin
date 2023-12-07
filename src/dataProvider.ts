@@ -50,6 +50,9 @@ const dataProvider = withLifecycleCallbacks(
           newImages = await convertImages(params.images);
         }
 
+        // update updateDate to now
+        params.updateDate = new Date().toISOString();
+
         return {
           ...params,
           icon: await newIcon,
