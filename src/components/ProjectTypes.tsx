@@ -10,6 +10,7 @@ export const getProjectTypeChoices = () => {
     { id: "machineLearning", name: "Machine Learning" },
     { id: "artificialIntelligence", name: "Artificial Intelligence" },
     { id: "game", name: "Game" },
+    { id: "newsletter", name: "Newsletter" },
     { id: "other", name: "Other" },
   ];
 };
