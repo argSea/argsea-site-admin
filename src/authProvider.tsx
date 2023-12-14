@@ -23,21 +23,29 @@ export const authProvider = {
   },
   logout: () => {
     // remove auth-token cookie
-    document.cookie = "";
+    const request = new Request(API.BASE_URL + API.LOGOUT, {
+      method: "GET",
+      headers: new Headers({ "Content-Type": "application/json" }),
+      credentials: "include",
+    });
+
+    fetch(request).then((response) => {
+      if (response.status < 200 || response.status >= 300) {
+        console.log(response);
+        throw new Error(response.statusText);
+      }
+    });
+
     return Promise.resolve();
   },
   checkError: ({ status }: any) => {
     if (status === 401 || status === 403) {
-      // remove auth-token cookie
-      document.cookie = "";
+      // logout
       return Promise.reject();
     }
     return Promise.resolve();
   },
   checkAuth: () => {
-    // hit validate API
-    // if valid, return Promise.resolve()
-    // else return Promise.reject()
     const request = new Request(API.BASE_URL + API.VALIDATE, {
       method: "GET",
       headers: new Headers({ "Content-Type": "application/json" }),
