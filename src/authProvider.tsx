@@ -6,6 +6,7 @@ export const authProvider = {
       method: "POST",
       body: JSON.stringify({ username, password }),
       headers: new Headers({ "Content-Type": "application/json" }),
+      credentials: "include",
     });
     return fetch(request)
       .then((response) => {
@@ -17,23 +18,39 @@ export const authProvider = {
       })
       .then(({ token }) => {
         console.log(token);
-        localStorage.setItem("auth-token", token);
         return Promise.resolve();
       });
   },
   logout: () => {
-    localStorage.removeItem("auth-token");
+    // remove auth-token cookie
+    document.cookie = "";
     return Promise.resolve();
   },
   checkError: ({ status }: any) => {
     if (status === 401 || status === 403) {
-      localStorage.removeItem("auth-token");
+      // remove auth-token cookie
+      document.cookie = "";
       return Promise.reject();
     }
     return Promise.resolve();
   },
   checkAuth: () => {
-    return localStorage.getItem("auth-token") ? Promise.resolve() : Promise.reject();
+    // hit validate API
+    // if valid, return Promise.resolve()
+    // else return Promise.reject()
+    const request = new Request(API.BASE_URL + API.VALIDATE, {
+      method: "GET",
+      headers: new Headers({ "Content-Type": "application/json" }),
+      credentials: "include",
+    });
+    return fetch(request).then((response) => {
+      if (response.status < 200 || response.status >= 300) {
+        console.log(response);
+        throw new Error(response.statusText);
+      }
+
+      return Promise.resolve();
+    });
   },
   getPermissions: () => Promise.resolve(),
 };

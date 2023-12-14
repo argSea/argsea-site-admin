@@ -1,8 +1,21 @@
 import simpleRestProvider from "ra-data-simple-rest";
-import { withLifecycleCallbacks } from "react-admin";
+import { fetchUtils, withLifecycleCallbacks } from "react-admin";
+
+// add credentials include to all requests
+const httpClient = (url: string, options: any = {}) => {
+  if (!options.headers) {
+    options.headers = new Headers({ Accept: "application/json" });
+  }
+
+  // add your own headers here
+  options.credentials = "include";
+  options.headers.set("Content-Type", "application/json");
+
+  return fetchUtils.fetchJson(url, options);
+};
 
 const dataProvider = withLifecycleCallbacks(
-  simpleRestProvider("https://api.argsea.com/1"),
+  simpleRestProvider("https://api.argsea.com/1", httpClient),
   [
     {
       // apply to user resources
