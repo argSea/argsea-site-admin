@@ -1,5 +1,5 @@
 import { Admin, Resource, radiantDarkTheme } from "react-admin";
-import authProvider from "./authProvider";
+import { authProvider } from "./authProvider";
 import { UserList } from "./components/UserList";
 import UserCreate from "./components/UserCreate";
 import UserEdit from "./components/UserEdit";
