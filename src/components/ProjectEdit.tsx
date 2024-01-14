@@ -47,6 +47,7 @@ const ProjectEdit = (props: any) => {
         <BooleanInput source="isHidden" />
         <hr style={{ width: "100%" }} />
         <RichTextInput source="description" />
+        <RichTextInput source="shortDescription" />
         <AutocompleteArrayInput source="skills" autoHighlight={true} autoSelect={true} choices={skillChoices} ChipProps={{ color: "primary" }} />
         <CheckboxGroupInput source="roles" choices={getRoleChoices()} />
         {/* <ImageInput source="icon">

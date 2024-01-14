@@ -19,7 +19,7 @@ export const ProjectList = () => {
       <Datagrid rowClick="edit">
         {/* <TextField source="id" /> */}5
         <TextField source="name" />
-        <TextField source="description" sx={{ maxWidth: "200px", textOverflow: "ellipsis" }} />
+        <TextField source="shortDescription" sx={{ maxWidth: "200px", textOverflow: "ellipsis" }} />
         <DateField source="updatedDate" />
         <ArrayField source="skills" label="Skills">
           <SingleFieldList>

@@ -38,6 +38,7 @@ const ProjectCreate = (props: any) => {
         <DateTimeInput source="publishedDate" />
         <TextInput source="repoURL" label="Repo URL" />
         <RichTextInput source="description" />
+        <RichTextInput source="shortDescription" />
         <ImageInput source="icon">
           <ImageField source="src" />
         </ImageInput>
