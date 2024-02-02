@@ -12,9 +12,13 @@ const UserEdit = (props: any) => {
         <TextInput source="lastName" />
         <TextInput source="title" />
         <TextInput source="email" />
-        <ImageInput source="picture">
-          <ImageField source="src" className="user-edit-me-avatar" />
-        </ImageInput>
+        <ArrayInput source="pictures" className="user-edit-me-pictures">
+          <SimpleFormIterator inline>
+            <ImageInput source="image" accept="image/*">
+              <ImageField source="src" />
+            </ImageInput>
+          </SimpleFormIterator>
+        </ArrayInput>
         <RichTextInput source="about" />
         <ArrayInput source="contacts" className="user-edit-me-contacts">
           <SimpleFormIterator inline>

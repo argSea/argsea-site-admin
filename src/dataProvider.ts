@@ -15,7 +15,7 @@ const httpClient = (url: string, options: any = {}) => {
 };
 
 const dataProvider = withLifecycleCallbacks(
-  simpleRestProvider("https://api.argsea.com/1", httpClient),
+  simpleRestProvider("https://api.argsea.com/1", httpClient, "X-Total-Count"),
   [
     {
       // apply to user resources
@@ -23,12 +23,13 @@ const dataProvider = withLifecycleCallbacks(
       beforeSave: async (params: any) => {
         console.log(params);
         // pictures can be in params.picture, params.contacts[0].icon, params.techInterests[0].icon, check if any of them is a File
-        let newPicture = params.picture;
+        let newPictures = params.pictures;
         let newContacts = params.contacts;
         let newTechInterests = params.techInterests;
 
-        if (params.picture && params.picture.rawFile) {
-          newPicture = await convertPicture(params.picture);
+        // conver param.pictures to base64
+        if (params.pictures) {
+          newPictures = await convertImages(params.pictures);
         }
 
         if (params.contacts) {
@@ -43,7 +44,7 @@ const dataProvider = withLifecycleCallbacks(
         return {
           ...params,
           contacts: await newContacts,
-          picture: await newPicture,
+          pictures: await newPictures,
           techInterests: await newTechInterests,
         };
       },
