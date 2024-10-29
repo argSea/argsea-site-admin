@@ -73,6 +73,16 @@ const dataProvider = withLifecycleCallbacks(
           images: await newImages,
         };
       },
+    },
+    {
+      resource: "skill",
+      beforeSave: async (params: any) => {
+        console.log(params);
+
+        return {
+          ...params,
+        };
+      },
     }
   ]
 );
