@@ -5,6 +5,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "serve": "vite preview",
+    "deploy": "vite build && scp -r dist/* argsea:/var/www/argsea/admin/",
     "type-check": "tsc --noEmit",
     "lint": "eslint --fix --ext .js,.jsx,.ts,.tsx ./src",
     "format": "prettier --write ./src"

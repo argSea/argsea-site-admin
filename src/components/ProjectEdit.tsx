@@ -19,9 +19,23 @@ import { getSkillChoices } from "./Skills";
 import { getRoleChoices } from "./Roles";
 import { getProjectTypeChoices } from "./ProjectTypes";
 import { getLinkTypeChoices } from "./LinkTypes";
+import { useEffect, useState } from "react";
 
 const ProjectEdit = (props: any) => {
-  const skillChoices = getSkillChoices();
+  const [skillChoices, setSkillChoices] = useState([{}]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getSkillChoices().then((choices) => {
+      setSkillChoices(choices);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <Edit title="Edit a project" {...props}>
       <SimpleForm sx={{ display: "flex" }}>

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   SimpleForm,
   TextInput,
@@ -19,8 +20,22 @@ import { getRoleChoices } from "./Roles";
 import { getProjectTypeChoices } from "./ProjectTypes";
 
 const ProjectCreate = (props: any) => {
+  const [skillChoices, setSkillChoices] = useState([]);
+  const [loading, setLoading] = useState(true);
   const userID = "6396d88feafa14a262f9915c";
-  const skillChoices = getSkillChoices();
+
+  useEffect(() => {
+    getSkillChoices().then((choices) => {
+      console.log(choices);
+      setSkillChoices(choices);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <Create title="Create a project" {...props}>
       <SimpleForm>

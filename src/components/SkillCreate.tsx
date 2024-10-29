@@ -1,3 +1,4 @@
+import { RichTextInput } from "ra-input-rich-text";
 import { Create, SimpleForm, TextInput } from "react-admin";
 
 const SkillCreate = (props: any) => {
@@ -5,7 +6,7 @@ const SkillCreate = (props: any) => {
     <Create {...props}>
       <SimpleForm>
         <TextInput source="name" label="Skill Name" />
-        <TextInput source="description" label="Description" />
+        <RichTextInput source="description" label="Description" />
       </SimpleForm>
     </Create>
   );

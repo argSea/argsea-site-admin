@@ -11,9 +11,33 @@ import {
   FunctionField,
   DateField,
 } from "react-admin";
+import { getSkillChoices } from "./Skills";
+import { useEffect, useState } from "react";
 
 export const ProjectList = () => {
+  const [skillChoices, setSkillChoices] = useState([{} as any]);
+  const [loading, setLoading] = useState(true);
   const userID = "6396d88feafa14a262f9915c";
+
+  useEffect(() => {
+    getSkillChoices().then((choices) => {
+      // take choices in format {id: blah, name: blah} and convert to associated array keyed on id
+      choices = choices.reduce((acc: any, choice: any) => {
+        acc[choice.id] = choice;
+        return acc;
+      }, {});
+
+      console.log(choices);
+
+      setSkillChoices(choices);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <List resource="project" filter={{ userID }}>
       <Datagrid rowClick="edit">
@@ -23,7 +47,9 @@ export const ProjectList = () => {
         <DateField source="updatedDate" />
         <ArrayField source="skills" label="Skills">
           <SingleFieldList>
-            <FunctionField render={(record: any) => <ChipField record={{ name: record }} source="name" />} />
+            <FunctionField
+              render={(record: any) => <ChipField record={{ name: skillChoices[record]?.name }} source="name" tooltip={skillChoices[record]?.description} />}
+            />
           </SingleFieldList>
         </ArrayField>
         <TextField source="priority" />
