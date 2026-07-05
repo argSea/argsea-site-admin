@@ -1,0 +1,797 @@
+// The harbor store — one provider owning every piece of office state, the way
+// the design mock kept it in a single component. Screens stay markup-heavy and
+// logic-light: they read from this context and call its actions. All API
+// traffic funnels through lib/api.ts.
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import * as api from '../lib/api';
+import type {
+	ActivityEntry, Category, Hobby, KeeperProfile, LanternStatus, MediaItem,
+	Note, Project, Revision, SiteCopy, Stamp, Suggestion,
+} from '../lib/api';
+import { htmlToText, textToHtml } from '../lib/paragraphs';
+import { stampForWire } from '../lib/stamp';
+
+export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'media' | 'keeper';
+
+export interface Session {
+	token:    string;
+	userID:   string;
+	userName: string;
+}
+
+export interface ProjectDraft {
+	title:        string;
+	category:     Category;
+	tagsText:     string;
+	shortDesc:    string;
+	bodyText:     string;
+	moral:        string;
+	postcardTo:   string;
+	postcardFrom: string;
+	postmarked:   string;
+	image:        string | null;
+	stamp:        Stamp | null;
+}
+
+export interface NoteDraft {
+	title:    string;
+	date:     string;
+	teaser:   string;
+	bodyText: string;
+	image:    string | null;
+}
+
+export interface HobbyDraft {
+	name:    string;
+	dates:   string;
+	epitaph: string;
+	eulogy:  string;
+	active:  boolean;
+}
+
+interface EditBase {
+	id:          string | null;
+	revisions:   Revision[];
+	restoredRev: string | null;
+	// whether the keeper typed after loading a revision — decides if a PUT
+	// rides on top of the restore
+	touched:     boolean;
+}
+
+export type EditState =
+	| (EditBase & { type: 'project'; draft: ProjectDraft })
+	| (EditBase & { type: 'note'; draft: NoteDraft })
+	| (EditBase & { type: 'hobby'; draft: HobbyDraft });
+
+export type EditType = EditState['type'];
+
+export interface PeekState {
+	type: 'project' | 'note';
+	id:   string;
+}
+
+const EMPTY_COPY: SiteCopy = {
+	id: '', quipHello: '', quipProjects: '', quipHobbies: '', quipNotes: '', quip404: '',
+	heroKicker: '', heroHeadline: '', heroBody: '', dict: '', updatedAt: '',
+};
+
+const EMPTY_KEEPER: KeeperProfile = {
+	name: '', pronouns: '', location: '', title: '', bio: '',
+	email: '', github: '', linkedin: '', signoff: '',
+};
+
+const SESSION_KEY = 'harbor-session';
+const AUTOSAVE_DELAY = 800;
+const CONFIRM_WINDOW = 2800;
+const TOAST_WINDOW = 2600;
+const REVISIONS_SHOWN = 5;
+
+const byOrder = <T extends { order: number; createdAt: string }>(a: T, b: T): number =>
+	a.order - b.order || a.createdAt.localeCompare(b.createdAt);
+
+function loadSession(): Session | null {
+	try {
+		const raw = localStorage.getItem(SESSION_KEY);
+		return raw ? (JSON.parse(raw) as Session) : null;
+	} catch {
+		return null;
+	}
+}
+
+function projectDraft(p?: Project): ProjectDraft {
+	return p
+		? {
+			title: p.title, category: p.category, tagsText: p.tags.join(', '),
+			shortDesc: p.shortDesc, bodyText: htmlToText(p.body), moral: p.moral,
+			postcardTo: p.postcardTo, postcardFrom: p.postcardFrom, postmarked: p.postmarked,
+			image: p.image, stamp: p.stamp ?? null,
+		}
+		: {
+			title: '', category: 'backend', tagsText: '', shortDesc: '', bodyText: '',
+			moral: 'Moral: ', postcardTo: '', postcardFrom: '',
+			postmarked: String(new Date().getFullYear()), image: null, stamp: null,
+		};
+}
+
+function monthYear(): string {
+	return new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toLowerCase();
+}
+
+function noteDraft(n?: Note): NoteDraft {
+	return n
+		? { title: n.title, date: n.date, teaser: n.teaser, bodyText: htmlToText(n.body), image: n.image }
+		: { title: '', date: monthYear(), teaser: '', bodyText: '', image: null };
+}
+
+function hobbyDraft(h?: Hobby): HobbyDraft {
+	return h
+		? { name: h.name, dates: h.dates, epitaph: h.epitaph, eulogy: h.eulogy, active: h.active }
+		: { name: '', dates: `${new Date().getFullYear()} — present`, epitaph: '', eulogy: '', active: true };
+}
+
+interface HarborValue {
+	session:  Session | null;
+	booting:  boolean;
+	screen:   Screen;
+	goTo:     (screen: Screen) => void;
+	signIn:   (userName: string, password: string) => Promise<void>;
+	goAshore: () => void;
+
+	projects:    Project[];
+	notes:       Note[];
+	hobbies:     Hobby[];
+	suggestions: Suggestion[];
+	prints:      MediaItem[];
+	copy:        SiteCopy;
+	keeper:      KeeperProfile;
+	activity:    ActivityEntry[];
+
+	keeperName: string;
+	dirtyCount: number;
+
+	toast:      string | null;
+	showToast:  (message: string) => void;
+	confirmKey: string | null;
+	askConfirm: (key: string, doIt: () => void) => void;
+
+	edit:         EditState | null;
+	openEdit:     (type: EditType, id: string | null) => void;
+	patchDraft:   (patch: Partial<ProjectDraft & NoteDraft & HobbyDraft>) => void;
+	patchStamp:   (stamp: Stamp) => void;
+	loadRevision: (revision: Revision) => void;
+	saveEdit:     () => Promise<void>;
+	cancelEdit:   () => void;
+
+	peek:      PeekState | null;
+	openPeek:  (type: PeekState['type'], id: string) => void;
+	closePeek: () => void;
+
+	toggleProjectStatus: (p: Project) => Promise<void>;
+	toggleNoteStatus:    (n: Note) => Promise<void>;
+	toggleFeatured:      (p: Project) => Promise<void>;
+	moveProject:         (p: Project, dir: -1 | 1) => Promise<void>;
+	scuttleProject:      (p: Project) => Promise<void>;
+	burnNote:            (n: Note) => Promise<void>;
+
+	moveHobby:      (h: Hobby, dir: -1 | 1) => Promise<void>;
+	retireRevive:   (h: Hobby) => Promise<void>;
+	addSuggestion:    (value: string) => Promise<void>;
+	removeSuggestion: (s: Suggestion) => Promise<void>;
+
+	setCopyField:   (key: keyof SiteCopy, value: string) => void;
+	setKeeperField: (key: keyof KeeperProfile, value: string) => void;
+
+	printUsage:    (filename: string) => number;
+	developPrints: (files: Iterable<File>) => Promise<void>;
+	tearOffPrint:  (m: MediaItem) => Promise<void>;
+
+	lantern:        LanternStatus | null;
+	lanternAbsent:  boolean;
+	deploying:      boolean;
+	deployPct:      number;
+	hoistLantern:   () => Promise<void>;
+	rollbackLantern: () => Promise<void>;
+}
+
+const HarborContext = createContext<HarborValue | null>(null);
+
+export function useHarbor(): HarborValue {
+	const value = useContext(HarborContext);
+	if (!value) {
+		throw new Error('useHarbor outside HarborProvider');
+	}
+	return value;
+}
+
+export function HarborProvider({ children }: { children: ReactNode }) {
+	const [session, setSession] = useState<Session | null>(null);
+	const [booting, setBooting] = useState(true);
+	const [screen, setScreen] = useState<Screen>('dash');
+
+	const [projects, setProjects] = useState<Project[]>([]);
+	const [notes, setNotes] = useState<Note[]>([]);
+	const [hobbies, setHobbies] = useState<Hobby[]>([]);
+	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+	const [prints, setPrints] = useState<MediaItem[]>([]);
+	const [copy, setCopy] = useState<SiteCopy>(EMPTY_COPY);
+	const [keeper, setKeeper] = useState<KeeperProfile>(EMPTY_KEEPER);
+	const [activity, setActivity] = useState<ActivityEntry[]>([]);
+
+	const [toast, setToast] = useState<string | null>(null);
+	const [confirmKey, setConfirmKey] = useState<string | null>(null);
+	const [edit, setEdit] = useState<EditState | null>(null);
+	const [peek, setPeek] = useState<PeekState | null>(null);
+
+	const [lantern, setLantern] = useState<LanternStatus | null>(null);
+	const [lanternAbsent, setLanternAbsent] = useState(false);
+	const [deployPct, setDeployPct] = useState(0);
+
+	const toastTimer = useRef<number>(undefined);
+	const confirmTimer = useRef<number>(undefined);
+	const confirmAction = useRef<(() => void) | null>(null);
+	const copySaveTimer = useRef<number>(undefined);
+	const keeperSaveTimer = useRef<number>(undefined);
+	const copyRef = useRef(copy);
+	copyRef.current = copy;
+	const keeperRef = useRef(keeper);
+	keeperRef.current = keeper;
+	const sessionRef = useRef(session);
+	sessionRef.current = session;
+
+	const showToast = useCallback((message: string) => {
+		window.clearTimeout(toastTimer.current);
+		setToast(message);
+		toastTimer.current = window.setTimeout(() => setToast(null), TOAST_WINDOW);
+	}, []);
+
+	const oops = useCallback((error: unknown) => {
+		const message = error instanceof Error ? error.message : String(error);
+		showToast(`⚠ ${message}`);
+	}, [showToast]);
+
+	// Two-click confirm, straight from the design: first click arms the key,
+	// second within the window runs the action.
+	const confirmKeyRef = useRef<string | null>(null);
+	const askConfirm = useCallback((key: string, doIt: () => void) => {
+		window.clearTimeout(confirmTimer.current);
+		if (confirmAction.current && key === confirmKeyRef.current) {
+			confirmKeyRef.current = null;
+			confirmAction.current = null;
+			setConfirmKey(null);
+			doIt();
+			return;
+		}
+		confirmKeyRef.current = key;
+		confirmAction.current = doIt;
+		setConfirmKey(key);
+		confirmTimer.current = window.setTimeout(() => {
+			confirmKeyRef.current = null;
+			confirmAction.current = null;
+			setConfirmKey(null);
+		}, CONFIRM_WINDOW);
+	}, []);
+
+	const refreshActivity = useCallback(() => {
+		api.listActivity().then(setActivity).catch(() => { /* the log is decoration; stay quiet */ });
+	}, []);
+
+	const refreshLantern = useCallback(() => {
+		api.lanternStatus()
+			.then((status) => { setLantern(status); setLanternAbsent(false); })
+			.catch((error) => {
+				if (error instanceof api.ApiError && error.status === 404) {
+					setLanternAbsent(true);
+				}
+			});
+	}, []);
+
+	const loadAll = useCallback((userID: string) => {
+		api.projects.list().then((list) => setProjects([...list].sort(byOrder))).catch(oops);
+		api.notes.list().then(setNotes).catch(oops);
+		api.hobbies.list().then((list) => setHobbies([...list].sort(byOrder))).catch(oops);
+		api.suggestions.list().then((list) => setSuggestions([...list].sort((a, b) => a.order - b.order))).catch(oops);
+		api.media.list().then(setPrints).catch(oops);
+		api.getCopy().then((doc) => setCopy({ ...EMPTY_COPY, ...doc })).catch(() => setCopy(EMPTY_COPY));
+		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
+		refreshActivity();
+		refreshLantern();
+	}, [oops, refreshActivity, refreshLantern]);
+
+	// Boot: revalidate a stowed token before trusting it
+	useEffect(() => {
+		const stowed = loadSession();
+		if (!stowed) {
+			setBooting(false);
+			return;
+		}
+		api.setBearer(stowed.token);
+		api.validate()
+			.then(() => {
+				setSession(stowed);
+				loadAll(stowed.userID);
+			})
+			.catch(() => {
+				api.setBearer(null);
+				localStorage.removeItem(SESSION_KEY);
+			})
+			.finally(() => setBooting(false));
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	const signIn = useCallback(async (userName: string, password: string) => {
+		const result = await api.login(userName, password);
+		const fresh: Session = { token: result.token, userID: result.userID, userName: result.userName };
+		api.setBearer(fresh.token);
+		localStorage.setItem(SESSION_KEY, JSON.stringify(fresh));
+		setSession(fresh);
+		setScreen('dash');
+		loadAll(fresh.userID);
+		showToast('⚓ welcome back, keeper. token stowed.');
+	}, [loadAll, showToast]);
+
+	const goAshore = useCallback(() => {
+		api.logout().catch(() => { /* the token is dropped either way */ });
+		api.setBearer(null);
+		localStorage.removeItem(SESSION_KEY);
+		setSession(null);
+		setScreen('dash');
+		setEdit(null);
+		setPeek(null);
+	}, []);
+
+	const goTo = useCallback((next: Screen) => {
+		setScreen(next);
+		setConfirmKey(null);
+		confirmKeyRef.current = null;
+		confirmAction.current = null;
+	}, []);
+
+	// ---- edit overlay ----
+
+	const openEdit = useCallback((type: EditType, id: string | null) => {
+		const base: EditBase = { id, revisions: [], restoredRev: null, touched: false };
+		if (type === 'project') {
+			setEdit({ ...base, type, draft: projectDraft(projects.find((p) => p.id === id)) });
+		} else if (type === 'note') {
+			setEdit({ ...base, type, draft: noteDraft(notes.find((n) => n.id === id)) });
+		} else {
+			setEdit({ ...base, type, draft: hobbyDraft(hobbies.find((h) => h.id === id)) });
+		}
+
+		// earlier printings load alongside — hobbies keep no history
+		if (id && type !== 'hobby') {
+			const family = type === 'project' ? api.projects : api.notes;
+			family.revisions(id, REVISIONS_SHOWN)
+				.then((revisions) => setEdit((cur) => (cur && cur.id === id && cur.type === type ? { ...cur, revisions } : cur)))
+				.catch(() => { /* no printings, no section */ });
+		}
+	}, [projects, notes, hobbies]);
+
+	const patchDraft = useCallback((patch: Partial<ProjectDraft & NoteDraft & HobbyDraft>) => {
+		setEdit((cur) => (cur ? { ...cur, touched: true, draft: { ...cur.draft, ...patch } } as EditState : cur));
+	}, []);
+
+	const patchStamp = useCallback((stamp: Stamp) => {
+		setEdit((cur) => (cur && cur.type === 'project'
+			? { ...cur, touched: true, draft: { ...cur.draft, stamp } }
+			: cur));
+	}, []);
+
+	const loadRevision = useCallback((revision: Revision) => {
+		setEdit((cur) => {
+			if (!cur) {
+				return cur;
+			}
+			try {
+				const snapshot = JSON.parse(revision.snapshot);
+				const draft = cur.type === 'project' ? projectDraft(snapshot as Project) : noteDraft(snapshot as Note);
+				return { ...cur, draft, restoredRev: revision.id, touched: false } as EditState;
+			} catch {
+				showToast('⚠ that printing would not open');
+				return cur;
+			}
+		});
+		showToast('↺ earlier printing loaded — file it to keep it');
+	}, [showToast]);
+
+	const cancelEdit = useCallback(() => setEdit(null), []);
+
+	const replaceProject = useCallback((saved: Project) => {
+		setProjects((cur) => [...cur.filter((p) => p.id !== saved.id), saved].sort(byOrder));
+	}, []);
+
+	const replaceNote = useCallback((saved: Note) => {
+		setNotes((cur) => {
+			const at = cur.findIndex((n) => n.id === saved.id);
+			return at === -1 ? [saved, ...cur] : cur.map((n) => (n.id === saved.id ? saved : n));
+		});
+	}, []);
+
+	const replaceHobby = useCallback((saved: Hobby) => {
+		setHobbies((cur) => {
+			const at = cur.findIndex((h) => h.id === saved.id);
+			return (at === -1 ? [...cur, saved] : cur.map((h) => (h.id === saved.id ? saved : h))).sort(byOrder);
+		});
+	}, []);
+
+	const statusLine = (status: string): string => (status === 'published' ? 'published ●' : 'a draft ○');
+
+	const saveEdit = useCallback(async () => {
+		if (!edit) {
+			return;
+		}
+		try {
+			if (edit.type === 'project') {
+				const d = edit.draft;
+				if (d.stamp && d.stamp.motif === 'text' && !(d.stamp.text ?? '').trim()) {
+					showToast('⚠ a words stamp needs its words');
+					return;
+				}
+				const fields = {
+					title: d.title, category: d.category,
+					tags: d.tagsText.split(',').map((t) => t.trim()).filter(Boolean),
+					shortDesc: d.shortDesc, body: textToHtml(d.bodyText), moral: d.moral,
+					postcardTo: d.postcardTo, postcardFrom: d.postcardFrom, postmarked: d.postmarked,
+					image: d.image, stamp: d.stamp ? stampForWire(d.stamp) : undefined,
+				};
+				if (edit.id === null) {
+					replaceProject(await api.projects.create({ ...fields, status: 'draft' }));
+					showToast('✉ new postcard in the rack');
+				} else if (edit.restoredRev) {
+					let saved = await api.projects.restore(edit.id, edit.restoredRev);
+					if (edit.touched) {
+						saved = await api.projects.update(edit.id, { ...saved, ...fields });
+					}
+					replaceProject(saved);
+					showToast(`↺ earlier printing filed — it's now ${statusLine(saved.status)}`);
+				} else {
+					const current = projects.find((p) => p.id === edit.id);
+					if (!current) {
+						return;
+					}
+					replaceProject(await api.projects.update(edit.id, { ...current, ...fields }));
+					showToast('✉ postcard filed');
+				}
+			} else if (edit.type === 'note') {
+				const d = edit.draft;
+				const fields = { title: d.title, date: d.date, teaser: d.teaser, body: textToHtml(d.bodyText), image: d.image };
+				if (edit.id === null) {
+					replaceNote(await api.notes.create({ ...fields, status: 'draft' }));
+					showToast('✎ filed at the writing desk');
+				} else if (edit.restoredRev) {
+					let saved = await api.notes.restore(edit.id, edit.restoredRev);
+					if (edit.touched) {
+						saved = await api.notes.update(edit.id, { ...saved, ...fields });
+					}
+					replaceNote(saved);
+					showToast(`↺ earlier printing filed — it's now ${statusLine(saved.status)}`);
+				} else {
+					const current = notes.find((n) => n.id === edit.id);
+					if (!current) {
+						return;
+					}
+					replaceNote(await api.notes.update(edit.id, { ...current, ...fields }));
+					showToast('✎ filed at the writing desk');
+				}
+			} else {
+				const d = edit.draft;
+				if (edit.id === null) {
+					replaceHobby(await api.hobbies.create({ ...d }));
+					showToast('† a new hobby enters the cycle');
+				} else {
+					const current = hobbies.find((h) => h.id === edit.id);
+					if (!current) {
+						return;
+					}
+					replaceHobby(await api.hobbies.update(edit.id, { ...current, ...d }));
+					showToast('† groundskeeping done');
+				}
+			}
+			setEdit(null);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [edit, projects, notes, hobbies, replaceProject, replaceNote, replaceHobby, showToast, oops, refreshActivity]);
+
+	// ---- rack / desk / graveyard actions ----
+
+	const toggleProjectStatus = useCallback(async (p: Project) => {
+		try {
+			const saved = p.status === 'published' ? await api.projects.unpublish(p.id) : await api.projects.publish(p.id);
+			replaceProject(saved);
+			showToast(p.status === 'published' ? '○ pulled back into the rack' : '● stamped and published');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceProject, showToast, oops, refreshActivity]);
+
+	const toggleNoteStatus = useCallback(async (n: Note) => {
+		try {
+			const saved = n.status === 'published' ? await api.notes.unpublish(n.id) : await api.notes.publish(n.id);
+			replaceNote(saved);
+			showToast(n.status === 'published' ? '○ back to the desk drawer' : '● posted. no promises broken yet.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceNote, showToast, oops, refreshActivity]);
+
+	const toggleFeatured = useCallback(async (p: Project) => {
+		// the cap is the admin's rule, not the server's — enforce before the call
+		if (!p.featured && projects.filter((x) => x.featured).length >= 3) {
+			showToast('the mantel only fits three — take one down first');
+			return;
+		}
+		try {
+			replaceProject(await api.featureProject(p.id, !p.featured));
+			showToast(p.featured ? '☆ taken down from the mantel' : '★ up on the mantel');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [projects, replaceProject, showToast, oops, refreshActivity]);
+
+	const moveProject = useCallback(async (p: Project, dir: -1 | 1) => {
+		const rack = [...projects].sort(byOrder);
+		const at = rack.findIndex((x) => x.id === p.id);
+		const neighbor = rack[at + dir];
+		if (!neighbor) {
+			return;
+		}
+		try {
+			// swap = two set-order calls; each response is the fresh document
+			const [movedSaved, neighborSaved] = await Promise.all([
+				api.reorderProject(p.id, neighbor.order),
+				api.reorderProject(neighbor.id, p.order),
+			]);
+			setProjects((cur) => cur
+				.map((x) => (x.id === movedSaved.id ? movedSaved : x.id === neighborSaved.id ? neighborSaved : x))
+				.sort(byOrder));
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [projects, oops, refreshActivity]);
+
+	const scuttleProject = useCallback(async (p: Project) => {
+		try {
+			await api.projects.remove(p.id);
+			setProjects((cur) => cur.filter((x) => x.id !== p.id));
+			showToast('🌊 scuttled. the sea keeps its secrets.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const burnNote = useCallback(async (n: Note) => {
+		try {
+			await api.notes.remove(n.id);
+			setNotes((cur) => cur.filter((x) => x.id !== n.id));
+			showToast('🕯 burned. it never happened.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const moveHobby = useCallback(async (h: Hobby, dir: -1 | 1) => {
+		// reorder stays inside the hobby's own group (learning vs resting)
+		const group = hobbies.filter((x) => x.active === h.active).sort(byOrder);
+		const at = group.findIndex((x) => x.id === h.id);
+		const neighbor = group[at + dir];
+		if (!neighbor) {
+			return;
+		}
+		try {
+			// hobbies snapshot nothing — full-replace PUTs with swapped orders
+			const [movedSaved, neighborSaved] = await Promise.all([
+				api.hobbies.update(h.id, { ...h, order: neighbor.order }),
+				api.hobbies.update(neighbor.id, { ...neighbor, order: h.order }),
+			]);
+			setHobbies((cur) => cur
+				.map((x) => (x.id === movedSaved.id ? movedSaved : x.id === neighborSaved.id ? neighborSaved : x))
+				.sort(byOrder));
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [hobbies, oops, refreshActivity]);
+
+	const retireRevive = useCallback(async (h: Hobby) => {
+		try {
+			// retiring fills a blank epitaph; reviving clears it (per the design)
+			const doc = h.active
+				? { ...h, active: false, epitaph: h.epitaph || '† resting' }
+				: { ...h, active: true, epitaph: '' };
+			replaceHobby(await api.hobbies.update(h.id, doc));
+			showToast(h.active ? '† laid to rest. gently.' : '↺ back from the graveyard');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceHobby, showToast, oops, refreshActivity]);
+
+	const addSuggestion = useCallback(async (value: string) => {
+		const trimmed = value.trim();
+		if (!trimmed) {
+			return;
+		}
+		try {
+			const saved = await api.suggestions.add(trimmed.endsWith('?') ? trimmed : `${trimmed}?`);
+			setSuggestions((cur) => [...cur, saved]);
+			showToast('the pool deepens');
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops]);
+
+	const removeSuggestion = useCallback(async (s: Suggestion) => {
+		try {
+			await api.suggestions.remove(s.id);
+			setSuggestions((cur) => cur.filter((x) => x.id !== s.id));
+			showToast('fate un-tempted');
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops]);
+
+	// ---- signal flags & the keeper — saved as you type (debounced) ----
+
+	const setCopyField = useCallback((key: keyof SiteCopy, value: string) => {
+		setCopy((cur) => ({ ...cur, [key]: value }));
+		window.clearTimeout(copySaveTimer.current);
+		copySaveTimer.current = window.setTimeout(() => {
+			api.putCopy(copyRef.current).then(setCopy).catch(oops);
+		}, AUTOSAVE_DELAY);
+	}, [oops]);
+
+	const setKeeperField = useCallback((key: keyof KeeperProfile, value: string) => {
+		setKeeper((cur) => ({ ...cur, [key]: value }));
+		window.clearTimeout(keeperSaveTimer.current);
+		keeperSaveTimer.current = window.setTimeout(() => {
+			const holder = sessionRef.current;
+			if (holder) {
+				api.saveProfile(holder.userID, keeperRef.current).catch(oops);
+			}
+		}, AUTOSAVE_DELAY);
+	}, [oops]);
+
+	// ---- the darkroom ----
+
+	const printUsage = useCallback((filename: string): number =>
+		projects.filter((p) => p.image === filename).length + notes.filter((n) => n.image === filename).length,
+	[projects, notes]);
+
+	const developPrints = useCallback(async (files: Iterable<File>) => {
+		const images = Array.from(files).filter((f) => f.type.startsWith('image/') || /\.(png|jpe?g|gif|svg|webp)$/i.test(f.name));
+		if (!images.length) {
+			showToast('the darkroom only develops images');
+			return;
+		}
+		try {
+			const developed = await Promise.all(images.map((f) => api.media.upload(f)));
+			setPrints((cur) => [...developed, ...cur]);
+			showToast(developed.length === 1 ? '🖼 developed. hang it to dry.' : `🖼 ${developed.length} prints developed`);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const tearOffPrint = useCallback(async (m: MediaItem) => {
+		try {
+			// deleting the file does NOT touch referencing documents (pinned
+			// contract) — detaching is this client's job, via full-replace PUTs
+			const usedProjects = projects.filter((p) => p.image === m.filename);
+			const usedNotes = notes.filter((n) => n.image === m.filename);
+			const [savedProjects, savedNotes] = await Promise.all([
+				Promise.all(usedProjects.map((p) => api.projects.update(p.id, { ...p, image: null }))),
+				Promise.all(usedNotes.map((n) => api.notes.update(n.id, { ...n, image: null }))),
+			]);
+			savedProjects.forEach(replaceProject);
+			savedNotes.forEach(replaceNote);
+			await api.media.remove(m.id);
+			setPrints((cur) => cur.filter((x) => x.id !== m.id));
+			showToast(usedProjects.length + usedNotes.length
+				? 'print torn off its cards and left in the sun'
+				: 'print left out in the sun');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [projects, notes, replaceProject, replaceNote, showToast, oops, refreshActivity]);
+
+	// ---- the lantern ----
+
+	const deploying = lantern !== null && (lantern.state === 'building' || lantern.state === 'swapping');
+
+	// While the boat is out: poll the real status, and let the boat creep on a
+	// theater percentage (the API reports states, not progress)
+	const wasDeploying = useRef(false);
+	useEffect(() => {
+		if (!deploying) {
+			if (wasDeploying.current && lantern) {
+				setDeployPct(0);
+				if (lantern.state === 'succeeded') {
+					showToast('⚓ hoisted. the site sails with the new cargo.');
+					refreshActivity();
+				} else if (lantern.state === 'failed') {
+					showToast('⚠ the hoist failed — the old lights stay on');
+				}
+			}
+			wasDeploying.current = false;
+			return;
+		}
+		wasDeploying.current = true;
+		const poll = window.setInterval(refreshLantern, 1500);
+		const creep = window.setInterval(() => {
+			setDeployPct((pct) => Math.min(96, pct + 1.6 + Math.random() * 1.8));
+		}, 300);
+		return () => {
+			window.clearInterval(poll);
+			window.clearInterval(creep);
+		};
+	}, [deploying, lantern, refreshLantern, showToast, refreshActivity]);
+
+	const hoistLantern = useCallback(async () => {
+		if (deploying) {
+			return;
+		}
+		try {
+			const result = await api.hoist();
+			setLantern(result.status);
+			setDeployPct(0);
+			if (!result.accepted) {
+				showToast('the boat is already out — one hoist at a time');
+			}
+		} catch (error) {
+			oops(error);
+		}
+	}, [deploying, showToast, oops]);
+
+	const rollbackLantern = useCallback(async () => {
+		try {
+			setLantern(await api.lanternRollback());
+			showToast('↩ previous lantern re-hoisted. the old lights are back on.');
+			refreshActivity();
+		} catch (error) {
+			if (error instanceof api.ApiError && error.status === 409) {
+				showToast('⚓ no previous lantern to re-hoist');
+			} else {
+				oops(error);
+			}
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	// changes aboard since the last hoist — activity newer than lastHoistedAt,
+	// lantern's own entries excluded
+	const dirtyCount = useMemo(() => {
+		const since = lantern?.lastHoistedAt ?? '';
+		return activity.filter((entry) => entry.entityType !== 'lantern' && entry.timestamp > since).length;
+	}, [activity, lantern]);
+
+	const keeperName = keeper.name.trim() || session?.userName || 'keeper';
+
+	const openPeek = useCallback((type: PeekState['type'], id: string) => setPeek({ type, id }), []);
+	const closePeek = useCallback(() => setPeek(null), []);
+
+	const value: HarborValue = {
+		session, booting, screen, goTo, signIn, goAshore,
+		projects, notes, hobbies, suggestions, prints, copy, keeper, activity,
+		keeperName, dirtyCount,
+		toast, showToast, confirmKey, askConfirm,
+		edit, openEdit, patchDraft, patchStamp, loadRevision, saveEdit, cancelEdit,
+		peek, openPeek, closePeek,
+		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, scuttleProject, burnNote,
+		moveHobby, retireRevive, addSuggestion, removeSuggestion,
+		setCopyField, setKeeperField,
+		printUsage, developPrints, tearOffPrint,
+		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
+	};
+
+	return <HarborContext.Provider value={value}>{children}</HarborContext.Provider>;
+}
