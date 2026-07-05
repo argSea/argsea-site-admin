@@ -1,0 +1,690 @@
+/*
+ * Harbormaster's Office global stylesheet.
+ *
+ * Owns the night-harbor tokens (values lifted from design/Admin.dc.html in
+ * argsea-site), the shared vocabulary used on more than one screen (buttons,
+ * pills, chips, cards, inputs, labels, overlays), and the shared keyframes.
+ * Screen-specific layout lives in each screen's co-located CSS file.
+ *
+ * The reduced-motion kill-switch at the bottom is a hard design requirement —
+ * keep it last so nothing re-enables motion after it. Elements whose resting
+ * pose is a transform carry it via --tilt so the kill-switch never breaks
+ * layout.
+ */
+
+:root {
+	/* Colors */
+	--bg-top:           #11131f;
+	--bg-bottom:        #131628;
+	--card:             #1a1e33;
+	--card-alt:         #161a2c;
+	--well:             #131728;
+	--overlay-card:     #1c2036;
+	--text-strong:      #f0f2fc;
+	--text-head:        #eef0fb;
+	--text-nav:         #e8ebfa;
+	--text-base:        #dde1f0;
+	--text-body:        #a5aed4;
+	--text-body-strong: #b8c0e0;
+	--text-soft:        #c3cbf2;
+	--text-quip:        #8f9be0;
+	--text-dim:         #7a83ad;
+	--periwinkle:       #93a0e8;
+	--periwinkle-deep:  #5f6ec4;
+	--gold:             #f0d9a8;
+	--btn-text-dark:    #151830;
+	--btn-text-gold:    #1b2033;
+	--danger:           #e08a72;
+	--paper:            #e8e6df;
+	--paper-name:       #3d4468;
+	--border-card:      rgba(150, 160, 220, .2);
+	--border-card-alt:  rgba(150, 160, 220, .18);
+	--border-chip:      rgba(150, 160, 220, .3);
+	--border-faint:     rgba(150, 160, 220, .15);
+	--border-hair:      rgba(150, 160, 220, .12);
+	--border-input:     rgba(150, 160, 220, .25);
+	--gold-dash:        rgba(240, 217, 168, .4);
+	--gold-dash-mid:    rgba(240, 217, 168, .5);
+	--gold-dash-hot:    rgba(240, 217, 168, .6);
+	--gold-focus:       rgba(240, 217, 168, .6);
+	--gold-hover:       rgba(240, 217, 168, .7);
+
+	/* Type */
+	--font-display: 'Gloock', serif;
+	--font-body:    'Newsreader Variable', 'Newsreader', serif;
+	--font-mono:    'IBM Plex Mono', monospace;
+
+	/* Shape & rhythm */
+	--gutter: clamp(22px, 4vw, 52px);
+}
+
+html {
+	background: var(--bg-bottom);
+}
+
+body {
+	margin: 0;
+	background: linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+	color: var(--text-base);
+	font-family: var(--font-body);
+}
+
+a {
+	text-decoration: none;
+}
+
+input,
+textarea,
+select,
+button {
+	font: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+	color: var(--periwinkle-deep);
+	opacity: .8;
+}
+
+/* ---- shared vocabulary ---- */
+
+.mono {
+	font-family: var(--font-mono);
+}
+
+.kicker {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	letter-spacing: .14em;
+	color: var(--periwinkle);
+	text-transform: uppercase;
+}
+
+.card-kicker {
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	letter-spacing: .13em;
+	color: var(--periwinkle);
+	text-transform: uppercase;
+}
+
+.card-kicker--gold {
+	color: var(--gold);
+}
+
+.page-title {
+	font-family: var(--font-display);
+	font-size: clamp(28px, 4vw, 38px);
+	color: var(--text-strong);
+	line-height: 1.15;
+}
+
+.page-sub {
+	font-size: 15.5px;
+	color: var(--text-body);
+	font-style: italic;
+}
+
+.field-label {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: .12em;
+	color: var(--periwinkle-deep);
+	text-transform: uppercase;
+}
+
+.footnote {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--periwinkle-deep);
+}
+
+/* Anything that rests at a slight angle and rights itself on hover */
+.tilt {
+	transform: rotate(var(--tilt, 0deg));
+	transition: transform .25s;
+}
+
+.tilt:hover {
+	transform: rotate(0deg);
+}
+
+.btn {
+	padding: 12px 20px;
+	background: var(--periwinkle);
+	color: var(--btn-text-dark);
+	border: none;
+	border-radius: 8px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	box-shadow: 3px 3px 0 rgba(240, 217, 168, .85);
+	transform: rotate(-.5deg);
+	cursor: pointer;
+	transition: transform .2s, box-shadow .2s;
+}
+
+.btn:hover {
+	transform: rotate(0deg) translateY(-2px);
+	box-shadow: 5px 5px 0 rgba(240, 217, 168, .85);
+}
+
+.btn--gold {
+	background: var(--gold);
+	color: var(--btn-text-gold);
+	box-shadow: 3px 3px 0 rgba(147, 160, 232, .6);
+}
+
+.btn--gold:hover {
+	box-shadow: 5px 5px 0 rgba(147, 160, 232, .6);
+}
+
+.pill {
+	padding: 7px 14px;
+	border: 1px solid var(--border-chip);
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--text-soft);
+	cursor: pointer;
+	user-select: none;
+	transition: all .2s;
+	background: none;
+}
+
+.pill:hover {
+	border-color: var(--gold-hover);
+}
+
+.pill--quiet {
+	border-color: var(--border-card);
+	color: var(--periwinkle-deep);
+}
+
+.pill--quiet:hover {
+	color: var(--gold);
+}
+
+.pill--on {
+	border: 1.5px dashed var(--gold-dash-hot);
+	color: var(--gold);
+}
+
+.pill--off {
+	color: var(--text-dim);
+}
+
+.pill--feat-off {
+	border-color: var(--border-card);
+	color: var(--periwinkle-deep);
+}
+
+.pill--danger {
+	border: 1.5px solid rgba(210, 110, 90, .8);
+	color: var(--danger);
+}
+
+.pill--danger:hover {
+	border-color: rgba(210, 110, 90, .8);
+}
+
+.pill--arrow {
+	padding: 7px 11px;
+	border-color: var(--border-card);
+	color: var(--periwinkle-deep);
+}
+
+.pill--arrow:hover {
+	color: var(--gold);
+}
+
+.chip-dashed {
+	padding: 7px 15px;
+	border: 1.5px dashed var(--gold-dash-mid);
+	background: none;
+	color: var(--gold);
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	cursor: pointer;
+	user-select: none;
+	transition: transform .2s;
+}
+
+.chip-dashed:hover {
+	transform: scale(1.04);
+}
+
+.input {
+	width: 100%;
+	box-sizing: border-box;
+	background: var(--well);
+	border: 1px solid var(--border-input);
+	border-radius: 8px;
+	padding: 11px 13px;
+	color: var(--text-base);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	outline: none;
+	transition: border-color .2s;
+	resize: vertical;
+}
+
+.input:focus {
+	border-color: var(--gold-focus);
+}
+
+.input--display {
+	color: var(--text-strong);
+	font-family: var(--font-display);
+	font-size: 18px;
+}
+
+.input--serif {
+	font-family: var(--font-body);
+	font-size: 15px;
+	line-height: 1.55;
+}
+
+.input--serif-italic {
+	font-family: var(--font-body);
+	font-style: italic;
+	font-size: 15px;
+}
+
+.input--soft {
+	color: var(--text-soft);
+	font-size: 12.5px;
+	padding: 10px 12px;
+}
+
+.card {
+	background: var(--card);
+	border: 1px solid var(--border-card);
+	border-radius: 12px;
+	padding: 22px 24px;
+	box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+	box-sizing: border-box;
+}
+
+.card--alt {
+	background: var(--card-alt);
+	border-color: var(--border-card-alt);
+	box-shadow: none;
+}
+
+.card--gold {
+	background: rgba(240, 217, 168, .06);
+	border: 1.5px dashed var(--gold-dash);
+	box-shadow: none;
+}
+
+.fieldset-dashed {
+	border: 1.5px dashed var(--border-input);
+	border-radius: 10px;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.overlay-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(8, 10, 20, .72);
+	backdrop-filter: blur(5px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: clamp(14px, 3vw, 40px);
+	animation: backdropIn .25s ease both;
+}
+
+.overlay-card {
+	max-height: 86vh;
+	overflow-y: auto;
+	background: var(--overlay-card);
+	border: 1px solid var(--border-input);
+	border-radius: 14px;
+	box-sizing: border-box;
+	box-shadow: 0 30px 80px rgba(0, 0, 0, .6);
+	animation: overlayIn .35s ease both;
+}
+
+.photo-thumb {
+	background: var(--paper);
+	border-radius: 3px;
+	padding: 4px 4px 9px;
+	transform: rotate(-2deg);
+	flex-shrink: 0;
+	box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+}
+
+.photo-thumb__img {
+	width: 46px;
+	height: 34px;
+	border-radius: 1px;
+	background-size: cover;
+	background-position: center;
+}
+
+.wave-strip {
+	background: url('data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2253%22%20height=%2218%22%3E%3Cpath%20d=%22M0%209%20Q%2013.25%200,%2026.5%209%20T%2053%209%22%20stroke=%22rgba(147,160,232,0.3)%22%20stroke-width=%221.5%22%20fill=%22none%22/%3E%3C/svg%3E') repeat-x;
+}
+
+.drift-dot {
+	position: absolute;
+	border-radius: 50%;
+	pointer-events: none;
+}
+
+.toast {
+	position: fixed;
+	bottom: 26px;
+	left: 50%;
+	transform: translateX(-50%);
+	background: var(--overlay-card);
+	border: 1.5px dashed var(--gold-dash-mid);
+	border-radius: 999px;
+	padding: 11px 22px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--gold);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+	z-index: 80;
+	animation: toastIn .3s ease both;
+	white-space: nowrap;
+}
+
+/* ---- screen vocabulary (shared by more than one screen) ---- */
+
+.screen-head {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 14px;
+	animation: fadeUp .7s ease .05s both;
+}
+
+.screen-head__text {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.content-row {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	border-radius: 12px;
+	padding: 20px 24px;
+	box-sizing: border-box;
+	background: var(--card);
+	border: 1px solid var(--border-card);
+	box-shadow: 0 10px 24px rgba(0, 0, 0, .35);
+}
+
+.content-row--gold {
+	background: rgba(240, 217, 168, .06);
+	border: 1.5px dashed var(--gold-dash);
+	box-shadow: none;
+}
+
+.content-row--alt {
+	background: var(--card-alt);
+	border: 1px solid var(--border-card-alt);
+	box-shadow: none;
+}
+
+.row-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	flex-shrink: 0;
+}
+
+.row-title {
+	font-family: var(--font-display);
+	font-size: 19px;
+	color: var(--text-head);
+}
+
+.row-sub {
+	font-size: 14.5px;
+	color: var(--text-body);
+	line-height: 1.5;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.nav-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	padding: 9px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: color .2s, background .2s, transform .2s;
+	color: var(--periwinkle);
+	border-left: 2px solid transparent;
+}
+
+.nav-item:hover {
+	color: var(--text-nav);
+	transform: translateX(4px);
+}
+
+.nav-item--active {
+	color: var(--text-nav);
+	background: rgba(150, 160, 220, .08);
+	border-left: 2px solid var(--gold);
+}
+
+.nav-item--active:hover {
+	transform: none;
+}
+
+.errand {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--text-soft);
+	cursor: pointer;
+	transition: color .2s, transform .2s;
+}
+
+.errand:hover {
+	color: var(--gold);
+	transform: translateX(4px);
+}
+
+.note-row {
+	display: flex;
+	align-items: center;
+	gap: 18px;
+	flex-wrap: wrap;
+	border-bottom: 1px solid var(--border-faint);
+	padding: 18px 10px;
+	transition: background .2s, transform .2s;
+}
+
+.note-row:hover {
+	background: rgba(150, 160, 220, .05);
+	transform: translateX(6px);
+}
+
+.sway-chip {
+	padding: 6px 14px;
+	border: 1px solid var(--border-chip);
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 12.5px;
+	color: var(--text-body);
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	animation: swayChip 5.5s ease-in-out infinite;
+}
+
+.sway-chip--gold {
+	border: 1.5px dashed var(--gold-dash-mid);
+	color: var(--gold);
+}
+
+.chip-x {
+	cursor: pointer;
+	color: var(--periwinkle-deep);
+	transition: color .2s;
+}
+
+.chip-x:hover {
+	color: var(--gold);
+}
+
+.ghost-link {
+	font-family: var(--font-mono);
+	cursor: pointer;
+	color: var(--text-dim);
+	transition: color .2s;
+	user-select: none;
+}
+
+.ghost-link:hover {
+	color: var(--gold);
+}
+
+.print-del {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: #8a86b8;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: color .2s;
+}
+
+.print-del:hover {
+	color: #b0483a;
+}
+
+.proverb {
+	font-size: 15px;
+	color: var(--text-quip);
+	font-style: italic;
+	cursor: pointer;
+	user-select: none;
+	transition: color .2s;
+}
+
+.proverb:hover {
+	color: var(--gold);
+}
+
+.cat-perch {
+	cursor: pointer;
+	transition: transform .2s;
+}
+
+.cat-perch:hover {
+	transform: translateY(-2px);
+}
+
+.hover-still:hover {
+	transform: rotate(0deg);
+}
+
+/* ---- keyframes ---- */
+
+@keyframes fadeUp {
+	from { opacity: 0; transform: translateY(16px); }
+	to   { opacity: 1; transform: none; }
+}
+
+@keyframes drift {
+	0%, 100% { transform: translate(0, 0); }
+	25%      { transform: translate(9px, -14px); }
+	50%      { transform: translate(-7px, -22px); }
+	75%      { transform: translate(6px, -9px); }
+}
+
+@keyframes wiggle {
+	0%, 100% { transform: rotate(-2deg); }
+	50%      { transform: rotate(3deg); }
+}
+
+@keyframes postmarkSway {
+	0%, 100% { transform: rotate(9deg); }
+	50%      { transform: rotate(15deg); }
+}
+
+@keyframes swayChip {
+	0%, 100% { transform: rotate(-1deg); }
+	50%      { transform: rotate(1deg); }
+}
+
+@keyframes bobBoat {
+	0%, 100% { transform: translateY(0) rotate(-2deg); }
+	50%      { transform: translateY(-3px) rotate(2deg); }
+}
+
+@keyframes sail {
+	0%   { left: -40px; }
+	100% { left: 102%; }
+}
+
+@keyframes lampPulse {
+	0%, 100% { opacity: .55; }
+	50%      { opacity: 1; }
+}
+
+@keyframes toastIn {
+	from { opacity: 0; transform: translate(-50%, 14px); }
+	to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes overlayIn {
+	from { opacity: 0; transform: rotate(-2deg) translateY(18px) scale(.97); }
+	to   { opacity: 1; transform: none; }
+}
+
+@keyframes backdropIn {
+	from { opacity: 0; }
+	to   { opacity: 1; }
+}
+
+@keyframes fishArc {
+	0%, 82%   { transform: translateY(16px) rotate(-8deg); opacity: 0; }
+	86%       { transform: translateY(-8px) rotate(-14deg); opacity: 1; }
+	90%       { transform: translateY(-13px) rotate(0deg); opacity: 1; }
+	94%       { transform: translateY(0px) rotate(18deg); opacity: 1; }
+	96%, 100% { transform: translateY(16px) rotate(24deg); opacity: 0; }
+}
+
+@keyframes bubblePop {
+	from { opacity: 0; transform: translateY(6px) scale(.92); }
+	to   { opacity: 1; transform: none; }
+}
+
+@keyframes tailSwish {
+	0%, 100% { transform: rotate(0deg); }
+	50%      { transform: rotate(-8deg); }
+}
+
+/* ---- reduced-motion kill-switch — keep last ---- */
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}
