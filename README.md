@@ -1,32 +1,40 @@
-# argsea-admin
+# argsea-site-admin
 
-## Installation
+The Harbormaster's Office — the back office for [argsea.com](https://argsea.com).
+A Vite + React 19 + TypeScript single-page app, night-harbor themed, talking to
+the `argsea-site-api` Go backend. No router, no UI kit, no rich-text editor.
 
-Install the application dependencies by running:
+## Screens
 
-```sh
+| screen | what it does |
+| --- | --- |
+| login | "crew only" — JWT via `POST /1/auth/login/` |
+| the bridge | greeting, stat tiles, ship's log, quick errands |
+| postcards | project CRUD, rack order, the mantel (featured, max 3), stamp designer |
+| the graveyard | hobby CRUD, retire/revive, suggestion pool |
+| writing desk | note CRUD — plain textarea over `<p>`-wrapped storage |
+| signal flags | the SiteCopy singleton, saved as you type |
+| the darkroom | media upload/delete with usage badges and detach-on-delete |
+| the keeper | profile fields on the user doc, saved as you type |
+| the lantern | deploy: hoist, poll, rollback — lives in the sidebar |
+
+## Run it
+
+```bash
 npm install
+echo 'VITE_ARGSEA_API_URL=http://localhost:8181' > .env   # your API origin
+npm run dev                                               # http://127.0.0.1:5173
 ```
 
-## Development
+Local dev auths with the bearer token (the API's cookie domain is prod-only).
+API recipe — tunnel, config, flags — lives in the argsea-site-api README.
 
-Start the application in development mode by running:
+## Verify
 
-```sh
-npm run dev
+```bash
+npm run type-check    # tsc --noEmit
+npm run build         # vite build
+npm test              # playwright — mock API via route interception, no live API
 ```
 
-## Production
-
-Build the application in production mode by running:
-
-```sh
-npm run build
-```
-
-## DataProvider
-
-The included data provider use [ra-data-simple-rest](https://github.com/marmelab/react-admin/tree/master/packages/ra-data-simple-rest). It fits REST APIs using simple GET parameters for filters and sorting. This is the dialect used for instance in [FakeRest](https://github.com/marmelab/FakeRest).
-
-You'll find an `.env` file at the project root that includes a `VITE_JSON_SERVER_URL` variable. Set it to the URL of your backend.
-
+First test run may need `npx playwright install chromium`.
