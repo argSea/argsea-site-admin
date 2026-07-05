@@ -177,9 +177,13 @@ export function setBearer(token: string | null): void {
 	bearer = token;
 }
 
-/** Resolve an API media url (web_path-relative) against the API host. */
+/**
+ * Resolve an API media url (web_path-relative) against the API host. The
+ * result lands inside CSS url("…") strings, so it is URI-encoded — a quote in
+ * a filename must never escape the CSS string.
+ */
 export function mediaUrl(url: string): string {
-	return /^https?:/.test(url) ? url : API_URL + url;
+	return encodeURI(/^https?:/.test(url) ? url : API_URL + url);
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -304,8 +308,9 @@ export function putCopy(doc: SiteCopy): Promise<SiteCopy> {
 
 // ---- ship's log ----
 
-export function listActivity(): Promise<ActivityEntry[]> {
-	return request<ActivityEntry[]>('GET', '/1/activity/');
+/** The API defaults to a small recent window — pass a limit and mean it. */
+export function listActivity(limit: number): Promise<ActivityEntry[]> {
+	return request<ActivityEntry[]>('GET', `/1/activity/?limit=${limit}`);
 }
 
 // ---- media (the darkroom) ----

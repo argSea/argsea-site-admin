@@ -22,6 +22,24 @@ test('the <p> adapter round-trips a note body', async ({ page }) => {
 	await expect(overlay.getByLabel('the note itself')).toHaveValue('para one\n\npara two & a half');
 });
 
+test('a soft break inside a paragraph survives as <br>', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'writing desk').click();
+	await page.getByRole('button', { name: '+ new note' }).click();
+
+	const overlay = page.locator('.overlay-card');
+	await overlay.getByLabel('title').fill('Soft breaks');
+	await overlay.getByLabel('the note itself').fill('line one\nline two\n\npara two');
+	await overlay.getByRole('button', { name: 'file it' }).click();
+	await expect(toast(page)).toHaveText('✎ filed at the writing desk');
+
+	const [create] = mock.find('POST', /^\/1\/note\/$/);
+	expect(create.body.body).toBe('<p>line one<br>line two</p>\n<p>para two</p>');
+
+	await page.locator('.note-row', { hasText: 'Soft breaks' }).getByText('edit', { exact: true }).click();
+	await expect(overlay.getByLabel('the note itself')).toHaveValue('line one\nline two\n\npara two');
+});
+
 test('unknown tags in a stored body are dropped gracefully on load', async ({ page }) => {
 	await signIn(page);
 	await nav(page, 'writing desk').click();

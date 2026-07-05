@@ -8,6 +8,7 @@ import type { Page, Route } from '@playwright/test';
 export interface RecordedCall {
 	method:  string;
 	path:    string;
+	search:  string;
 	headers: Record<string, string>;
 	body:    any;
 	post:    string | null;
@@ -131,8 +132,14 @@ export class MockApi {
 	activity: Doc[] = [
 		{ id: 'a1', timestamp: '2026-07-05T09:30:00Z', message: 'note "The queue is the product" published', entityType: 'note', entityId: 'n1' },
 		{ id: 'a2', timestamp: '2026-07-05T09:00:00Z', message: 'postcard "This website" edited 11 times. it counts.', entityType: 'project', entityId: 'p4' },
-		{ id: 'a3', timestamp: '2026-07-04T21:00:00Z', message: 'lantern hoisted — site rebuilt in 41s', entityType: 'lantern', entityId: 'l1' },
-		{ id: 'a4', timestamp: '2026-07-03T12:00:00Z', message: 'hobby "Running" moved to the graveyard (again)', entityType: 'hobby', entityId: 'h4' },
+		{ id: 'a3', timestamp: '2026-07-05T08:50:00Z', message: 'postcard "Meo Wave Race" edited', entityType: 'project', entityId: 'p2' },
+		{ id: 'a4', timestamp: '2026-07-05T08:40:00Z', message: 'postcard "The home lab" edited', entityType: 'project', entityId: 'p3' },
+		{ id: 'a5', timestamp: '2026-07-05T08:30:00Z', message: 'hobby "Piano" edited', entityType: 'hobby', entityId: 'h3' },
+		{ id: 'a6', timestamp: '2026-07-05T08:20:00Z', message: 'hobby "Running" edited', entityType: 'hobby', entityId: 'h4' },
+		{ id: 'a7', timestamp: '2026-07-05T08:10:00Z', message: 'note "The home lab ate my weekend" edited', entityType: 'note', entityId: 'n2' },
+		{ id: 'a8', timestamp: '2026-07-05T08:00:00Z', message: 'signal flags re-flown', entityType: 'sitecopy', entityId: 'c1' },
+		{ id: 'a9', timestamp: '2026-07-04T21:00:00Z', message: 'lantern hoisted — site rebuilt in 41s', entityType: 'lantern', entityId: 'l1' },
+		{ id: 'a10', timestamp: '2026-07-03T12:00:00Z', message: 'hobby "Running" moved to the graveyard (again)', entityType: 'hobby', entityId: 'h4' },
 	];
 
 	revisions: Record<string, Doc[]> = {
@@ -182,7 +189,8 @@ export class MockApi {
 	private handle(route: Route): Promise<void> {
 		const request = route.request();
 		const method = request.method();
-		const path = new URL(request.url()).pathname;
+		const url = new URL(request.url());
+		const path = url.pathname;
 
 		if (method === 'OPTIONS') {
 			return route.fulfill({ status: 204, headers: CORS });
@@ -198,7 +206,7 @@ export class MockApi {
 		if (post && (request.headers()['content-type'] ?? '').includes('json')) {
 			try { body = JSON.parse(post); } catch { body = null; }
 		}
-		this.calls.push({ method, path, headers: request.headers(), body, post });
+		this.calls.push({ method, path, search: url.search, headers: request.headers(), body, post });
 
 		const authed = Boolean(request.headers()['authorization']);
 		const json = (status: number, payload: unknown) =>
@@ -337,7 +345,8 @@ export class MockApi {
 
 		// ---- activity ----
 		if (/^\/1\/activity\/?$/.test(path) && method === 'GET') {
-			return json(200, this.activity);
+			const limit = Number(url.searchParams.get('limit')) || 6;
+			return json(200, this.activity.slice(0, limit));
 		}
 
 		// ---- media ----

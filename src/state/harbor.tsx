@@ -275,7 +275,10 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	}, []);
 
 	const refreshActivity = useCallback(() => {
-		api.listActivity().then(setActivity).catch(() => { /* the log is decoration; stay quiet */ });
+		// fetch generously: the dirty counter reads this list, and the API's
+		// default window is only the last few entries — the bridge log slices
+		// its own display down
+		api.listActivity(100).then(setActivity).catch(() => { /* the log is decoration; stay quiet */ });
 	}, []);
 
 	const refreshLantern = useCallback(() => {
@@ -674,15 +677,23 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			showToast('the darkroom only develops images');
 			return;
 		}
-		try {
-			const developed = await Promise.all(images.map((f) => api.media.upload(f)));
+		// settle each upload on its own — one bad file must not drop the
+		// prints that developed fine
+		const settled = await Promise.allSettled(images.map((f) => api.media.upload(f)));
+		const developed = settled
+			.filter((r): r is PromiseFulfilledResult<MediaItem> => r.status === 'fulfilled')
+			.map((r) => r.value);
+		const failed = settled.length - developed.length;
+		if (developed.length) {
 			setPrints((cur) => [...developed, ...cur]);
-			showToast(developed.length === 1 ? '🖼 developed. hang it to dry.' : `🖼 ${developed.length} prints developed`);
 			refreshActivity();
-		} catch (error) {
-			oops(error);
 		}
-	}, [showToast, oops, refreshActivity]);
+		if (failed) {
+			showToast(`⚠ ${failed} print${failed === 1 ? '' : 's'} would not develop`);
+		} else {
+			showToast(developed.length === 1 ? '🖼 developed. hang it to dry.' : `🖼 ${developed.length} prints developed`);
+		}
+	}, [showToast, refreshActivity]);
 
 	const tearOffPrint = useCallback(async (m: MediaItem) => {
 		try {

@@ -2,10 +2,15 @@ import { test, expect } from '@playwright/test';
 import { MockApi } from './mock-api';
 import { signIn, toast } from './office';
 
-test('the dirty counter reads the log — lantern entries excluded', async ({ page }) => {
-	await signIn(page);
-	// seeded: two content entries newer than lastHoistedAt, one lantern entry
-	await expect(page.getByText('◍ 2 changes aboard since last hoist')).toBeVisible();
+test('the dirty counter beats the default activity window — lantern entries excluded', async ({ page }) => {
+	const mock = await signIn(page);
+	// seeded: EIGHT content entries newer than lastHoistedAt (more than the
+	// API's default recent window of 6), plus one lantern entry to exclude
+	await expect(page.getByText('◍ 8 changes aboard since last hoist')).toBeVisible();
+	// only possible because the client asked for more than the default window
+	const activityReads = mock.find('GET', /^\/1\/activity\/$/);
+	expect(activityReads.length).toBeGreaterThan(0);
+	expect(activityReads[0].search).toBe('?limit=100');
 });
 
 test('hoist: 202, the boat goes out, polling brings it home', async ({ page }) => {

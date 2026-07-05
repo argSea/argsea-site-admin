@@ -6,13 +6,17 @@
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;' };
 
-/** Textarea text → sanitized-HTML-shaped body: one <p> per blank-line block. */
+/**
+ * Textarea text → sanitized-HTML-shaped body: one <p> per blank-line block.
+ * Single newlines inside a block become <br>, so a soft break survives the
+ * round trip instead of collapsing to a space on the site.
+ */
 export function textToHtml(text: string): string {
 	return text
 		.split(/\n\s*\n/)
 		.map((block) => block.trim())
 		.filter(Boolean)
-		.map((block) => `<p>${block.replace(/[&<>]/g, (c) => ESCAPES[c])}</p>`)
+		.map((block) => `<p>${block.replace(/[&<>]/g, (c) => ESCAPES[c]).replace(/\n/g, '<br>')}</p>`)
 		.join('\n');
 }
 
