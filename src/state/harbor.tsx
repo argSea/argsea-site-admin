@@ -10,7 +10,7 @@ import type {
 	Note, Project, Revision, SiteCopy, Stamp, Suggestion,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
-import { stampForWire } from '../lib/stamp';
+import { randomStamp, stampForWire } from '../lib/stamp';
 
 export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'media' | 'keeper';
 
@@ -110,7 +110,9 @@ function projectDraft(p?: Project): ProjectDraft {
 		: {
 			title: '', category: 'backend', tagsText: '', shortDesc: '', bodyText: '',
 			moral: 'Moral: ', postcardTo: '', postcardFrom: '',
-			postmarked: String(new Date().getFullYear()), image: null, stamp: null,
+			// a fresh postcard gets a surprise stamp, like the design; existing
+			// cards without one stay stampless unless the designer is touched
+			postmarked: String(new Date().getFullYear()), image: null, stamp: randomStamp(),
 		};
 }
 
@@ -755,15 +757,18 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const rollbackLantern = useCallback(async () => {
 		try {
-			setLantern(await api.lanternRollback());
-			showToast('↩ previous lantern re-hoisted. the old lights are back on.');
-			refreshActivity();
-		} catch (error) {
-			if (error instanceof api.ApiError && error.status === 409) {
-				showToast('⚓ no previous lantern to re-hoist');
+			const result = await api.lanternRollback();
+			setLantern(result.status);
+			if (result.ok) {
+				showToast('↩ previous lantern re-hoisted. the old lights are back on.');
+				refreshActivity();
+			} else if (result.status.state === 'building' || result.status.state === 'swapping') {
+				showToast('the boat is out — wait for it to dock first');
 			} else {
-				oops(error);
+				showToast('⚓ no previous lantern to re-hoist');
 			}
+		} catch (error) {
+			oops(error);
 		}
 	}, [showToast, oops, refreshActivity]);
 

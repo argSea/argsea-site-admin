@@ -366,7 +366,25 @@ export async function hoist(): Promise<HoistResult> {
 		: `hoist failed (${response.status})`);
 }
 
-/** 200 = re-pointed at the previous build; 409 = nothing to roll back to. */
-export function lanternRollback(): Promise<LanternStatus> {
-	return request<LanternStatus>('POST', '/1/lantern/rollback');
+export interface RollbackResult {
+	ok:     boolean;  // false = 409 — hoist in flight OR no previous build
+	status: LanternStatus;
+}
+
+/**
+ * 200 = re-pointed at the previous build. 409 carries the LanternStatus body
+ * too (integrator pin 2026-07-05, mirroring hoist): a deploying state means a
+ * hoist is in flight, a non-deploying one means there is no previous build —
+ * callers tell the two apart by the status fields, not the body shape.
+ */
+export async function lanternRollback(): Promise<RollbackResult> {
+	const headers: Record<string, string> = bearer ? { Authorization: `Bearer ${bearer}` } : {};
+	const response = await fetch(`${API_URL}/1/lantern/rollback`, { method: 'POST', headers });
+
+	if (response.ok || response.status === 409) {
+		return { ok: response.ok, status: await response.json() };
+	}
+	throw new ApiError(response.status, response.status === 403
+		? 'the lantern only answers to the harbormaster'
+		: `rollback failed (${response.status})`);
 }
