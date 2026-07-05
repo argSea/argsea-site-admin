@@ -206,6 +206,11 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 				<textarea className="input input--serif" rows={3} value={draft.eulogy}
 					onChange={(e) => h.patchDraft({ eulogy: e.target.value })} />
 			</label>
+			<label className="field">
+				<span className="field-label">tags · comma separated</span>
+				<input type="text" className="input" style={{ color: 'var(--periwinkle)' }} value={draft.tagsText}
+					onChange={(e) => h.patchDraft({ tagsText: e.target.value })} />
+			</label>
 		</div>
 	);
 }

@@ -75,6 +75,7 @@ export interface Hobby {
 	active:    boolean;
 	epitaph:   string;
 	eulogy:    string;
+	tags:      string[];
 	order:     number;
 	createdAt: string;
 	updatedAt: string;

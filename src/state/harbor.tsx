@@ -43,11 +43,12 @@ export interface NoteDraft {
 }
 
 export interface HobbyDraft {
-	name:    string;
-	dates:   string;
-	epitaph: string;
-	eulogy:  string;
-	active:  boolean;
+	name:     string;
+	dates:    string;
+	epitaph:  string;
+	eulogy:   string;
+	tagsText: string;
+	active:   boolean;
 }
 
 interface EditBase {
@@ -128,8 +129,8 @@ function noteDraft(n?: Note): NoteDraft {
 
 function hobbyDraft(h?: Hobby): HobbyDraft {
 	return h
-		? { name: h.name, dates: h.dates, epitaph: h.epitaph, eulogy: h.eulogy, active: h.active }
-		: { name: '', dates: `${new Date().getFullYear()} — present`, epitaph: '', eulogy: '', active: true };
+		? { name: h.name, dates: h.dates, epitaph: h.epitaph, eulogy: h.eulogy, tagsText: (h.tags ?? []).join(', '), active: h.active }
+		: { name: '', dates: `${new Date().getFullYear()} — present`, epitaph: '', eulogy: '', tagsText: '', active: true };
 }
 
 interface HarborValue {
@@ -480,7 +481,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					showToast('✎ filed at the writing desk');
 				}
 			} else {
-				const d = edit.draft;
+				const { tagsText, ...rest } = edit.draft;
+				const d = { ...rest, tags: tagsText.split(',').map((t) => t.trim()).filter(Boolean) };
 				if (edit.id === null) {
 					replaceHobby(await api.hobbies.create({ ...d }));
 					showToast('† a new hobby enters the cycle');
