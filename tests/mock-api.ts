@@ -42,6 +42,9 @@ export class MockApi {
 	lanternMounted = true;
 	// GET /1/lantern/ polls needed before a running hoist succeeds
 	pollsUntilDone = 2;
+	// an API deployed before the hold serves AND echoes JSON null for the egg
+	// fields, whatever the client sends
+	copyPredatesHold = false;
 
 	projects: Doc[] = [
 		{
@@ -344,12 +347,15 @@ export class MockApi {
 
 		// ---- site copy ----
 		if (/^\/1\/copy\/?$/.test(path)) {
+			const serve = (doc: Doc) => this.copyPredatesHold
+				? { ...doc, eggs: null, catLocs: null, bottleProverbs: null, lighthouses: null }
+				: doc;
 			if (method === 'GET') {
-				return json(200, this.copy);
+				return json(200, serve(this.copy));
 			}
 			if (method === 'PUT') {
 				this.copy = { ...body, id: this.copy.id, updatedAt: now() };
-				return json(200, this.copy);
+				return json(200, serve(this.copy));
 			}
 		}
 

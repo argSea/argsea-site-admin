@@ -698,11 +698,13 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	// ---- signal flags, the hold & the keeper — saved as you type (debounced) ----
 
 	// every copy mutation rides the same debounced full-replace PUT — one save
-	// path for the flag locker and the smuggler's hold alike
+	// path for the flag locker and the smuggler's hold alike. The echo goes
+	// through seedHold like the GET does: an API from before the hold echoes
+	// null/absent egg fields, and adopting those raw would sink the screen.
 	const queueCopySave = useCallback(() => {
 		window.clearTimeout(copySaveTimer.current);
 		copySaveTimer.current = window.setTimeout(() => {
-			api.putCopy(copyRef.current).then(setCopy).catch(oops);
+			api.putCopy(copyRef.current).then((doc) => setCopy(seedHold(doc))).catch(oops);
 		}, AUTOSAVE_DELAY);
 	}, [oops]);
 

@@ -1,6 +1,7 @@
 // Below decks. The three easter eggs riding the copy singleton — flip them
 // loose or stowed, tune the cat's rounds, edit the proverbs and the light
 // list. Saved as you type, the same debounced PUT as the signal flags.
+import type { ReactNode } from 'react';
 import { useHarbor, EGG_DEFS, CAT_LOCS } from '../state/harbor';
 
 function Toggle({ on, title, small, onFlip }: { on: boolean; title: string; small?: boolean; onFlip: () => void }) {
@@ -12,7 +13,7 @@ function Toggle({ on, title, small, onFlip }: { on: boolean; title: string; smal
 	);
 }
 
-function EggCard({ egg, children }: { egg: (typeof EGG_DEFS)[number]; children: React.ReactNode }) {
+function EggCard({ egg, children }: { egg: (typeof EGG_DEFS)[number]; children: ReactNode }) {
 	const h = useHarbor();
 	const on = h.copy.eggs[egg.key];
 

@@ -105,3 +105,37 @@ test('a copy doc from before the hold comes up with everything loose', async ({ 
 	expect(put.body.bottleProverbs).toEqual([]);
 	expect(put.body.lighthouses).toEqual([]);
 });
+
+test('null hold fields from a legacy API are seeded — on load and on the PUT echo', async ({ page }) => {
+	// the real wire shape for a pre-hold doc is JSON null, not absent keys —
+	// and the API echoes those nulls straight back on the PUT
+	const mock = new MockApi();
+	mock.copyPredatesHold = true;
+	await signIn(page, mock);
+	await nav(page, "smuggler's hold").click();
+
+	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
+
+	const lights = page.locator('.card', { hasText: 'The light list' });
+	await lights.getByTitle('stow it away').click();
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
+	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
+	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false });
+	expect(put.body.catLocs).toEqual({ postcards: true, notes: true, p404: true });
+	expect(put.body.bottleProverbs).toEqual([]);
+	expect(put.body.lighthouses).toEqual([]);
+
+	// the echo nulled everything again — seedHold adopts it as a fresh legacy
+	// doc (the server kept nothing), everything reads loose, and the screen
+	// is still standing instead of crashing on eggs being null
+	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
+
+	// and the next flip still works, sending a fully seeded doc again
+	const bottle = page.locator('.card', { hasText: 'Message in a bottle' });
+	await bottle.getByTitle('stow it away').click();
+	await expect(page.getByText('2 of 3 loose on the site right now')).toBeVisible();
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(2);
+	const [echoPut] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
+	expect(echoPut.body.eggs).toEqual({ bottle: false, cat: true, lights: true });
+	expect(echoPut.body.catLocs).toEqual({ postcards: true, notes: true, p404: true });
+});
