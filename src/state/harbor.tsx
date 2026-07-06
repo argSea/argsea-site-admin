@@ -283,6 +283,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const confirmTimer = useRef<number>(undefined);
 	const confirmAction = useRef<(() => void) | null>(null);
 	const copySaveTimer = useRef<number>(undefined);
+	const copyEditSeq = useRef(0);
 	const keeperSaveTimer = useRef<number>(undefined);
 	const copyRef = useRef(copy);
 	copyRef.current = copy;
@@ -702,9 +703,20 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	// through seedHold like the GET does: an API from before the hold echoes
 	// null/absent egg fields, and adopting those raw would sink the screen.
 	const queueCopySave = useCallback(() => {
+		copyEditSeq.current += 1;
 		window.clearTimeout(copySaveTimer.current);
 		copySaveTimer.current = window.setTimeout(() => {
-			api.putCopy(copyRef.current).then((doc) => setCopy(seedHold(doc))).catch(oops);
+			// only adopt the echo if nothing was typed since this PUT went out —
+			// otherwise a slow response lands on top of newer keystrokes and
+			// reverts them (the follow-up save they queued still carries them to
+			// the wire). Legacy-null docs still get seeded: their echo lands with
+			// no edit behind it.
+			const dispatchedAt = copyEditSeq.current;
+			api.putCopy(copyRef.current).then((doc) => {
+				if (copyEditSeq.current === dispatchedAt) {
+					setCopy(seedHold(doc));
+				}
+			}).catch(oops);
 		}, AUTOSAVE_DELAY);
 	}, [oops]);
 

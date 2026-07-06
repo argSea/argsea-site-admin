@@ -6,10 +6,11 @@ import { useHarbor, EGG_DEFS, CAT_LOCS } from '../state/harbor';
 
 function Toggle({ on, title, small, onFlip }: { on: boolean; title: string; small?: boolean; onFlip: () => void }) {
 	return (
-		<div className={`egg-toggle${on ? ' egg-toggle--on' : ''}${small ? ' egg-toggle--small' : ''}`}
+		<button type="button" aria-pressed={on}
+			className={`egg-toggle${on ? ' egg-toggle--on' : ''}${small ? ' egg-toggle--small' : ''}`}
 			title={title} onClick={onFlip}>
-			<div className="egg-toggle__knob" />
-		</div>
+			<span className="egg-toggle__knob" />
+		</button>
 	);
 }
 
@@ -82,10 +83,10 @@ export default function SmugglersHold() {
 							<input type="text" className="input input--serif-italic" style={{ padding: '10px 12px' }}
 								value={proverb}
 								onChange={(e) => h.setProverb(idx, e.target.value)} />
-							<span className="hold-x" title="toss this one overboard" onClick={() => h.removeProverb(idx)}>✕</span>
+							<button type="button" className="hold-x" title="toss this one overboard" onClick={() => h.removeProverb(idx)}>✕</button>
 						</div>
 					))}
-					<span className="hold-add" onClick={h.addProverb}>＋ cast a new one out</span>
+					<button type="button" className="hold-add" onClick={h.addProverb}>+ cast a new one out</button>
 				</EggCard>
 
 				<EggCard egg={catDef}>
@@ -124,10 +125,10 @@ export default function SmugglersHold() {
 									value={light.line}
 									onChange={(e) => h.setLight(idx, { line: e.target.value })} />
 							</div>
-							<span className="hold-x" title="strike it from the chart" style={{ marginTop: 6 }} onClick={() => h.removeLight(idx)}>✕</span>
+							<button type="button" className="hold-x" title="strike it from the chart" style={{ marginTop: 6 }} onClick={() => h.removeLight(idx)}>✕</button>
 						</div>
 					))}
-					<span className="hold-add" onClick={h.addLight}>＋ chart another light</span>
+					<button type="button" className="hold-add" onClick={h.addLight}>+ chart another light</button>
 				</EggCard>
 			</div>
 
