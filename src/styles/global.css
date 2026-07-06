@@ -669,6 +669,8 @@ textarea::placeholder {
 	flex-shrink: 0;
 	width: 30px;
 	height: 30px;
+	padding: 0;
+	background: none;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -690,6 +692,7 @@ textarea::placeholder {
 	align-self: flex-start;
 	cursor: pointer;
 	padding: 9px 16px;
+	background: none;
 	border: 1px dashed rgba(147, 160, 232, .45);
 	border-radius: 8px;
 	color: var(--periwinkle);

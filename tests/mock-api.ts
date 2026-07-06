@@ -45,6 +45,8 @@ export class MockApi {
 	// an API deployed before the hold serves AND echoes JSON null for the egg
 	// fields, whatever the client sends
 	copyPredatesHold = false;
+	// ms to hold the copy PUT response — lets a spec type over an in-flight save
+	copyPutLatency = 0;
 
 	projects: Doc[] = [
 		{
@@ -355,7 +357,12 @@ export class MockApi {
 			}
 			if (method === 'PUT') {
 				this.copy = { ...body, id: this.copy.id, updatedAt: now() };
-				return json(200, serve(this.copy));
+				// echo this write's snapshot, held if a spec asked for latency —
+				// a later PUT reassigns this.copy, so the captured echo stays put
+				const echo = serve(this.copy);
+				return this.copyPutLatency
+					? new Promise<void>((resolve) => setTimeout(() => resolve(json(200, echo)), this.copyPutLatency))
+					: json(200, echo);
 			}
 		}
 
