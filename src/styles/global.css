@@ -601,6 +601,109 @@ textarea::placeholder {
 	transform: rotate(0deg);
 }
 
+/* The hold's switches: a pill track whose knob slides by flex justification */
+.egg-toggle {
+	flex-shrink: 0;
+	cursor: pointer;
+	width: 48px;
+	height: 27px;
+	border-radius: 999px;
+	padding: 3px;
+	box-sizing: border-box;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	background: #232a4d;
+	border: 1px solid var(--border-chip);
+	transition: background .2s, border-color .2s;
+}
+
+.egg-toggle--on {
+	justify-content: flex-end;
+	background: var(--periwinkle);
+	border-color: var(--gold-dash-mid);
+}
+
+.egg-toggle--small {
+	width: 40px;
+	height: 23px;
+}
+
+.egg-toggle__knob {
+	width: 21px;
+	height: 21px;
+	border-radius: 50%;
+	background: var(--text-dim);
+	transition: background .2s;
+}
+
+.egg-toggle--on .egg-toggle__knob {
+	background: var(--btn-text-dark);
+}
+
+.egg-toggle--small .egg-toggle__knob {
+	width: 17px;
+	height: 17px;
+}
+
+.egg-status {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+	padding: 3px 9px;
+	border-radius: 999px;
+	color: var(--text-dim);
+	background: rgba(150, 160, 220, .08);
+	border: 1px solid var(--border-card);
+}
+
+.egg-status--loose {
+	color: var(--gold);
+	background: rgba(240, 217, 168, .12);
+	border-color: var(--gold-dash);
+}
+
+.hold-x {
+	cursor: pointer;
+	flex-shrink: 0;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--border-input);
+	border-radius: 8px;
+	color: var(--text-dim);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	transition: all .2s;
+	user-select: none;
+}
+
+.hold-x:hover {
+	color: var(--gold);
+	border-color: var(--gold-dash-mid);
+}
+
+.hold-add {
+	align-self: flex-start;
+	cursor: pointer;
+	padding: 9px 16px;
+	border: 1px dashed rgba(147, 160, 232, .45);
+	border-radius: 8px;
+	color: var(--periwinkle);
+	font-family: var(--font-mono);
+	font-size: 12.5px;
+	transition: all .2s;
+	user-select: none;
+}
+
+.hold-add:hover {
+	color: var(--gold);
+	border-color: var(--gold-dash-hot);
+}
+
 /* ---- keyframes ---- */
 
 @keyframes fadeUp {

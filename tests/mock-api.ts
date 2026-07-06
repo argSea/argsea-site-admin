@@ -126,6 +126,16 @@ export class MockApi {
 		quip404: 'You are the first person to find this exact wrong URL. Probably.',
 		heroKicker: 'HIYA', heroHeadline: 'I help keep the lights on behind the news.',
 		heroBody: 'Backend engineering at the Post-Gazette.', dict: '1. the Argo, but for one.',
+		eggs: { bottle: true, cat: true, lights: true },
+		catLocs: { postcards: true, notes: true, p404: true },
+		bottleProverbs: [
+			'A migration nobody notices is a migration done right.',
+			'Ship the boring version. Boring floats.',
+		],
+		lighthouses: [
+			{ name: 'Fastnet Rock', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop — the last light the emigrants saw.' },
+			{ name: 'Bell Rock', pos: '56°26′N 2°23′W', line: 'built on a rock that vanishes twice a day.' },
+		],
 		updatedAt: '2026-06-01T12:00:00Z',
 	};
 

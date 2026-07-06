@@ -12,6 +12,7 @@ const NAV: { id: Screen; glyph: string; label: string }[] = [
 	{ id: 'hobbies', glyph: '†', label: 'the graveyard' },
 	{ id: 'notes', glyph: '✎', label: 'writing desk' },
 	{ id: 'copy', glyph: '⚑', label: 'signal flags' },
+	{ id: 'eggs', glyph: '✧', label: "smuggler's hold" },
 	{ id: 'media', glyph: '❏', label: 'the darkroom' },
 	{ id: 'keeper', glyph: '☸', label: 'the keeper' },
 ];

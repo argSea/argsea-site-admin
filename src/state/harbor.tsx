@@ -6,13 +6,36 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Category, Hobby, KeeperProfile, LanternStatus, MediaItem,
-	Note, Project, Revision, SiteCopy, Stamp, Suggestion,
+	ActivityEntry, Category, CatLocs, CopyTextField, EggFlags, Hobby, KeeperProfile, LanternStatus,
+	Lighthouse, MediaItem, Note, Project, Revision, SiteCopy, Stamp, Suggestion,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { randomStamp, stampForWire } from '../lib/stamp';
 
-export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'media' | 'keeper';
+export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'media' | 'keeper';
+
+// The three live eggs and the cat's rounds — display copy shared by the hold
+// screen and the toggle toasts. The keys are the frozen cross-repo contract.
+export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where: string }[] = [
+	{
+		key: 'bottle', name: 'Message in a bottle', where: 'homepage · the drifting boat',
+		blurb: 'Poke the little boat sailing across the waves and it drops a corked bottle — a proverb unrolls from it, then drifts off.',
+	},
+	{
+		key: 'cat', name: 'The harbor cat', where: 'postcards · notes · the 404 wreck',
+		blurb: 'The lighthouse cat, out on its rounds. It perches on postcards and notes when they open — and heckles the shipwreck from the 404 placard.',
+	},
+	{
+		key: 'lights', name: 'The light list', where: 'the 404 wreck report',
+		blurb: 'Every wreck report lists a last known position — the real coordinates of a real lighthouse. Click them and the light introduces itself.',
+	},
+];
+
+export const CAT_LOCS: { key: keyof CatLocs; label: string; hint: string }[] = [
+	{ key: 'postcards', label: 'Postcards', hint: 'projects & homepage — when a card opens' },
+	{ key: 'notes', label: 'Notes', hint: 'when a note opens' },
+	{ key: 'p404', label: 'The wreck', hint: 'heckling the boat on the 404' },
+];
 
 export interface Session {
 	token:    string;
@@ -74,8 +97,25 @@ export interface PeekState {
 
 const EMPTY_COPY: SiteCopy = {
 	id: '', quipHello: '', quipProjects: '', quipHobbies: '', quipNotes: '', quip404: '',
-	heroKicker: '', heroHeadline: '', heroBody: '', dict: '', updatedAt: '',
+	heroKicker: '', heroHeadline: '', heroBody: '', dict: '',
+	eggs: { bottle: true, cat: true, lights: true },
+	catLocs: { postcards: true, notes: true, p404: true },
+	bottleProverbs: [], lighthouses: [], updatedAt: '',
 };
+
+// Absent = on (agreed ruling): a copy doc from before the hold lacks the egg
+// fields on the wire — seed them enabled so the first autosave persists them
+// explicitly. Nested spreads guard a partially-filled object too.
+function seedHold(doc: SiteCopy): SiteCopy {
+	return {
+		...EMPTY_COPY,
+		...doc,
+		eggs:           { ...EMPTY_COPY.eggs, ...doc.eggs },
+		catLocs:        { ...EMPTY_COPY.catLocs, ...doc.catLocs },
+		bottleProverbs: doc.bottleProverbs ?? [],
+		lighthouses:    doc.lighthouses ?? [],
+	};
+}
 
 const EMPTY_KEEPER: KeeperProfile = {
 	name: '', pronouns: '', location: '', title: '', bio: '',
@@ -182,8 +222,17 @@ interface HarborValue {
 	addSuggestion:    (value: string) => Promise<void>;
 	removeSuggestion: (s: Suggestion) => Promise<void>;
 
-	setCopyField:   (key: keyof SiteCopy, value: string) => void;
+	setCopyField:   (key: CopyTextField, value: string) => void;
 	setKeeperField: (key: keyof KeeperProfile, value: string) => void;
+
+	toggleEgg:     (key: keyof EggFlags) => void;
+	toggleCatLoc:  (key: keyof CatLocs) => void;
+	setProverb:    (idx: number, value: string) => void;
+	addProverb:    () => void;
+	removeProverb: (idx: number) => void;
+	setLight:      (idx: number, patch: Partial<Lighthouse>) => void;
+	addLight:      () => void;
+	removeLight:   (idx: number) => void;
 
 	printUsage:    (filename: string) => number;
 	developPrints: (files: Iterable<File>) => Promise<void>;
@@ -298,7 +347,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.hobbies.list().then((list) => setHobbies([...list].sort(byOrder))).catch(oops);
 		api.suggestions.list().then((list) => setSuggestions([...list].sort((a, b) => a.order - b.order))).catch(oops);
 		api.media.list().then(setPrints).catch(oops);
-		api.getCopy().then((doc) => setCopy({ ...EMPTY_COPY, ...doc })).catch(() => setCopy(EMPTY_COPY));
+		api.getCopy().then((doc) => setCopy(seedHold(doc))).catch(() => setCopy(EMPTY_COPY));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
 		refreshActivity();
 		refreshLantern();
@@ -646,15 +695,67 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops]);
 
-	// ---- signal flags & the keeper — saved as you type (debounced) ----
+	// ---- signal flags, the hold & the keeper — saved as you type (debounced) ----
 
-	const setCopyField = useCallback((key: keyof SiteCopy, value: string) => {
-		setCopy((cur) => ({ ...cur, [key]: value }));
+	// every copy mutation rides the same debounced full-replace PUT — one save
+	// path for the flag locker and the smuggler's hold alike
+	const queueCopySave = useCallback(() => {
 		window.clearTimeout(copySaveTimer.current);
 		copySaveTimer.current = window.setTimeout(() => {
 			api.putCopy(copyRef.current).then(setCopy).catch(oops);
 		}, AUTOSAVE_DELAY);
 	}, [oops]);
+
+	const setCopyField = useCallback((key: CopyTextField, value: string) => {
+		setCopy((cur) => ({ ...cur, [key]: value }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const toggleEgg = useCallback((key: keyof EggFlags) => {
+		const on = !copyRef.current.eggs[key];
+		setCopy((cur) => ({ ...cur, eggs: { ...cur.eggs, [key]: on } }));
+		queueCopySave();
+		const def = EGG_DEFS.find((e) => e.key === key)!;
+		showToast(on ? `✧ ${def.name} — loose on the site.` : `· ${def.name} — stowed away.`);
+	}, [queueCopySave, showToast]);
+
+	const toggleCatLoc = useCallback((key: keyof CatLocs) => {
+		const on = !copyRef.current.catLocs[key];
+		setCopy((cur) => ({ ...cur, catLocs: { ...cur.catLocs, [key]: on } }));
+		queueCopySave();
+		const loc = CAT_LOCS.find((l) => l.key === key)!;
+		showToast(on ? `🐱 the cat roams ${loc.label.toLowerCase()} again.` : `🐱 kept off ${loc.label.toLowerCase()}.`);
+	}, [queueCopySave, showToast]);
+
+	const setProverb = useCallback((idx: number, value: string) => {
+		setCopy((cur) => ({ ...cur, bottleProverbs: cur.bottleProverbs.map((p, i) => (i === idx ? value : p)) }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const addProverb = useCallback(() => {
+		setCopy((cur) => ({ ...cur, bottleProverbs: [...cur.bottleProverbs, ''] }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const removeProverb = useCallback((idx: number) => {
+		setCopy((cur) => ({ ...cur, bottleProverbs: cur.bottleProverbs.filter((_, i) => i !== idx) }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const setLight = useCallback((idx: number, patch: Partial<Lighthouse>) => {
+		setCopy((cur) => ({ ...cur, lighthouses: cur.lighthouses.map((lh, i) => (i === idx ? { ...lh, ...patch } : lh)) }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const addLight = useCallback(() => {
+		setCopy((cur) => ({ ...cur, lighthouses: [...cur.lighthouses, { name: '', pos: '', line: '' }] }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const removeLight = useCallback((idx: number) => {
+		setCopy((cur) => ({ ...cur, lighthouses: cur.lighthouses.filter((_, i) => i !== idx) }));
+		queueCopySave();
+	}, [queueCopySave]);
 
 	const setKeeperField = useCallback((key: keyof KeeperProfile, value: string) => {
 		setKeeper((cur) => ({ ...cur, [key]: value }));
@@ -807,6 +908,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, scuttleProject, burnNote,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField,
+		toggleEgg, toggleCatLoc, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		printUsage, developPrints, tearOffPrint,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 	};
