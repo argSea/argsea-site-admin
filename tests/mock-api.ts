@@ -42,6 +42,9 @@ export class MockApi {
 	lanternMounted = true;
 	// GET /1/lantern/ polls needed before a running hoist succeeds
 	pollsUntilDone = 2;
+	// an API deployed before the hold serves AND echoes JSON null for the egg
+	// fields, whatever the client sends
+	copyPredatesHold = false;
 
 	projects: Doc[] = [
 		{
@@ -126,6 +129,16 @@ export class MockApi {
 		quip404: 'You are the first person to find this exact wrong URL. Probably.',
 		heroKicker: 'HIYA', heroHeadline: 'I help keep the lights on behind the news.',
 		heroBody: 'Backend engineering at the Post-Gazette.', dict: '1. the Argo, but for one.',
+		eggs: { bottle: true, cat: true, lights: true },
+		catLocs: { postcards: true, notes: true, p404: true },
+		bottleProverbs: [
+			'A migration nobody notices is a migration done right.',
+			'Ship the boring version. Boring floats.',
+		],
+		lighthouses: [
+			{ name: 'Fastnet Rock', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop — the last light the emigrants saw.' },
+			{ name: 'Bell Rock', pos: '56°26′N 2°23′W', line: 'built on a rock that vanishes twice a day.' },
+		],
 		updatedAt: '2026-06-01T12:00:00Z',
 	};
 
@@ -334,12 +347,15 @@ export class MockApi {
 
 		// ---- site copy ----
 		if (/^\/1\/copy\/?$/.test(path)) {
+			const serve = (doc: Doc) => this.copyPredatesHold
+				? { ...doc, eggs: null, catLocs: null, bottleProverbs: null, lighthouses: null }
+				: doc;
 			if (method === 'GET') {
-				return json(200, this.copy);
+				return json(200, serve(this.copy));
 			}
 			if (method === 'PUT') {
 				this.copy = { ...body, id: this.copy.id, updatedAt: now() };
-				return json(200, this.copy);
+				return json(200, serve(this.copy));
 			}
 		}
 

@@ -11,6 +11,7 @@ import Postcards from './screens/Postcards';
 import Graveyard from './screens/Graveyard';
 import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
+import SmugglersHold from './screens/SmugglersHold';
 import Darkroom from './screens/Darkroom';
 import Keeper from './screens/Keeper';
 import Sidebar from './components/Sidebar';
@@ -24,6 +25,7 @@ const SCREENS: Record<Screen, () => React.JSX.Element> = {
 	hobbies:  Graveyard,
 	notes:    WritingDesk,
 	copy:     SignalFlags,
+	eggs:     SmugglersHold,
 	media:    Darkroom,
 	keeper:   Keeper,
 };

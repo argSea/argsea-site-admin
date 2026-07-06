@@ -1,9 +1,9 @@
 // The flag locker. The SiteCopy singleton, field for field — five footer
 // quips, the hero, and the dictionary entry. Saved as you type (debounced PUT).
 import { useHarbor } from '../state/harbor';
-import type { SiteCopy } from '../lib/api';
+import type { CopyTextField } from '../lib/api';
 
-const QUIP_FIELDS: { key: keyof SiteCopy; label: string }[] = [
+const QUIP_FIELDS: { key: CopyTextField; label: string }[] = [
 	{ key: 'quipHello', label: 'hello' },
 	{ key: 'quipProjects', label: 'projects' },
 	{ key: 'quipHobbies', label: 'hobbies' },

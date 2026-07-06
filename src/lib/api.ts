@@ -87,19 +87,50 @@ export interface Suggestion {
 	order: number;
 }
 
-export interface SiteCopy {
-	id:           string;
-	quipHello:    string;
-	quipProjects: string;
-	quipHobbies:  string;
-	quipNotes:    string;
-	quip404:      string;
-	heroKicker:   string;
-	heroHeadline: string;
-	heroBody:     string;
-	dict:         string;
-	updatedAt:    string;
+// The smuggler's hold rides the copy singleton. These field names are the
+// frozen cross-repo contract (the site and the API build against them — do
+// not rename). A copy doc from before the hold omits them on the wire; the
+// harbor seeds absent fields enabled on load (absent = on, agreed ruling) so
+// the first autosave persists them explicitly.
+export interface EggFlags {
+	bottle: boolean;
+	cat:    boolean;
+	lights: boolean;
 }
+
+export interface CatLocs {
+	postcards: boolean;
+	notes:     boolean;
+	p404:      boolean;
+}
+
+export interface Lighthouse {
+	name: string;
+	pos:  string;
+	line: string;
+}
+
+export interface SiteCopy {
+	id:             string;
+	quipHello:      string;
+	quipProjects:   string;
+	quipHobbies:    string;
+	quipNotes:      string;
+	quip404:        string;
+	heroKicker:     string;
+	heroHeadline:   string;
+	heroBody:       string;
+	dict:           string;
+	eggs:           EggFlags;
+	catLocs:        CatLocs;
+	bottleProverbs: string[];
+	lighthouses:    Lighthouse[];
+	updatedAt:      string;
+}
+
+// The copy keys the flag locker edits as plain text — the hold's egg fields
+// have actions of their own.
+export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catLocs' | 'bottleProverbs' | 'lighthouses'>;
 
 export interface ActivityEntry {
 	id:         string;
