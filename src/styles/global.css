@@ -618,6 +618,10 @@ textarea::placeholder {
 	transition: background .2s, border-color .2s;
 }
 
+.egg-toggle:disabled {
+	cursor: default;
+}
+
 .egg-toggle--on {
 	justify-content: flex-end;
 	background: var(--periwinkle);

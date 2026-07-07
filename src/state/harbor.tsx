@@ -6,7 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Category, CatLocs, CopyTextField, EggFlags, Hobby, KeeperProfile, LanternStatus,
+	ActivityEntry, Category, CopyTextField, EggFlags, Hobby, KeeperProfile, LanternStatus,
 	Lighthouse, MediaItem, Note, Project, Revision, SiteCopy, Stamp, Suggestion,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
@@ -22,8 +22,8 @@ export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where
 		blurb: 'Poke the little boat sailing across the waves and it drops a corked bottle — a proverb unrolls from it, then drifts off.',
 	},
 	{
-		key: 'cat', name: 'The harbor cat', where: 'postcards · notes · the 404 wreck',
-		blurb: 'The lighthouse cat, out on its rounds. It perches on postcards and notes when they open — and heckles the shipwreck from the 404 placard.',
+		key: 'cat', name: 'The harbor cat', where: 'every page · one perch per view',
+		blurb: 'The lighthouse cat, out on its rounds. One shows per page, picked from a catalog of perches across the whole site — pin it per spot and per page below.',
 	},
 	{
 		key: 'lights', name: 'The light list', where: 'the 404 wreck report',
@@ -31,11 +31,58 @@ export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where
 	},
 ];
 
-export const CAT_LOCS: { key: keyof CatLocs; label: string; hint: string }[] = [
-	{ key: 'postcards', label: 'Postcards', hint: 'projects & homepage — when a card opens' },
-	{ key: 'notes', label: 'Notes', hint: 'when a note opens' },
-	{ key: 'p404', label: 'The wreck', hint: 'heckling the boat on the 404' },
+// The cat's catalog of perches — a page → spots tree. The site defines the same
+// catalog (each spot carries its pose + anchor there); the copy doc only stores
+// on/off, so this repo hardcodes its own copy. The page + spot ids are the
+// FROZEN cross-repo contract, matched to the site slice — do not rename. A new
+// perch is a code change in both repos that then shows up in the hold on its own.
+export interface CatSpot { id: string; label: string; hint: string }
+export interface CatPage { id: string; label: string; spots: CatSpot[] }
+
+export const CAT_CATALOG: CatPage[] = [
+	{
+		id: 'hello', label: 'Hello', spots: [
+			{ id: 'hello.header', label: 'The nav link', hint: 'lounging on the hello nav link' },
+			{ id: 'hello.hero', label: 'The hero', hint: 'peeking beside the hero headline' },
+			{ id: 'hello.postcard', label: 'An open postcard', hint: 'on a postcard when it opens' },
+			{ id: 'hello.manifest', label: 'The cargo manifest', hint: 'at the end of the manifest list' },
+			{ id: 'hello.graveyard', label: 'The hobby graveyard', hint: 'among the graveyard chips' },
+			{ id: 'hello.contact', label: 'The contact lighthouse', hint: 'by the contact-band lighthouse' },
+		],
+	},
+	{
+		id: 'projects', label: 'Projects', spots: [
+			{ id: 'projects.header', label: 'The nav link', hint: 'lounging on the projects nav link' },
+			{ id: 'projects.filterTag', label: 'The filter chip', hint: 'on the active filter chip' },
+			{ id: 'projects.card', label: 'A project card', hint: 'on a project card corner' },
+			{ id: 'projects.overlay', label: 'The postcard back', hint: 'on a postcard when it flips open' },
+		],
+	},
+	{
+		id: 'hobbies', label: 'Hobbies', spots: [
+			{ id: 'hobbies.header', label: 'The nav link', hint: 'lounging on the hobbies nav link' },
+			{ id: 'hobbies.entry', label: 'A logbook entry', hint: 'on a logbook headstone' },
+			{ id: 'hobbies.nextChip', label: 'The next chip', hint: 'on the next: ??? chip' },
+		],
+	},
+	{
+		id: 'notes', label: 'Notes', spots: [
+			{ id: 'notes.header', label: 'The nav link', hint: 'lounging on the notes nav link' },
+			{ id: 'notes.row', label: 'A note row', hint: 'on a note row' },
+			{ id: 'notes.overlay', label: 'An open letter', hint: 'on a letter when it opens' },
+		],
+	},
+	{
+		id: 'p404', label: '404', spots: [
+			{ id: 'p404.wreck', label: 'The wreck placard', hint: 'heckling from the 404 placard' },
+		],
+	},
 ];
+
+const CAT_PAGES_ON: Record<string, boolean> = Object.fromEntries(CAT_CATALOG.map((pg) => [pg.id, true]));
+const CAT_SPOTS_ON: Record<string, boolean> = Object.fromEntries(
+	CAT_CATALOG.flatMap((pg) => pg.spots.map((sp) => [sp.id, true])),
+);
 
 export interface Session {
 	token:    string;
@@ -99,7 +146,7 @@ const EMPTY_COPY: SiteCopy = {
 	id: '', quipHello: '', quipProjects: '', quipHobbies: '', quipNotes: '', quip404: '',
 	heroKicker: '', heroHeadline: '', heroBody: '', dict: '',
 	eggs: { bottle: true, cat: true, lights: true },
-	catLocs: { postcards: true, notes: true, p404: true },
+	catPages: CAT_PAGES_ON, catSpots: CAT_SPOTS_ON,
 	bottleProverbs: [], lighthouses: [], updatedAt: '',
 };
 
@@ -111,7 +158,8 @@ function seedHold(doc: SiteCopy): SiteCopy {
 		...EMPTY_COPY,
 		...doc,
 		eggs:           { ...EMPTY_COPY.eggs, ...doc.eggs },
-		catLocs:        { ...EMPTY_COPY.catLocs, ...doc.catLocs },
+		catPages:       { ...CAT_PAGES_ON, ...doc.catPages },
+		catSpots:       { ...CAT_SPOTS_ON, ...doc.catSpots },
 		bottleProverbs: doc.bottleProverbs ?? [],
 		lighthouses:    doc.lighthouses ?? [],
 	};
@@ -226,7 +274,8 @@ interface HarborValue {
 	setKeeperField: (key: keyof KeeperProfile, value: string) => void;
 
 	toggleEgg:     (key: keyof EggFlags) => void;
-	toggleCatLoc:  (key: keyof CatLocs) => void;
+	toggleCatPage: (pageId: string) => void;
+	toggleCatSpot: (spotId: string) => void;
 	setProverb:    (idx: number, value: string) => void;
 	addProverb:    () => void;
 	removeProverb: (idx: number) => void;
@@ -733,12 +782,22 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		showToast(on ? `✧ ${def.name} — loose on the site.` : `· ${def.name} — stowed away.`);
 	}, [queueCopySave, showToast]);
 
-	const toggleCatLoc = useCallback((key: keyof CatLocs) => {
-		const on = !copyRef.current.catLocs[key];
-		setCopy((cur) => ({ ...cur, catLocs: { ...cur.catLocs, [key]: on } }));
+	// Absent = on: a page/spot missing from the map reads enabled, so a flip off
+	// the seeded state writes the explicit value the first autosave persists.
+	const toggleCatPage = useCallback((pageId: string) => {
+		const on = !(copyRef.current.catPages[pageId] ?? true);
+		setCopy((cur) => ({ ...cur, catPages: { ...cur.catPages, [pageId]: on } }));
 		queueCopySave();
-		const loc = CAT_LOCS.find((l) => l.key === key)!;
-		showToast(on ? `🐱 the cat roams ${loc.label.toLowerCase()} again.` : `🐱 kept off ${loc.label.toLowerCase()}.`);
+		const page = CAT_CATALOG.find((pg) => pg.id === pageId)!;
+		showToast(on ? `🐱 the cat prowls ${page.label} again.` : `🐱 kept off ${page.label} entirely.`);
+	}, [queueCopySave, showToast]);
+
+	const toggleCatSpot = useCallback((spotId: string) => {
+		const on = !(copyRef.current.catSpots[spotId] ?? true);
+		setCopy((cur) => ({ ...cur, catSpots: { ...cur.catSpots, [spotId]: on } }));
+		queueCopySave();
+		const spot = CAT_CATALOG.flatMap((pg) => pg.spots).find((sp) => sp.id === spotId)!;
+		showToast(on ? `🐱 the cat perches on ${spot.label.toLowerCase()} again.` : `🐱 kept off ${spot.label.toLowerCase()}.`);
 	}, [queueCopySave, showToast]);
 
 	const setProverb = useCallback((idx: number, value: string) => {
@@ -922,7 +981,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, scuttleProject, burnNote,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField,
-		toggleEgg, toggleCatLoc, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
+		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		printUsage, developPrints, tearOffPrint,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 	};
