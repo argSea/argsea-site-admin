@@ -352,6 +352,17 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			return;
 		}
 
+		// an armed origin tap outranks everything the tap might land on —
+		// shapes, selection handles, the lot
+		if (armOrigin && selId) {
+			overlayHit.current = null;
+			hitId.current = null;
+			const spot = toWorld(e.clientX, e.clientY);
+			patchShape(selId, { origin: [round2(spot.x), round2(spot.y)] });
+			setArmOrigin(false);
+			return;
+		}
+
 		if (overlayHit.current) {
 			drag.current = overlayHit.current;
 			overlayHit.current = null;
@@ -362,12 +373,6 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 		const hit = hitId.current;
 		hitId.current = null;
 		const pt = toWorld(e.clientX, e.clientY);
-
-		if (armOrigin && selId) {
-			patchShape(selId, { origin: [round2(pt.x), round2(pt.y)] });
-			setArmOrigin(false);
-			return;
-		}
 
 		switch (tool) {
 			case 'select': {
@@ -1039,13 +1044,17 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 						</div>
 						<div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
 							{shapes.map((s, i) => ({ s, i })).reverse().map(({ s, i }) => (
-								<div key={s.id} className={`shop-layer${selId === s.id ? ' shop-layer--sel' : ''}`}
-									onClick={() => setSelId(s.id)}>
+								<div key={s.id} data-layer={s.id} className={`shop-layer${selId === s.id ? ' shop-layer--sel' : ''}`}
+									onClick={() => {
+										setSelId(s.id);
+										if (tool === 'nodes') {
+											setNodeEdit(s.type === 'path' ? { shapeId: s.id, subs: parsePath(s.d ?? ''), sel: null } : null);
+										}
+									}}>
 									<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--periwinkle-deep)', width: 14, flexShrink: 0 }}>
 										{s.type === 'path' ? '∿' : s.type === 'ellipse' ? '◯' : s.type === 'rect' ? '▭' : '╱'}
 									</span>
 									<input type="text" className="input shop-layer__name" defaultValue={s.id} aria-label="layer name"
-										onClick={(e) => e.stopPropagation()}
 										onBlur={(e) => renameLayer(s.id, e.target.value)}
 										onKeyDown={(e) => {
 											if (e.key === 'Enter') {
@@ -1063,13 +1072,15 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 										}}>
 										{ROLES.map((r) => <option key={r} value={r}>{r || '—'}</option>)}
 									</select>
-									<button type="button" className="shop-mini" title="set the animation origin — then tap the canvas"
-										aria-pressed={armOrigin && selId === s.id} disabled={!s.role}
-										onClick={(e) => {
-											e.stopPropagation();
-											setSelId(s.id);
-											setArmOrigin((cur) => !(cur && selId === s.id));
-										}}>⌖</button>
+									{s.role && (
+										<button type="button" className="shop-mini" title="set the animation origin — then tap the canvas"
+											aria-pressed={armOrigin && selId === s.id}
+											onClick={(e) => {
+												e.stopPropagation();
+												setSelId(s.id);
+												setArmOrigin((cur) => !(cur && selId === s.id));
+											}}>⌖</button>
+									)}
 									<button type="button" className="shop-mini" title="raise" disabled={i === shapes.length - 1}
 										onClick={(e) => { e.stopPropagation(); moveLayer(s.id, 1); }}>▲</button>
 									<button type="button" className="shop-mini" title="lower" disabled={i === 0}

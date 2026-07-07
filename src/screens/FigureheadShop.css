@@ -237,8 +237,8 @@
 }
 
 .shop-layer__role {
-	width: 62px;
-	padding: 6px 4px;
+	width: 56px;
+	padding: 6px 3px;
 	font-size: 11px;
 	flex-shrink: 0;
 }
