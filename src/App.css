@@ -1,0 +1,132 @@
+/*
+ * The shell's phone collapse. Above the drawer breakpoint none of this fires
+ * and the office keeps its fixed sidebar; below it the sidebar hides behind a
+ * hamburger in a slim top bar and opens as an overlay drawer. Lives in its own
+ * file (the co-located-CSS idiom) so it never collides with global.css.
+ * Keep the breakpoint in sync with DRAWER_MAX in App.tsx.
+ */
+
+.office-sidebar {
+	width: 236px;
+	flex-shrink: 0;
+	border-right: 1px solid var(--border-faint);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 26px 18px 20px;
+	box-sizing: border-box;
+	position: sticky;
+	top: 0;
+	height: 100vh;
+	overflow-y: auto;
+}
+
+.office-topbar {
+	display: none;
+}
+
+.office-burger {
+	background: none;
+	border: 0;
+	padding: 8px;
+	margin: -8px -4px -8px 0;
+	cursor: pointer;
+	color: var(--periwinkle);
+}
+
+/* Same treatment as the site's burger: no UA box on pointer taps, gold ring
+   on keyboard reach */
+.office-burger:focus {
+	outline: none;
+}
+
+.office-burger:focus-visible {
+	outline: 2px solid var(--gold);
+	outline-offset: 3px;
+	border-radius: 8px;
+}
+
+.office-burger__box {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 5px;
+	width: 22px;
+	height: 16px;
+}
+
+.office-burger__bar {
+	height: 2px;
+	width: 100%;
+	background: currentColor;
+	border-radius: 2px;
+	transform-origin: center;
+	transition: transform .2s ease, opacity .2s ease;
+}
+
+/* Base transforms carry the resting/X poses so the reduced-motion kill-switch
+   (which drops the transition) leaves a clean shape, never a broken one */
+.office-burger__box--open .office-burger__bar:nth-child(1) {
+	transform: translateY(7px) rotate(45deg);
+}
+
+.office-burger__box--open .office-burger__bar:nth-child(2) {
+	opacity: 0;
+}
+
+.office-burger__box--open .office-burger__bar:nth-child(3) {
+	transform: translateY(-7px) rotate(-45deg);
+}
+
+.office-drawer-backdrop {
+	position: fixed;
+	inset: 0;
+	z-index: 30;
+	background: rgba(9, 11, 20, .5);
+	animation: drawerFade .18s ease both;
+}
+
+@media (max-width: 600px) {
+	.office-topbar {
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 10px 16px 10px 20px;
+		border-bottom: 1px solid var(--border-faint);
+		background: rgba(17, 19, 31, .88);
+		backdrop-filter: blur(8px);
+	}
+
+	.office-sidebar {
+		display: none;
+	}
+
+	.office-sidebar--open {
+		display: flex;
+		position: fixed;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		height: 100dvh;
+		width: min(280px, 84vw);
+		z-index: 31;
+		background: var(--overlay-card);
+		border-right: 1px solid var(--border-chip);
+		box-shadow: 0 18px 40px rgba(0, 0, 0, .5);
+		animation: drawerIn .2s ease both;
+	}
+}
+
+@keyframes drawerIn {
+	from { opacity: 0; transform: translateX(-16px); }
+	to   { opacity: 1; transform: none; }
+}
+
+@keyframes drawerFade {
+	from { opacity: 0; }
+	to   { opacity: 1; }
+}

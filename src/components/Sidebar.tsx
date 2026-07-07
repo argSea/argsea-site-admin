@@ -1,4 +1,6 @@
 // Sidebar: brand, nav, the harbor cat, the lantern panel, and the way ashore.
+// Fixed rail on desktop; below the drawer breakpoint it hides until the shell's
+// hamburger opens it as an overlay drawer (layout lives in App.css).
 import { useState, useRef } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { Screen } from '../state/harbor';
@@ -73,7 +75,12 @@ function Lantern() {
 	);
 }
 
-export default function Sidebar() {
+interface Props {
+	open:       boolean;
+	onNavigate: () => void;
+}
+
+export default function Sidebar({ open, onNavigate }: Props) {
 	const h = useHarbor();
 	const [catSay, setCatSay] = useState<string | null>(null);
 	const catTimer = useRef<number>(undefined);
@@ -86,11 +93,7 @@ export default function Sidebar() {
 	};
 
 	return (
-		<div style={{
-			width: 236, flexShrink: 0, borderRight: '1px solid var(--border-faint)',
-			display: 'flex', flexDirection: 'column', gap: 6, padding: '26px 18px 20px', boxSizing: 'border-box',
-			position: 'sticky', top: 0, height: '100vh', overflowY: 'auto',
-		}}>
+		<div id="office-sidebar" className={`office-sidebar${open ? ' office-sidebar--open' : ''}`}>
 			<div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0 6px 18px' }}>
 				<LighthouseMark style={{ transform: 'rotate(-4deg)' }} />
 				<div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -102,7 +105,7 @@ export default function Sidebar() {
 			{NAV.map((item) => (
 				<div key={item.id}
 					className={`nav-item${h.screen === item.id ? ' nav-item--active' : ''}`}
-					onClick={() => h.goTo(item.id)}>
+					onClick={() => { h.goTo(item.id); onNavigate(); }}>
 					<span style={{ width: 18, display: 'inline-block', textAlign: 'center' }}>{item.glyph}</span>
 					{item.label}
 				</div>
@@ -125,7 +128,7 @@ export default function Sidebar() {
 
 				<Lantern />
 
-				<div className="ghost-link" style={{ fontSize: 12, padding: '4px 6px' }} onClick={h.goAshore}>
+				<div className="ghost-link" style={{ fontSize: 12, padding: '4px 6px' }} onClick={() => { onNavigate(); h.goAshore(); }}>
 					← go ashore
 				</div>
 			</div>
