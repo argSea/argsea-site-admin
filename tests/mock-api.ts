@@ -152,6 +152,61 @@ export class MockApi {
 		updatedAt: '2026-06-01T12:00:00Z',
 	};
 
+	// The two seeded v1 cats, shape-for-shape the site's HarborCat.tsx (perched
+	// then lying, render order preserved), plus one perched draft so the shelf
+	// has something renameable, deletable, and publishable. Stroke-only shapes
+	// carry explicit fill:"none"; role/origin follow the site's animation
+	// transform-origins.
+	figureheads: Doc[] = [
+		{
+			id: 'fh1', pose: 'perched', label: 'v1', viewBox: '0 0 64 74',
+			published: true, seed: true,
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+			shapes: [
+				{ id: 'tail', type: 'path', d: 'M45 55 C57 52 61 62 56 70 C54.5 72.5 51 72.5 50 70 C52.5 64.5 50 60 43 60 Z', fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.4, linejoin: 'round', role: 'tail', origin: [45, 56] },
+				{ id: 'paw-left', type: 'ellipse', cx: 26, cy: 52.5, rx: 4.4, ry: 3.2, fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.3 },
+				{ id: 'paw-right', type: 'ellipse', cx: 37.5, cy: 52.5, rx: 4.4, ry: 3.2, fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.3 },
+				{ id: 'body', type: 'path', d: 'M12.95 51.8 C9.25 40.7 13.9 29.6 22.2 25.9 L21.3 15.7 L27.4 21.8 L33.7 21.8 L39.8 15.7 L38.85 25.9 C47.2 29.6 51.8 40.7 48.1 51.8 Z', fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.6, linejoin: 'round', role: 'body' },
+				{ id: 'ear-left', type: 'path', d: 'M22.7 18.2 L25.6 21.6 L22.2 21.6 Z', fill: '#f0d9a8', opacity: .5 },
+				{ id: 'ear-right', type: 'path', d: 'M38.3 18.2 L38.8 21.6 L35.4 21.6 Z', fill: '#f0d9a8', opacity: .5 },
+				{ id: 'eye-left', type: 'ellipse', cx: 25.9, cy: 30.8, rx: 1.9, ry: 1.9, fill: '#f0d9a8', role: 'eyes', origin: [30, 31] },
+				{ id: 'eye-right', type: 'ellipse', cx: 35.2, cy: 30.8, rx: 1.9, ry: 1.9, fill: '#f0d9a8', role: 'eyes', origin: [30, 31] },
+				{ id: 'nose', type: 'path', d: 'M29.4 35 L32.2 35 L30.8 36.6 Z', fill: '#f0d9a8' },
+				{ id: 'mouth', type: 'path', d: 'M30.8 36.6 v1.4 M30.8 38 q-2 1.4 -3.6 .4 M30.8 38 q2 1.4 3.6 .4', fill: 'none', stroke: '#5f6ec4', strokeWidth: 1, linecap: 'round' },
+				{ id: 'whiskers', type: 'path', d: 'M22 33 l-7 -1.4 M22 35.4 l-7 1 M39.5 33 l7 -1.4 M39.5 35.4 l7 1', fill: 'none', stroke: '#5f6ec4', strokeWidth: 0.9, linecap: 'round', opacity: .7 },
+			],
+		},
+		{
+			id: 'fh2', pose: 'lying', label: 'v1', viewBox: '0 0 100 48',
+			published: true, seed: true,
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+			shapes: [
+				{ id: 'tail', type: 'path', d: 'M72 38 C85 33 91 41 86 46.5 C84 49 80.2 48.4 80.8 45.2 C83 41.4 78.6 39.6 72.6 42.4 Z', fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.4, linejoin: 'round', role: 'tail', origin: [73, 40] },
+				{ id: 'paw-front-left', type: 'ellipse', cx: 10.5, cy: 42.6, rx: 4.6, ry: 2.7, fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.3 },
+				{ id: 'paw-front-right', type: 'ellipse', cx: 18.5, cy: 42.9, rx: 4.4, ry: 2.6, fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.3 },
+				{ id: 'body', type: 'path', d: 'M13.5 44 C8.5 39 9 30 13 25 L12.8 22 L12.4 10 L18.6 17 L24.5 17 L30 10 L30.5 22 C35.5 25 38.5 27 44.5 28.5 C56 25.5 69 26.5 77.5 32.5 C83.5 36.8 83 42 76 44 Z', fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.6, linejoin: 'round', role: 'body' },
+				{ id: 'paw-hind', type: 'ellipse', cx: 68, cy: 43.2, rx: 5, ry: 2.4, fill: '#232a4d', stroke: '#93a0e8', strokeWidth: 1.2 },
+				{ id: 'ear-left', type: 'path', d: 'M13.7 16 L13.5 11.5 L17 15 Z', fill: '#f0d9a8', opacity: .5 },
+				{ id: 'ear-right', type: 'path', d: 'M29 16 L29.4 11.5 L26 15 Z', fill: '#f0d9a8', opacity: .5 },
+				{ id: 'eye-left', type: 'ellipse', cx: 17.8, cy: 26.8, rx: 1.9, ry: 1.9, fill: '#f0d9a8', role: 'eyes', origin: [22, 27] },
+				{ id: 'eye-right', type: 'ellipse', cx: 26, cy: 26.8, rx: 1.9, ry: 1.9, fill: '#f0d9a8', role: 'eyes', origin: [22, 27] },
+				{ id: 'nose', type: 'path', d: 'M20.6 30.4 L23.4 30.4 L22 32 Z', fill: '#f0d9a8' },
+				{ id: 'mouth', type: 'path', d: 'M22 32 v1.3 M22 33.3 q-2 1.4 -3.6 .4 M22 33.3 q2 1.4 3.6 .4', fill: 'none', stroke: '#5f6ec4', strokeWidth: 1, linecap: 'round' },
+				{ id: 'whiskers', type: 'path', d: 'M12.6 29 l-7 -1.3 M12.6 31.2 l-7 .9 M30.5 29 l7 -1.3 M30.5 31.2 l7 .9', fill: 'none', stroke: '#5f6ec4', strokeWidth: 0.9, linecap: 'round', opacity: .7 },
+				{ id: 'chest-stripe', type: 'path', d: 'M15.8 36 q3 1.6 6.4 .6', fill: 'none', stroke: '#5f6ec4', strokeWidth: 0.9, linecap: 'round', opacity: .45 },
+			],
+		},
+		{
+			id: 'fh3', pose: 'perched', label: 'second fitting', viewBox: '0 0 64 74',
+			published: false, seed: false,
+			createdAt: '2026-07-05T12:00:00Z', updatedAt: '2026-07-05T15:00:00Z',
+			shapes: [
+				{ id: 'arc', type: 'path', d: 'M10 50 C20 20 44 20 54 50', fill: 'none', stroke: '#f0d9a8', strokeWidth: 2, linecap: 'round' },
+				{ id: 'moon', type: 'ellipse', cx: 32, cy: 30, rx: 6, ry: 6, fill: '#93a0e8' },
+			],
+		},
+	];
+
 	activity: Doc[] = [
 		{ id: 'a1', timestamp: '2026-07-05T09:30:00Z', message: 'note "The queue is the product" published', entityType: 'note', entityId: 'n1' },
 		{ id: 'a2', timestamp: '2026-07-05T09:00:00Z', message: 'postcard "This website" edited 11 times. it counts.', entityType: 'project', entityId: 'p4' },
@@ -372,6 +427,82 @@ export class MockApi {
 					? new Promise<void>((resolve) => setTimeout(() => resolve(json(200, echo)), this.copyPutLatency))
 					: json(200, echo);
 			}
+		}
+
+		// ---- figurehead designs ----
+		if (path === '/1/figurehead/published' && method === 'GET') {
+			// public: the current cat per pose, perched then lying, [] never null
+			const rank: Record<string, number> = { perched: 0, lying: 1 };
+			return json(200, this.figureheads.filter((d) => d.published).sort((a, b) => rank[a.pose] - rank[b.pose]));
+		}
+		if (/^\/1\/figurehead\/designs\/?$/.test(path)) {
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
+			if (method === 'GET') {
+				return json(200, this.figureheads);
+			}
+			if (method === 'POST') {
+				// always lands as a draft — published/seed in the body are ignored
+				if (body?.pose !== 'perched' && body?.pose !== 'lying') {
+					return json(400, { status: 'error', code: 400, message: 'bad pose' });
+				}
+				if ((body.shapes ?? []).some((s: Doc) => !['path', 'ellipse', 'rect', 'line'].includes(s.type))) {
+					return json(400, { status: 'error', code: 400, message: 'bad shape type' });
+				}
+				const doc = {
+					id: `fh${this.nextId++}`, pose: body.pose, label: body.label ?? '', viewBox: body.viewBox ?? '',
+					shapes: body.shapes ?? [], published: false, seed: false, createdAt: now(), updatedAt: now(),
+				};
+				this.figureheads.push(doc);
+				return json(200, doc);
+			}
+		}
+		if ((match = /^\/1\/figurehead\/designs\/([^/]+)$/.exec(path))) {
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
+			const doc = this.figureheads.find((d) => d.id === match![1]);
+			if (!doc) {
+				// 400 for not-found is the house idiom on this route family
+				return json(400, { status: 'error', code: 400, message: 'no such design' });
+			}
+			if (method === 'PUT') {
+				if (doc.seed) {
+					return json(409, { status: 'error', code: 409, message: 'a seed is carved — copy it instead' });
+				}
+				// label/viewBox/shapes only; pose/published/seed/createdAt preserved
+				doc.label = body.label;
+				doc.viewBox = body.viewBox;
+				doc.shapes = body.shapes ?? [];
+				doc.updatedAt = now();
+				return json(200, doc);
+			}
+			if (method === 'DELETE') {
+				if (doc.seed || doc.published) {
+					return json(409, { status: 'error', code: 409, message: doc.seed ? 'a seed is carved — it stays' : 'lower it before scrapping it' });
+				}
+				this.figureheads = this.figureheads.filter((d) => d.id !== doc.id);
+				return json(200, { status: 'ok', code: 200 });
+			}
+		}
+		if ((match = /^\/1\/figurehead\/designs\/([^/]+)\/publish$/.exec(path)) && method === 'POST') {
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
+			const doc = this.figureheads.find((d) => d.id === match![1]);
+			if (!doc) {
+				return json(400, { status: 'error', code: 400, message: 'no such design' });
+			}
+			// atomic within the pose: hoist first, then lower the previous
+			doc.published = true;
+			doc.updatedAt = now();
+			for (const other of this.figureheads) {
+				if (other.pose === doc.pose && other.id !== doc.id) {
+					other.published = false;
+				}
+			}
+			return json(200, doc);
 		}
 
 		// ---- activity ----

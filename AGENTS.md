@@ -57,7 +57,11 @@ Read narrowly. Do not wander the repo.
 - `src/state/harbor.tsx` — the harbor store: one provider owning all office
   state and every API-calling action. Screens read from it and stay thin.
 - `src/screens/` — one file per screen: `Login`, `Bridge`, `Postcards`,
-  `Graveyard`, `WritingDesk`, `SignalFlags`, `Darkroom`, `Keeper`.
+  `Graveyard`, `WritingDesk`, `SignalFlags`, `SmugglersHold`, `FigureheadShop`,
+  `Darkroom`, `Keeper`. The shop's editor lives in
+  `src/components/ShapeEditor.tsx` over `src/lib/shapes.ts` (path anchor model,
+  baked transforms, pencil smoothing) — shapes are the frozen figurehead
+  contract's JSON, never markup.
 - `src/components/` — shared chrome: `Sidebar` (nav + the lantern + the cat),
   `EditOverlay`, `PeekOverlay`, `art.tsx`.
 - `src/styles/global.css` — night-harbor tokens, shared vocabulary classes,
