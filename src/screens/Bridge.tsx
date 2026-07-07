@@ -9,6 +9,13 @@ import { Boat, Fish } from '../components/art';
 
 const STAT_TILTS = ['-.6deg', '.4deg', '-.3deg', '.5deg'];
 
+// Each log family wears its screen's glyph so the ship's log reads at a
+// glance — the figurehead lines arrive from the API and get a face here.
+const LOG_GLYPHS: Record<string, string> = {
+	project: '✉', note: '✎', hobby: '†', sitecopy: '⚑', media: '❏',
+	user: '☸', lantern: '☀', figurehead: '♆',
+};
+
 const TRAFFIC = [
 	{ d: 'mon', v: 142 }, { d: 'tue', v: 180 }, { d: 'wed', v: 121 }, { d: 'thu', v: 238 },
 	{ d: 'fri', v: 164 }, { d: 'sat', v: 98 }, { d: 'sun', v: 187 },
@@ -78,6 +85,9 @@ export default function Bridge() {
 							<div key={entry.id} style={{ display: 'flex', gap: 12, alignItems: 'baseline', borderTop: '1px solid var(--border-hair)', paddingTop: 11 }}>
 								<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', width: 80, flexShrink: 0 }}>
 									{relativeTime(entry.timestamp)}
+								</span>
+								<span title={entry.entityType} style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--periwinkle)', width: 16, textAlign: 'center', flexShrink: 0 }}>
+									{LOG_GLYPHS[entry.entityType] ?? '·'}
 								</span>
 								<span className="row-sub">{entry.message}</span>
 							</div>

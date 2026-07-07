@@ -6,13 +6,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Category, CopyTextField, EggFlags, Hobby, KeeperProfile, LanternStatus,
-	Lighthouse, MediaItem, Note, Project, Revision, SiteCopy, Stamp, Suggestion,
+	ActivityEntry, Category, CopyTextField, EggFlags, FigureheadDesign, FigureheadPose, Hobby,
+	KeeperProfile, LanternStatus, Lighthouse, MediaItem, Note, Project, Revision, Shape,
+	SiteCopy, Stamp, Suggestion,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { randomStamp, stampForWire } from '../lib/stamp';
 
-export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'media' | 'keeper';
+export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'shop' | 'media' | 'keeper';
+
+// What the shop's editor hands back on save — the document fields a PUT may
+// change (plus pose, which only a POST uses; the server preserves it after).
+export interface DesignFields {
+	pose:    FigureheadPose;
+	label:   string;
+	viewBox: string;
+	shapes:  Shape[];
+}
 
 // The three live eggs and the cat's rounds — display copy shared by the hold
 // screen and the toggle toasts. The keys are the frozen cross-repo contract.
@@ -237,6 +247,7 @@ interface HarborValue {
 	copy:        SiteCopy;
 	keeper:      KeeperProfile;
 	activity:    ActivityEntry[];
+	designs:     FigureheadDesign[];
 
 	keeperName: string;
 	dirtyCount: number;
@@ -283,6 +294,11 @@ interface HarborValue {
 	addLight:      () => void;
 	removeLight:   (idx: number) => void;
 
+	saveDesign:    (id: string | null, fields: DesignFields) => Promise<FigureheadDesign | null>;
+	renameDesign:  (d: FigureheadDesign, label: string) => Promise<void>;
+	deleteDesign:  (d: FigureheadDesign) => Promise<void>;
+	publishDesign: (d: FigureheadDesign) => Promise<void>;
+
 	printUsage:    (filename: string) => number;
 	developPrints: (files: Iterable<File>) => Promise<void>;
 	tearOffPrint:  (m: MediaItem) => Promise<void>;
@@ -318,6 +334,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [copy, setCopy] = useState<SiteCopy>(EMPTY_COPY);
 	const [keeper, setKeeper] = useState<KeeperProfile>(EMPTY_KEEPER);
 	const [activity, setActivity] = useState<ActivityEntry[]>([]);
+	const [designs, setDesigns] = useState<FigureheadDesign[]>([]);
 
 	const [toast, setToast] = useState<string | null>(null);
 	const [confirmKey, setConfirmKey] = useState<string | null>(null);
@@ -397,6 +414,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.hobbies.list().then((list) => setHobbies([...list].sort(byOrder))).catch(oops);
 		api.suggestions.list().then((list) => setSuggestions([...list].sort((a, b) => a.order - b.order))).catch(oops);
 		api.media.list().then(setPrints).catch(oops);
+		api.figurehead.list().then(setDesigns).catch(oops);
 		api.getCopy().then((doc) => setCopy(seedHold(doc))).catch(() => setCopy(EMPTY_COPY));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
 		refreshActivity();
@@ -841,6 +859,86 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}, AUTOSAVE_DELAY);
 	}, [oops]);
 
+	// ---- the figurehead shop ----
+
+	const replaceDesign = useCallback((saved: FigureheadDesign) => {
+		setDesigns((cur) => {
+			const at = cur.findIndex((d) => d.id === saved.id);
+			return at === -1 ? [...cur, saved] : cur.map((d) => (d.id === saved.id ? saved : d));
+		});
+	}, []);
+
+	// Explicit save — designs are documents, they never ride the copy autosave.
+	// A null id POSTs a fresh draft; otherwise a full-replace PUT (the server
+	// preserves pose/published/seed). Returns the saved doc so the editor can
+	// adopt the new id, or null when the harbor swallowed an error.
+	const saveDesign = useCallback(async (id: string | null, fields: DesignFields): Promise<FigureheadDesign | null> => {
+		try {
+			let saved: FigureheadDesign;
+			if (id) {
+				const current = designs.find((d) => d.id === id);
+				if (!current) {
+					return null;
+				}
+				saved = await api.figurehead.update(id, { ...current, ...fields });
+				showToast('♆ design saved to the shelf');
+			} else {
+				saved = await api.figurehead.create(fields);
+				showToast('♆ a fresh draft joins the shelf');
+			}
+			replaceDesign(saved);
+			refreshActivity();
+			return saved;
+		} catch (error) {
+			oops(error);
+			return null;
+		}
+	}, [designs, replaceDesign, showToast, oops, refreshActivity]);
+
+	const renameDesign = useCallback(async (d: FigureheadDesign, label: string) => {
+		const trimmed = label.trim();
+		if (!trimmed || trimmed === d.label) {
+			return;
+		}
+		try {
+			replaceDesign(await api.figurehead.update(d.id, { ...d, label: trimmed }));
+			showToast('⚒ relabeled and hung back up');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceDesign, showToast, oops, refreshActivity]);
+
+	const deleteDesign = useCallback(async (d: FigureheadDesign) => {
+		// the API's 409 guards, honored before the wire: seeds are carved for
+		// good, and the published design leads its pose until superseded
+		if (d.seed || d.published) {
+			showToast(d.seed ? '⚠ v1 is carved — it stays' : '⚠ publish another first — the bow needs a cat');
+			return;
+		}
+		try {
+			await api.figurehead.remove(d.id);
+			setDesigns((cur) => cur.filter((x) => x.id !== d.id));
+			showToast('🪓 scrapped. sawdust and all.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const publishDesign = useCallback(async (d: FigureheadDesign) => {
+		try {
+			const saved = await api.figurehead.publish(d.id);
+			// the swap is atomic within the pose — mirror it locally
+			setDesigns((cur) => cur.map((x) =>
+				x.id === saved.id ? saved : x.pose === saved.pose ? { ...x, published: false } : x));
+			showToast(`♆ ${saved.label} leads the ${saved.pose} pose on next hoist`);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
 	// ---- the darkroom ----
 
 	const printUsage = useCallback((filename: string): number =>
@@ -973,7 +1071,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const value: HarborValue = {
 		session, booting, screen, goTo, signIn, goAshore,
-		projects, notes, hobbies, suggestions, prints, copy, keeper, activity,
+		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs,
 		keeperName, dirtyCount,
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchStamp, loadRevision, saveEdit, cancelEdit,
@@ -982,6 +1080,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
+		saveDesign, renameDesign, deleteDesign, publishDesign,
 		printUsage, developPrints, tearOffPrint,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 	};

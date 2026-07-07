@@ -1,0 +1,299 @@
+/*
+ * The figurehead shop's layout: shelf rows on dashed dividers (hold
+ * vocabulary), and the editor's rail / canvas / panels grid. Everything
+ * collapses to one column at phone width — the rail turns horizontal and the
+ * panels stack under the canvas. Tokens come from global.css.
+ */
+
+.shelf-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.shelf-row + .shelf-row {
+	border-top: 1px dashed rgba(150, 160, 220, .22);
+	padding-top: 14px;
+}
+
+.shelf-row__peek {
+	width: 72px;
+	height: 54px;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--well);
+	border: 1px solid var(--border-faint);
+	border-radius: 8px;
+	padding: 4px;
+	box-sizing: border-box;
+}
+
+/* ---- the editor ---- */
+
+.shop-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.shop-topbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.shop-dirty {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	flex-shrink: 0;
+}
+
+.shop-banner {
+	border: 1.5px dashed rgba(210, 110, 90, .7);
+	color: var(--danger);
+	border-radius: 10px;
+	padding: 10px 14px;
+	font-family: var(--font-mono);
+	font-size: 12.5px;
+	line-height: 1.55;
+}
+
+.shop-banner--seed {
+	border-color: var(--gold-dash-mid);
+	color: var(--gold);
+}
+
+.shop-body {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) 262px;
+	gap: 14px;
+	align-items: start;
+}
+
+.shop-rail {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.shop-tool {
+	width: 54px;
+	min-height: 46px;
+	padding: 5px 2px;
+	background: var(--card);
+	border: 1px solid var(--border-input);
+	border-radius: 10px;
+	color: var(--periwinkle);
+	font-size: 15px;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+	transition: color .2s, border-color .2s, background .2s;
+}
+
+.shop-tool__name {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+
+.shop-tool:hover {
+	color: var(--gold);
+	border-color: var(--gold-dash-mid);
+}
+
+.shop-tool[aria-pressed="true"] {
+	border: 1.5px dashed var(--gold-dash-hot);
+	color: var(--gold);
+	background: rgba(240, 217, 168, .08);
+}
+
+.shop-tool--verb {
+	border-style: dashed;
+	color: var(--gold);
+}
+
+.shop-tool:focus-visible,
+.shop-swatch:focus-visible,
+.shop-mini:focus-visible {
+	outline: 2px solid var(--gold);
+	outline-offset: 2px;
+}
+
+.shop-canvas-wrap {
+	position: relative;
+	border-radius: 12px;
+	overflow: hidden;
+	border: 1px solid var(--border-card);
+	background: var(--well);
+	height: clamp(340px, 56vh, 620px);
+}
+
+.shop-canvas {
+	width: 100%;
+	height: 100%;
+	display: block;
+	touch-action: none;
+	cursor: crosshair;
+}
+
+.shop-canvas--select {
+	cursor: default;
+}
+
+.shop-hint {
+	position: absolute;
+	left: 50%;
+	bottom: 12px;
+	transform: translateX(-50%);
+	background: var(--overlay-card);
+	border: 1.5px dashed var(--gold-dash-mid);
+	border-radius: 999px;
+	padding: 7px 16px;
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	color: var(--gold);
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.shop-side {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+.shop-panel {
+	padding: 14px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.shop-swatches {
+	display: flex;
+	gap: 7px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.shop-swatch {
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
+	border: 1px solid var(--border-chip);
+	cursor: pointer;
+	padding: 0;
+	box-sizing: border-box;
+	flex-shrink: 0;
+}
+
+.shop-swatch[aria-pressed="true"] {
+	border: 2px dashed var(--gold-dash-hot);
+}
+
+/* "none": the well with a strike through it */
+.shop-swatch--none {
+	background:
+		linear-gradient(to top right, transparent 44%, var(--danger) 46%, var(--danger) 54%, transparent 56%),
+		var(--well);
+}
+
+.shop-swatch--free {
+	border-style: dashed;
+	background: none;
+}
+
+.shop-layer {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 6px;
+	border-radius: 8px;
+	border: 1px solid transparent;
+	cursor: pointer;
+	transition: border-color .2s, background .2s;
+}
+
+.shop-layer--sel {
+	border-color: var(--gold-dash-mid);
+	background: rgba(240, 217, 168, .06);
+}
+
+.shop-layer__name {
+	flex: 1;
+	min-width: 40px;
+	padding: 6px 8px;
+	font-size: 11.5px;
+}
+
+.shop-layer__role {
+	width: 62px;
+	padding: 6px 4px;
+	font-size: 11px;
+	flex-shrink: 0;
+}
+
+.shop-mini {
+	cursor: pointer;
+	flex-shrink: 0;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	background: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--border-input);
+	border-radius: 7px;
+	color: var(--text-dim);
+	font-family: var(--font-mono);
+	font-size: 10px;
+	transition: color .2s, border-color .2s;
+}
+
+.shop-mini:hover:not(:disabled) {
+	color: var(--gold);
+	border-color: var(--gold-dash-mid);
+}
+
+.shop-mini:disabled {
+	opacity: .35;
+	cursor: default;
+}
+
+.shop-mini[aria-pressed="true"] {
+	color: var(--gold);
+	border: 1.5px dashed var(--gold-dash-hot);
+}
+
+/* ---- phone width: rail goes horizontal, panels drop below the canvas ---- */
+
+@media (max-width: 900px) {
+	.shop-body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.shop-rail {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.shop-tool {
+		width: 48px;
+		min-height: 48px;
+	}
+
+	.shop-canvas-wrap {
+		height: clamp(300px, 46vh, 460px);
+	}
+}
