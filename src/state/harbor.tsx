@@ -783,9 +783,10 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				if (copyEditSeq.current === dispatchedAt) {
 					setCopy(seedHold(doc));
 				}
+				refreshActivity();
 			}).catch(oops);
 		}, AUTOSAVE_DELAY);
-	}, [oops]);
+	}, [oops, refreshActivity]);
 
 	const setCopyField = useCallback((key: CopyTextField, value: string) => {
 		setCopy((cur) => ({ ...cur, [key]: value }));
