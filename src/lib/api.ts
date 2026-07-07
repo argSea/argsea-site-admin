@@ -127,6 +127,55 @@ export interface SiteCopy {
 // have actions of their own.
 export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses'>;
 
+// ---- the figurehead shop (contracts/figurehead.md, frozen 2026-07-07) ----
+
+export type FigureheadPose = 'perched' | 'lying';
+export type ShapeType = 'path' | 'ellipse' | 'rect' | 'line';
+export type ShapeRole = 'tail' | 'eyes' | 'body';
+export type Linecap = 'butt' | 'round' | 'square';
+export type Linejoin = 'miter' | 'round' | 'bevel';
+
+// One structured shape of a design document — never raw markup (XSS decision).
+// An absent optional field means the SVG attribute default; renderers write
+// only the fields present. Stroke-only shapes carry explicit fill: "none".
+export interface Shape {
+	id:           string;
+	type:         ShapeType;
+	d?:           string;             // path
+	cx?:          number;             // ellipse (circles: rx == ry)
+	cy?:          number;
+	rx?:          number;
+	ry?:          number;
+	x?:           number;             // rect
+	y?:           number;
+	w?:           number;
+	h?:           number;
+	x1?:          number;             // line
+	y1?:          number;
+	x2?:          number;
+	y2?:          number;
+	fill?:        string;
+	stroke?:      string;
+	strokeWidth?: number;
+	opacity?:     number;
+	linecap?:     Linecap;
+	linejoin?:    Linejoin;
+	role?:        ShapeRole;          // drives the site's canonical animations
+	origin?:      [number, number];   // animation transform-origin
+}
+
+export interface FigureheadDesign {
+	id:        string;
+	pose:      FigureheadPose;
+	label:     string;
+	viewBox:   string;
+	shapes:    Shape[];   // always [] in responses, never null
+	published: boolean;   // exactly one published per pose
+	seed:      boolean;   // seeds are immutable and undeletable (PUT/DELETE 409)
+	createdAt: string;
+	updatedAt: string;
+}
+
 export interface ActivityEntry {
 	id:         string;
 	timestamp:  string;
@@ -321,6 +370,21 @@ export const suggestions = {
 	list:   ()              => request<Suggestion[]>('GET', '/1/suggestion/'),
 	add:    (value: string) => request<Suggestion>('POST', '/1/suggestion/', { value }),
 	remove: (id: string)    => request<void>('DELETE', `/1/suggestion/${id}`),
+};
+
+// ---- figurehead designs (the shop's shelf and editor) ----
+
+// POST always lands as a draft (published/seed in the body are ignored); PUT
+// edits label/viewBox/shapes only (pose, published, seed, createdAt preserved
+// server-side, 409 on a seed); DELETE 409s for published designs and seeds;
+// publish is atomic within the pose — hoist first, then lower the previous.
+export const figurehead = {
+	published: ()                                  => request<FigureheadDesign[]>('GET', '/1/figurehead/published'),
+	list:      ()                                  => request<FigureheadDesign[]>('GET', '/1/figurehead/designs'),
+	create:    (doc: Partial<FigureheadDesign>)    => request<FigureheadDesign>('POST', '/1/figurehead/designs', doc),
+	update:    (id: string, doc: FigureheadDesign) => request<FigureheadDesign>('PUT', `/1/figurehead/designs/${id}`, doc),
+	remove:    (id: string)                        => request<void>('DELETE', `/1/figurehead/designs/${id}`),
+	publish:   (id: string)                        => request<FigureheadDesign>('POST', `/1/figurehead/designs/${id}/publish`),
 };
 
 // ---- site copy singleton ----
