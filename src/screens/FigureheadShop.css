@@ -69,7 +69,7 @@
 
 .shop-body {
 	display: grid;
-	grid-template-columns: auto minmax(0, 1fr) 262px;
+	grid-template-columns: auto minmax(0, 1fr) 288px;
 	gap: 14px;
 	align-items: start;
 }
@@ -216,7 +216,7 @@
 .shop-layer {
 	display: flex;
 	align-items: center;
-	gap: 6px;
+	gap: 4px;
 	padding: 5px 6px;
 	border-radius: 8px;
 	border: 1px solid transparent;
@@ -246,8 +246,8 @@
 .shop-mini {
 	cursor: pointer;
 	flex-shrink: 0;
-	width: 26px;
-	height: 26px;
+	width: 22px;
+	height: 22px;
 	padding: 0;
 	background: none;
 	display: flex;
@@ -295,5 +295,16 @@
 
 	.shop-canvas-wrap {
 		height: clamp(300px, 46vh, 460px);
+	}
+
+	/* the panels get the full width back — restore proper touch targets */
+	.shop-mini {
+		width: 30px;
+		height: 30px;
+		font-size: 12px;
+	}
+
+	.shop-layer__role {
+		width: 68px;
 	}
 }
