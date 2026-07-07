@@ -65,12 +65,14 @@ export default function App() {
 		}
 	});
 
-	// A jump past the breakpoint leaves no way to close the drawer, so drop it
+	// A jump past the breakpoint leaves no way to close the drawer, so drop it.
+	// Watch the exact query App.css uses — a mirrored min-width would leave a
+	// fractional-width gap between the two where neither side fires.
 	useEffect(() => {
-		const desktop = window.matchMedia(`(min-width: ${DRAWER_MAX + 1}px)`);
-		const onChange = () => { if (desktop.matches) { setNavOpen(false); } };
-		desktop.addEventListener('change', onChange);
-		return () => desktop.removeEventListener('change', onChange);
+		const phone = window.matchMedia(`(max-width: ${DRAWER_MAX}px)`);
+		const onChange = () => { if (!phone.matches) { setNavOpen(false); } };
+		phone.addEventListener('change', onChange);
+		return () => phone.removeEventListener('change', onChange);
 	}, []);
 
 	if (h.booting) {
