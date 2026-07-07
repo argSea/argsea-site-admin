@@ -459,6 +459,9 @@ export class MockApi {
 			}
 		}
 		if ((match = /^\/1\/figurehead\/designs\/([^/]+)$/.exec(path))) {
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
 			const doc = this.figureheads.find((d) => d.id === match![1]);
 			if (!doc) {
 				// 400 for not-found is the house idiom on this route family
@@ -484,6 +487,9 @@ export class MockApi {
 			}
 		}
 		if ((match = /^\/1\/figurehead\/designs\/([^/]+)\/publish$/.exec(path)) && method === 'POST') {
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
 			const doc = this.figureheads.find((d) => d.id === match![1]);
 			if (!doc) {
 				return json(400, { status: 'error', code: 400, message: 'no such design' });

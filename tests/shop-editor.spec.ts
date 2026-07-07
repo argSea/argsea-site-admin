@@ -79,14 +79,37 @@ test('undo and redo walk the shapes history', async ({ page }) => {
 	await dragOnCanvas(page, [.55, .35], [.7, .6]);
 	await expect(page.locator('.shop-layer')).toHaveCount(2);
 
+	await expect(page.getByText('◍ unsaved')).toBeVisible();
+
 	await page.getByTitle('undo').click();
 	await expect(page.locator('.shop-layer')).toHaveCount(1);
 	await page.getByTitle('undo').click();
 	await expect(page.locator('.shop-layer')).toHaveCount(0);
+	// undone all the way back to the opened document — clean again
+	await expect(page.getByText('○ saved')).toBeVisible();
 	await page.getByTitle('redo').click();
 	await expect(page.locator('.shop-layer')).toHaveCount(1);
+	await expect(page.getByText('◍ unsaved')).toBeVisible();
 	await page.getByTitle('redo').click();
 	await expect(page.locator('.shop-layer')).toHaveCount(2);
+});
+
+test('an armed origin picker disarms on Escape', async ({ page }) => {
+	await openShop(page);
+	await page.locator('.shelf-row', { hasText: 'second fitting' }).getByRole('button', { name: 'open', exact: true }).click();
+
+	const moonRow = page.locator('[data-layer="moon"]');
+	await moonRow.getByLabel('role').selectOption('eyes');
+	await moonRow.getByTitle('set the animation origin — then tap the canvas').click();
+	await expect(page.getByText('tap the canvas to plant the origin')).toBeVisible();
+
+	await page.keyboard.press('Escape');
+	await expect(page.getByText('tap the canvas to plant the origin')).toHaveCount(0);
+
+	// a later canvas tap is an ordinary select tap, not a surprise origin
+	const box = (await page.locator('.shop-canvas').boundingBox())!;
+	await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+	await expect(page.locator('.shop-origin')).toHaveCount(0);
 });
 
 test('role tag and canvas-tapped origin round-trip through the PUT payload', async ({ page }) => {

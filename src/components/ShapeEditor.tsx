@@ -126,7 +126,9 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 	const [shapes, setShapesRaw] = useState<Shape[]>(doc.shapes);
 	const [hist, setHist] = useState<Shape[][]>([doc.shapes]);
 	const [histAt, setHistAt] = useState(0);
-	const [dirty, setDirty] = useState(false);
+	// the last-saved snapshot; dirtiness is derived by identity, so undoing
+	// back to the saved array reads clean again
+	const [savedAt, setSavedAt] = useState<{ shapes: Shape[]; label: string }>({ shapes: doc.shapes, label: doc.label });
 	const [tool, setTool] = useState<Tool>('select');
 	const [selId, setSelId] = useState<string | null>(null);
 	const [view, setView] = useState<View>({ scale: 1, tx: 0, ty: 0 });
@@ -139,6 +141,13 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 	});
 	const [onionId, setOnionId] = useState('');
 	const [armOrigin, setArmOrigin] = useState(false);
+
+	// an armed origin without a target is meaningless — disarm with the selection
+	useEffect(() => {
+		if (!selId) {
+			setArmOrigin(false);
+		}
+	}, [selId]);
 
 	const svgRef = useRef<SVGSVGElement>(null);
 	const wrapRef = useRef<HTMLDivElement>(null);
@@ -166,14 +175,12 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 		const trimmed = hist.slice(0, histAt + 1);
 		setHist([...trimmed, next]);
 		setHistAt(trimmed.length);
-		setDirty(true);
 	};
 
 	const undo = () => {
 		if (histAt > 0) {
 			setHistAt(histAt - 1);
 			setShapesLive(hist[histAt - 1]);
-			setDirty(true);
 			setNodeEdit(null);
 		}
 	};
@@ -182,10 +189,11 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 		if (histAt < hist.length - 1) {
 			setHistAt(histAt + 1);
 			setShapesLive(hist[histAt + 1]);
-			setDirty(true);
 			setNodeEdit(null);
 		}
 	};
+
+	const dirty = shapes !== savedAt.shapes || label !== savedAt.label;
 
 	const sel = selId ? shapes.find((s) => s.id === selId) ?? null : null;
 
@@ -320,6 +328,12 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			setShapesLive(hist[histAt]);
 			setNodeEdit((ne) => (ne ? { ...ne, subs: parsePathOf(hist[histAt], ne.shapeId), sel: null } : ne));
 		}
+		if (d?.kind === 'penHandle') {
+			// the pen placed this anchor on the same pointerdown — roll it back
+			setPenDraft((cur) => (cur && cur.anchors.length > 1
+				? { ...cur, anchors: cur.anchors.slice(0, -1) }
+				: null));
+		}
 		setPreview(null);
 		setPencilTrace(null);
 		drag.current = null;
@@ -349,6 +363,11 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			return;
 		}
 		if (pointers.current.size > 2) {
+			// a third finger changes nothing — but a child pointerdown may have
+			// noted a hit before this guard; drop it or the next single tap
+			// consumes a stale note
+			overlayHit.current = null;
+			hitId.current = null;
 			return;
 		}
 
@@ -594,10 +613,17 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 		}
 	};
 
+	// a cancelled pointer (palm rejection, OS gesture steal) must not commit a
+	// half-finished drag — roll it back instead
+	const onPointerCancel = (e: React.PointerEvent<SVGSVGElement>) => {
+		pointers.current.delete(e.pointerId);
+		abortDrag();
+	};
+
 	// ---- keyboard ----
 
-	const keyRef = useRef({ undo, redo, removeNode, finishPen, penDraft, nodeEdit, selId });
-	keyRef.current = { undo, redo, removeNode, finishPen, penDraft, nodeEdit, selId };
+	const keyRef = useRef({ undo, redo, removeNode, finishPen, penDraft, nodeEdit, selId, armOrigin });
+	keyRef.current = { undo, redo, removeNode, finishPen, penDraft, nodeEdit, selId, armOrigin };
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			const k = keyRef.current;
@@ -618,7 +644,9 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			} else if (e.key === 'Enter' && k.penDraft) {
 				k.finishPen(false);
 			} else if (e.key === 'Escape') {
-				if (k.penDraft) {
+				if (k.armOrigin) {
+					setArmOrigin(false);
+				} else if (k.penDraft) {
 					setPenDraft(null);
 				} else if (k.nodeEdit) {
 					setNodeEdit(null);
@@ -669,10 +697,14 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 		commit(next);
 	};
 
-	const renameLayer = (id: string, name: string) => {
+	/** Rename a layer (= the shape's id). False when the name was rejected. */
+	const renameLayer = (id: string, name: string): boolean => {
 		const trimmed = name.trim();
-		if (!trimmed || trimmed === id || live.current.some((s) => s.id === trimmed)) {
-			return;
+		if (trimmed === id) {
+			return true;
+		}
+		if (!trimmed || live.current.some((s) => s.id === trimmed)) {
+			return false;
 		}
 		commit(live.current.map((s) => (s.id === id ? { ...s, id: trimmed } : s)));
 		if (selId === id) {
@@ -681,6 +713,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 		if (nodeEdit?.shapeId === id) {
 			setNodeEdit({ ...nodeEdit, shapeId: trimmed });
 		}
+		return true;
 	};
 
 	const deleteLayer = (id: string) => {
@@ -708,7 +741,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			setDocId(saved.id);
 			setMeta({ published: saved.published, seed: saved.seed });
 			setLabel(saved.label);
-			setDirty(false);
+			setSavedAt({ shapes: live.current, label: saved.label });
 		}
 	};
 
@@ -747,7 +780,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 				</button>
 				<input type="text" className="input input--display" aria-label="design label" value={label}
 					style={{ width: 'auto', flex: '1 1 140px', minWidth: 120, maxWidth: 280, padding: '8px 12px', fontSize: 17 }}
-					onChange={(e) => { setLabel(e.target.value); setDirty(true); }} />
+					onChange={(e) => setLabel(e.target.value)} />
 				<span className="shop-dirty" style={{ color: dirty ? 'var(--gold)' : 'var(--periwinkle-deep)' }}>
 					{dirty ? '◍ unsaved' : '○ saved'}
 				</span>
@@ -780,6 +813,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 							onClick={() => {
 								setTool(t.id);
 								setPenDraft(null);
+								setArmOrigin(false);
 								if (t.id !== 'nodes') {
 									setNodeEdit(null);
 								}
@@ -806,7 +840,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 					<svg ref={svgRef} className={`shop-canvas${tool === 'select' ? ' shop-canvas--select' : ''}`}
 						role="application" aria-label="design canvas"
 						onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-						onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+						onPointerUp={onPointerUp} onPointerCancel={onPointerCancel}>
 						<g transform={`translate(${view.tx},${view.ty}) scale(${view.scale})`}>
 							<rect x={vb.x} y={vb.y} width={vb.w} height={vb.h} fill="rgba(150,160,220,.05)"
 								stroke="var(--border-chip)" strokeWidth={px(1)} strokeDasharray={`${px(5)} ${px(4)}`} />
@@ -1055,7 +1089,12 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 										{s.type === 'path' ? '∿' : s.type === 'ellipse' ? '◯' : s.type === 'rect' ? '▭' : '╱'}
 									</span>
 									<input type="text" className="input shop-layer__name" defaultValue={s.id} aria-label="layer name"
-										onBlur={(e) => renameLayer(s.id, e.target.value)}
+										onBlur={(e) => {
+											// a rejected name must not linger in the box
+											if (!renameLayer(s.id, e.target.value)) {
+												e.target.value = s.id;
+											}
+										}}
 										onKeyDown={(e) => {
 											if (e.key === 'Enter') {
 												e.currentTarget.blur();
