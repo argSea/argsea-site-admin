@@ -2,6 +2,17 @@ import { test, expect } from '@playwright/test';
 import { MockApi } from './mock-api';
 import { signIn, nav, toast } from './office';
 
+// the full frozen catalog seeded on — mirrors mock-api's seed so a renamed or
+// dropped perch id fails here, not in production
+const allSpotsOn = {
+	'hello.header': true, 'hello.hero': true, 'hello.postcard': true, 'hello.manifest': true,
+	'hello.graveyard': true, 'hello.contact': true,
+	'projects.header': true, 'projects.filterTag': true, 'projects.card': true, 'projects.overlay': true,
+	'hobbies.header': true, 'hobbies.entry': true, 'hobbies.nextChip': true,
+	'notes.header': true, 'notes.row': true, 'notes.overlay': true,
+	'p404.wreck': true,
+};
+
 test('stowing an egg autosaves the complete copy singleton', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, "smuggler's hold").click();
@@ -139,8 +150,7 @@ test('a copy doc from before the hold comes up with everything loose', async ({ 
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false });
 	expect(put.body.catPages).toMatchObject({ hello: true, projects: true, hobbies: true, notes: true, p404: true });
-	expect(put.body.catSpots['hello.header']).toBe(true);
-	expect(put.body.catSpots['p404.wreck']).toBe(true);
+	expect(put.body.catSpots).toEqual(allSpotsOn);
 	expect(put.body.bottleProverbs).toEqual([]);
 	expect(put.body.lighthouses).toEqual([]);
 });
@@ -161,7 +171,7 @@ test('null hold fields from a legacy API are seeded — on load and on the PUT e
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false });
 	expect(put.body.catPages).toMatchObject({ hello: true, p404: true });
-	expect(put.body.catSpots['p404.wreck']).toBe(true);
+	expect(put.body.catSpots).toEqual(allSpotsOn);
 	expect(put.body.bottleProverbs).toEqual([]);
 	expect(put.body.lighthouses).toEqual([]);
 
