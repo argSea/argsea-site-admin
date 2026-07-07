@@ -19,27 +19,61 @@ test('stowing an egg autosaves the complete copy singleton', async ({ page }) =>
 	expect(put.body.eggs).toEqual({ bottle: false, cat: true, lights: true });
 	// the rest of the doc rode along — PUT is full-replace
 	expect(put.body.quipHello).toBe('The boats run on schedule. Ish.');
-	expect(put.body.catLocs).toEqual({ postcards: true, notes: true, p404: true });
+	expect(put.body.catPages).toMatchObject({ hello: true, p404: true });
+	expect(put.body.catSpots).toMatchObject({ 'hello.hero': true, 'p404.wreck': true });
 	expect(put.body.bottleProverbs).toHaveLength(2);
 	expect(put.body.lighthouses).toHaveLength(2);
 });
 
-test("the cat's rounds and the light list edit in place", async ({ page }) => {
+test('a page master dims and disables its nested spots', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, "smuggler's hold").click();
 
-	// keep the cat off the wreck (rows: postcards, notes, the wreck)
+	// counter reads the whole catalog loose on first load
 	const cat = page.locator('.card', { hasText: 'The harbor cat' });
-	await cat.getByTitle('keep it off here').nth(2).click();
-	await expect(toast(page)).toHaveText('🐱 kept off the wreck.');
+	await expect(cat.getByText('17 spots loose across 5 pages')).toBeVisible();
+
+	const projects = cat.locator('.cat-page', { hasText: 'Projects' });
+	const master = projects.locator('.egg-toggle:not(.egg-toggle--small)');
+	const spotSwitch = projects.locator('.egg-toggle--small').first();
+	await expect(spotSwitch).toBeEnabled();
+
+	await master.click();
+	await expect(toast(page)).toHaveText('🐱 kept off Projects entirely.');
+	// the page off disables its spots (they no longer count as loose)
+	await expect(spotSwitch).toBeDisabled();
+	await expect(cat.getByText('13 spots loose across 4 pages')).toBeVisible();
+
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
-	const [catPut] = mock.find('PUT', /^\/1\/copy\/?$/);
-	expect(catPut.body.catLocs).toEqual({ postcards: true, notes: true, p404: false });
-	expect(catPut.body.eggs).toEqual({ bottle: true, cat: true, lights: true });
+	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
+	expect(put.body.catPages).toMatchObject({ projects: false, hello: true });
+	// spots stay untouched — the master gates them, it doesn't rewrite them
+	expect(put.body.catSpots['projects.card']).toBe(true);
+});
+
+test('a spot toggle persists an explicit false through the PUT', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, "smuggler's hold").click();
+
+	const cat = page.locator('.card', { hasText: 'The harbor cat' });
+	const wreck = cat.locator('.cat-page', { hasText: '404' });
+	await wreck.locator('.egg-toggle--small').first().click();
+	await expect(toast(page)).toHaveText('🐱 kept off the wreck placard.');
+
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
+	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
+	expect(put.body.catSpots['p404.wreck']).toBe(false);
+	expect(put.body.catPages.p404).toBe(true);
+	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: true });
+});
+
+test('the light list edits in place', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, "smuggler's hold").click();
 
 	// rename a light in place; its position stays put
 	await page.getByPlaceholder('the light').first().fill('La Jument');
-	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(2);
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [lightPut] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
 	expect(lightPut.body.lighthouses[0]).toEqual({ name: 'La Jument', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop — the last light the emigrants saw.' });
 	expect(lightPut.body.lighthouses).toHaveLength(2);
@@ -48,7 +82,7 @@ test("the cat's rounds and the light list edit in place", async ({ page }) => {
 	const lights = page.locator('.card', { hasText: 'The light list' });
 	await lights.getByRole('button', { name: '+ chart another light' }).click();
 	await expect(lights.getByText('3 on the chart · one per wreck')).toBeVisible();
-	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(3);
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(2);
 	const [addPut] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
 	expect(addPut.body.lighthouses[2]).toEqual({ name: '', pos: '', line: '' });
 });
@@ -86,7 +120,8 @@ test('the proverb editor casts and tosses', async ({ page }) => {
 test('a copy doc from before the hold comes up with everything loose', async ({ page }) => {
 	const mock = new MockApi();
 	delete mock.copy.eggs;
-	delete mock.copy.catLocs;
+	delete mock.copy.catPages;
+	delete mock.copy.catSpots;
 	delete mock.copy.bottleProverbs;
 	delete mock.copy.lighthouses;
 	await signIn(page, mock);
@@ -94,6 +129,8 @@ test('a copy doc from before the hold comes up with everything loose', async ({ 
 
 	// absent = on: the missing fields are seeded enabled
 	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
+	const cat = page.locator('.card', { hasText: 'The harbor cat' });
+	await expect(cat.getByText('17 spots loose across 5 pages')).toBeVisible();
 
 	// and the first autosave persists the seeds explicitly
 	const lights = page.locator('.card', { hasText: 'The light list' });
@@ -101,7 +138,9 @@ test('a copy doc from before the hold comes up with everything loose', async ({ 
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false });
-	expect(put.body.catLocs).toEqual({ postcards: true, notes: true, p404: true });
+	expect(put.body.catPages).toMatchObject({ hello: true, projects: true, hobbies: true, notes: true, p404: true });
+	expect(put.body.catSpots['hello.header']).toBe(true);
+	expect(put.body.catSpots['p404.wreck']).toBe(true);
 	expect(put.body.bottleProverbs).toEqual([]);
 	expect(put.body.lighthouses).toEqual([]);
 });
@@ -121,7 +160,8 @@ test('null hold fields from a legacy API are seeded — on load and on the PUT e
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false });
-	expect(put.body.catLocs).toEqual({ postcards: true, notes: true, p404: true });
+	expect(put.body.catPages).toMatchObject({ hello: true, p404: true });
+	expect(put.body.catSpots['p404.wreck']).toBe(true);
 	expect(put.body.bottleProverbs).toEqual([]);
 	expect(put.body.lighthouses).toEqual([]);
 
@@ -137,7 +177,7 @@ test('null hold fields from a legacy API are seeded — on load and on the PUT e
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(2);
 	const [echoPut] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
 	expect(echoPut.body.eggs).toEqual({ bottle: false, cat: true, lights: true });
-	expect(echoPut.body.catLocs).toEqual({ postcards: true, notes: true, p404: true });
+	expect(echoPut.body.catPages).toMatchObject({ hello: true, p404: true });
 });
 
 test('keystrokes typed while a slow PUT is in flight survive the echo', async ({ page }) => {

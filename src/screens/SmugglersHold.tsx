@@ -2,11 +2,11 @@
 // loose or stowed, tune the cat's rounds, edit the proverbs and the light
 // list. Saved as you type, the same debounced PUT as the signal flags.
 import type { ReactNode } from 'react';
-import { useHarbor, EGG_DEFS, CAT_LOCS } from '../state/harbor';
+import { useHarbor, EGG_DEFS, CAT_CATALOG } from '../state/harbor';
 
-function Toggle({ on, title, small, onFlip }: { on: boolean; title: string; small?: boolean; onFlip: () => void }) {
+function Toggle({ on, title, small, disabled, onFlip }: { on: boolean; title: string; small?: boolean; disabled?: boolean; onFlip: () => void }) {
 	return (
-		<button type="button" aria-pressed={on}
+		<button type="button" aria-pressed={on} disabled={disabled}
 			className={`egg-toggle${on ? ' egg-toggle--on' : ''}${small ? ' egg-toggle--small' : ''}`}
 			title={title} onClick={onFlip}>
 			<span className="egg-toggle__knob" />
@@ -57,9 +57,14 @@ const rowNum = (idx: number): string => String(idx + 1).padStart(2, '0');
 
 export default function SmugglersHold() {
 	const h = useHarbor();
-	const { eggs, catLocs, bottleProverbs, lighthouses } = h.copy;
+	const { eggs, catPages, catSpots, bottleProverbs, lighthouses } = h.copy;
 	const [bottleDef, catDef, lightsDef] = EGG_DEFS;
 	const looseCount = EGG_DEFS.filter((egg) => eggs[egg.key]).length;
+
+	// a spot is loose only when its page is too; count the pages carrying at
+	// least one loose spot for the "N spots loose across M pages" line
+	const looseSpots = CAT_CATALOG.reduce((n, pg) => n + (catPages[pg.id] ? pg.spots.filter((sp) => catSpots[sp.id]).length : 0), 0);
+	const loosePages = CAT_CATALOG.filter((pg) => catPages[pg.id] && pg.spots.some((sp) => catSpots[sp.id])).length;
 
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -90,18 +95,41 @@ export default function SmugglersHold() {
 				</EggCard>
 
 				<EggCard egg={catDef}>
-					<CardMeta kicker="where it roams" aside="lives at the lighthouse · out on its rounds" />
-					{CAT_LOCS.map((loc) => (
-						<div key={loc.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
-							<div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-								<span style={{ fontSize: 15, color: 'var(--text-base)' }}>{loc.label}</span>
-								<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{loc.hint}</span>
+					<CardMeta kicker="where it roams" aside={`${looseSpots} spots loose across ${loosePages} pages`} />
+					{CAT_CATALOG.map((pg, pi) => {
+						const pageOn = catPages[pg.id];
+						return (
+							<div key={pg.id} className="cat-page" style={{
+								display: 'flex', flexDirection: 'column', gap: 11,
+								...(pi > 0 ? { borderTop: '1px dashed rgba(150,160,220,.22)', paddingTop: 15 } : null),
+							}}>
+								<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+									<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+										<span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text-strong)' }}>{pg.label}</span>
+										<span className={`egg-status${pageOn ? ' egg-status--loose' : ''}`}>{pageOn ? 'loose' : 'stowed'}</span>
+									</div>
+									<Toggle on={pageOn} title={pageOn ? 'keep the cat off this page' : 'let the cat onto this page'} onFlip={() => h.toggleCatPage(pg.id)} />
+								</div>
+								<div style={{
+									display: 'flex', flexDirection: 'column', gap: 9, paddingLeft: 15,
+									borderLeft: '1px dashed rgba(150,160,220,.22)',
+									opacity: pageOn ? 1 : .4, transition: 'opacity .25s',
+								}}>
+									{pg.spots.map((sp) => (
+										<div key={sp.id} className="cat-spot" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+											<div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+												<span style={{ fontSize: 14, color: 'var(--text-base)' }}>{sp.label}</span>
+												<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{sp.hint}</span>
+											</div>
+											<Toggle small disabled={!pageOn} on={catSpots[sp.id]}
+												title={catSpots[sp.id] ? 'keep it off here' : 'let it perch here'}
+												onFlip={() => h.toggleCatSpot(sp.id)} />
+										</div>
+									))}
+								</div>
 							</div>
-							<Toggle small on={catLocs[loc.key]}
-								title={catLocs[loc.key] ? 'keep it off here' : 'let it roam here'}
-								onFlip={() => h.toggleCatLoc(loc.key)} />
-						</div>
-					))}
+						);
+					})}
 				</EggCard>
 
 				<EggCard egg={lightsDef}>

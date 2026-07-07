@@ -132,7 +132,15 @@ export class MockApi {
 		heroKicker: 'HIYA', heroHeadline: 'I help keep the lights on behind the news.',
 		heroBody: 'Backend engineering at the Post-Gazette.', dict: '1. the Argo, but for one.',
 		eggs: { bottle: true, cat: true, lights: true },
-		catLocs: { postcards: true, notes: true, p404: true },
+		catPages: { hello: true, projects: true, hobbies: true, notes: true, p404: true },
+		catSpots: {
+			'hello.header': true, 'hello.hero': true, 'hello.postcard': true, 'hello.manifest': true,
+			'hello.graveyard': true, 'hello.contact': true,
+			'projects.header': true, 'projects.filterTag': true, 'projects.card': true, 'projects.overlay': true,
+			'hobbies.header': true, 'hobbies.entry': true, 'hobbies.nextChip': true,
+			'notes.header': true, 'notes.row': true, 'notes.overlay': true,
+			'p404.wreck': true,
+		},
 		bottleProverbs: [
 			'A migration nobody notices is a migration done right.',
 			'Ship the boring version. Boring floats.',
@@ -350,7 +358,7 @@ export class MockApi {
 		// ---- site copy ----
 		if (/^\/1\/copy\/?$/.test(path)) {
 			const serve = (doc: Doc) => this.copyPredatesHold
-				? { ...doc, eggs: null, catLocs: null, bottleProverbs: null, lighthouses: null }
+				? { ...doc, eggs: null, catPages: null, catSpots: null, bottleProverbs: null, lighthouses: null }
 				: doc;
 			if (method === 'GET') {
 				return json(200, serve(this.copy));

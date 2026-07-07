@@ -98,12 +98,6 @@ export interface EggFlags {
 	lights: boolean;
 }
 
-export interface CatLocs {
-	postcards: boolean;
-	notes:     boolean;
-	p404:      boolean;
-}
-
 export interface Lighthouse {
 	name: string;
 	pos:  string;
@@ -122,7 +116,8 @@ export interface SiteCopy {
 	heroBody:       string;
 	dict:           string;
 	eggs:           EggFlags;
-	catLocs:        CatLocs;
+	catPages:       Record<string, boolean>;  // per-page master, keyed by page id
+	catSpots:       Record<string, boolean>;  // per-perch, keyed by spot id
 	bottleProverbs: string[];
 	lighthouses:    Lighthouse[];
 	updatedAt:      string;
@@ -130,7 +125,7 @@ export interface SiteCopy {
 
 // The copy keys the flag locker edits as plain text — the hold's egg fields
 // have actions of their own.
-export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catLocs' | 'bottleProverbs' | 'lighthouses'>;
+export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses'>;
 
 export interface ActivityEntry {
 	id:         string;
