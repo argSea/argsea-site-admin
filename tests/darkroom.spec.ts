@@ -28,28 +28,26 @@ test('the darkroom only develops images', async ({ page }) => {
 	expect(mock.find('POST', /^\/1\/media\/$/)).toHaveLength(0);
 });
 
-test('tearing off a used print warns, detaches via PUTs with image: null, then deletes', async ({ page }) => {
+test('tearing off a used print warns, detaches via a PUT with image: null, then deletes', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the darkroom').click();
 
-	// homelab-rack.jpg is glued to project p3 and note n2
+	// homelab-rack.jpg is glued to project p3 — notes carry a doodle now, not a print
 	const tile = page.locator('.tilt', { hasText: 'homelab-rack.jpg' });
-	await expect(tile.getByText('on 2 cards')).toBeVisible();
+	await expect(tile.getByText('on 1 card')).toBeVisible();
 
 	await tile.locator('.print-del').click();
-	await expect(toast(page)).toHaveText('⚠ still glued to 2 cards — click again to tear it off');
+	await expect(toast(page)).toHaveText('⚠ still glued to 1 card — click again to tear it off');
 	expect(mock.find('DELETE', /^\/1\/media\//)).toHaveLength(0);
 
 	await tile.locator('.print-del').click();
 	await expect(toast(page)).toHaveText('print torn off its cards and left in the sun');
 
-	// the detach PUTs carry the COMPLETE documents (full-replace!) with image null
+	// the detach PUT carries the COMPLETE document (full-replace!) with image null
 	const projectPut = mock.find('PUT', /^\/1\/project\/p3$/)[0];
 	expect(projectPut.body.image).toBeNull();
 	expect(projectPut.body.title).toBe('The home lab');
-	const notePut = mock.find('PUT', /^\/1\/note\/n2$/)[0];
-	expect(notePut.body.image).toBeNull();
-	expect(notePut.body.title).toBe('The home lab ate my weekend');
+	expect(mock.find('PUT', /^\/1\/note\/n2$/)).toHaveLength(0);
 	expect(mock.find('DELETE', /^\/1\/media\/m2$/)).toHaveLength(1);
 	await expect(tile).toHaveCount(0);
 });

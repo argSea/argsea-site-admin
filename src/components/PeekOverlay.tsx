@@ -4,6 +4,8 @@
 import { useHarbor } from '../state/harbor';
 import { htmlToParagraphs } from '../lib/paragraphs';
 import { printBackground } from '../lib/prints';
+import { ShapeNode } from './ShapeEditor';
+import type { Doodle } from '../lib/api';
 
 function PhotoPrint({ image, wide }: { image: string; wide?: boolean }) {
 	const h = useHarbor();
@@ -15,6 +17,25 @@ function PhotoPrint({ image, wide }: { image: string; wide?: boolean }) {
 			...(wide ? { alignSelf: 'flex-start', width: 'min(260px, 70%)' } : {}),
 		}}>
 			<div style={{ width: '100%', height: 140, borderRadius: 1, background: printBackground(h.prints, image) }} />
+		</div>
+	);
+}
+
+function DoodlePrint({ doodle, caption }: { doodle: Doodle; caption: string }) {
+	return (
+		<div style={{
+			background: 'var(--paper)', padding: '8px 8px 24px', borderRadius: 2,
+			boxShadow: '0 6px 16px rgba(0,0,0,.35)', transform: 'rotate(-1.5deg)',
+			alignSelf: 'flex-start', width: 'min(220px, 70%)',
+		}}>
+			<svg viewBox={doodle.viewBox} width="100%" height="140" style={{ overflow: 'visible' }}>
+				{doodle.shapes.map((s) => <ShapeNode key={s.id} s={s} />)}
+			</svg>
+			{caption && (
+				<div style={{ fontFamily: 'var(--font-body)', fontStyle: 'italic', fontSize: 12, color: 'var(--paper-name)', textAlign: 'center', marginTop: 6 }}>
+					{caption}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -32,6 +53,7 @@ export default function PeekOverlay() {
 	if (!item) {
 		return null;
 	}
+	const doodle = peek.type === 'note' && 'doodleId' in item ? h.doodles.find((d) => d.id === item.doodleId) : undefined;
 
 	const statusLine = item.status === 'published' ? 'published — this is live' : 'draft — only you can see this';
 	const paragraphs = htmlToParagraphs(item.body);
@@ -84,11 +106,14 @@ export default function PeekOverlay() {
 				{peek.type === 'note' && 'teaser' in item && (
 					<div style={{ padding: 'clamp(22px, 4vw, 32px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--periwinkle-deep)' }}>{item.date}</span>
+						{item.conditions && (
+							<span style={{ fontSize: 14, color: 'var(--text-quip)', fontStyle: 'italic' }}>{item.conditions}</span>
+						)}
 						<div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(24px, 4vw, 30px)', color: 'var(--text-strong)', lineHeight: 1.2 }}>
 							{item.title}
 						</div>
 						<div style={{ fontSize: 16, color: 'var(--text-quip)', fontStyle: 'italic' }}>{item.teaser}</div>
-						{item.image && <PhotoPrint image={item.image} wide />}
+						{doodle && <DoodlePrint doodle={doodle} caption={item.doodleCaption} />}
 						{paragraphs.length > 0 && (
 							<div style={{ fontSize: 17, lineHeight: 1.7, color: 'var(--text-body-strong)', whiteSpace: 'pre-line' }}>
 								{paragraphs.join('\n\n')}

@@ -95,13 +95,13 @@ export class MockApi {
 		{
 			id: 'n1', title: 'The queue is the product', teaser: 'Notes on message queues.',
 			body: '<p>A decade of publishing systems.</p>\n<p>The queue was the product all along.</p>',
-			date: 'feb 2026', image: null, status: 'published',
+			date: 'feb 2026', conditions: 'clear skies', doodleId: 'd1', doodleCaption: 'a little wave', status: 'published',
 			publishedAt: '2026-06-01T12:00:00Z', createdAt: '2026-05-01T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
 		{
 			id: 'n2', title: 'The home lab ate my weekend', teaser: 'A confession, with uptime charts.',
 			body: '<h2>an heading the sanitizer let through</h2><p>kept <em>text</em> here</p>',
-			date: '—', image: 'homelab-rack.jpg', status: 'draft',
+			date: '—', conditions: '', doodleId: null, doodleCaption: '', status: 'draft',
 			publishedAt: '', createdAt: '2026-05-02T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
 	];
