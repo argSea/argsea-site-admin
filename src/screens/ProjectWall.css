@@ -18,8 +18,8 @@
 
 .wall-card {
 	position: absolute;
-	width: 15%;
-	min-width: 120px;
+	width: 30%;
+	min-width: 220px;
 	box-sizing: border-box;
 	transform: rotate(var(--tilt, 0deg));
 	transition: transform .2s, box-shadow .2s;
@@ -46,7 +46,7 @@
 	width: 9px;
 	height: 9px;
 	border-radius: 50%;
-	background: radial-gradient(circle at 35% 30%, #ecd9a4, #8a6d3b 70%);
+	background: radial-gradient(circle at 35% 30%, #b95069, #843a4c 70%);
 	box-shadow: 0 1px 3px rgba(0, 0, 0, .5);
 	pointer-events: none;
 }
@@ -98,4 +98,42 @@
 
 .wall-card__rotate--active {
 	cursor: grabbing;
+}
+
+/*
+ * The "out with the mail" ghost placard: a dashed-border notice, not a
+ * postcard, pinned and draggable like one. It shares the card's tack,
+ * pointer handlers, and tilt vocabulary, so most of it rides .wall-card__*.
+ */
+.wall-ghost {
+	position: absolute;
+	width: 26%;
+	min-width: 190px;
+	box-sizing: border-box;
+	transform: rotate(var(--tilt, 0deg));
+	transition: transform .2s, box-shadow .2s;
+	background: var(--paper-warm-top);
+	border: 1.5px dashed #8a6d3b;
+	border-radius: 3px;
+	padding: 14px 10px;
+	box-shadow: 0 8px 18px rgba(0, 0, 0, .4);
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
+	text-align: center;
+}
+
+.wall-ghost--active {
+	cursor: grabbing;
+	box-shadow: 0 18px 34px rgba(0, 0, 0, .55);
+	transition: none;
+}
+
+.wall-ghost__label {
+	display: block;
+	font-family: var(--font-body);
+	font-style: italic;
+	font-size: 12.5px;
+	line-height: 1.35;
+	color: var(--paper-name);
 }

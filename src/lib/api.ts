@@ -123,12 +123,15 @@ export interface SiteCopy {
 	catSpots:       Record<string, boolean>;  // per-perch, keyed by spot id
 	bottleProverbs: string[];
 	lighthouses:    Lighthouse[];
+	// the wall's "out with the mail" placard, same coordinate model as project
+	// wallPos; null means the site falls back to its own default placement
+	wallGhost:      { x: number; y: number; rotation: number; enabled: boolean } | null;
 	updatedAt:      string;
 }
 
 // The copy keys the flag locker edits as plain text; the hold's egg fields
-// have actions of their own.
-export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses'>;
+// and the wall ghost have actions of their own.
+export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses' | 'wallGhost'>;
 
 // ---- the figurehead shop (contracts/figurehead.md, frozen 2026-07-07) ----
 

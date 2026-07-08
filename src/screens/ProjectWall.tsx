@@ -15,12 +15,35 @@ const CANVAS_W = 1150;
 const CANVAS_H = 840;
 const ROT_LIMIT = 30;
 
+// cards are ~30% of the canvas width now, matching the public wall's
+// enlarged comp; three to a row leaves room without overlap
+const COLS = 3;
+const COL_STEP = 370;
+const ROW_STEP = 300;
+
+// the ghost placard isn't a project, so it gets its own key into the shared
+// position map rather than a project id
+const GHOST_ID = '__ghost__';
+
+// z-index baseline: order 1 sits on top of everything, matching the public
+// site. Floating (grabbed or last-selected) always wins, so its zIndex has
+// to clear the highest possible order-based baseline.
+const Z_BASE = 500;
+const Z_FLOATING = 1000;
+const Z_GHOST_REST = 1;
+
 function defaultPos(i: number): CardPos {
 	return {
-		x: ((30 + (i % 4) * 218) / CANVAS_W) * 100,
-		y: ((34 + Math.floor(i / 4) * 190) / CANVAS_H) * 100,
+		x: ((30 + (i % COLS) * COL_STEP) / CANVAS_W) * 100,
+		y: ((34 + Math.floor(i / COLS) * ROW_STEP) / CANVAS_H) * 100,
 		rotation: 0,
 	};
+}
+
+// mirrors the public wall's own null-ghost fallback so the admin preview
+// lands the placard where the site renders it before the first "pin it"
+function defaultGhostPos(): CardPos {
+	return { x: 38, y: 68, rotation: -1.8 };
 }
 
 function initialLayout(published: Project[]): Record<string, CardPos> {
@@ -39,8 +62,13 @@ export default function ProjectWall() {
 	const publishedKey = published.map((p) => p.id).join('|');
 
 	const [layout, setLayout] = useState<Record<string, CardPos>>(() => initialLayout(published));
+	const [ghostEnabled, setGhostEnabled] = useState(true);
 	const [grabbedId, setGrabbedId] = useState<string | null>(null);
 	const [rotatingId, setRotatingId] = useState<string | null>(null);
+	// transient, local-only: the last card (or the ghost) the keeper touched
+	// floats to the top for the rest of the session so arranging is easier.
+	// Never persisted, never sent to the API.
+	const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 
 	const canvasRef = useRef<HTMLDivElement>(null);
@@ -64,6 +92,18 @@ export default function ProjectWall() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [publishedKey]);
 
+	// the ghost seeds once from SiteCopy, the same moment the doc first lands;
+	// after that it's purely local until the next "pin it"
+	useEffect(() => {
+		if (!h.copy.id || layout[GHOST_ID]) {
+			return;
+		}
+		const g = h.copy.wallGhost;
+		setLayout((cur) => ({ ...cur, [GHOST_ID]: g ? { x: g.x, y: g.y, rotation: g.rotation } : defaultGhostPos() }));
+		setGhostEnabled(g ? g.enabled : true);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [h.copy.id]);
+
 	const onCardPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>, id: string) => {
 		if (!canvasRef.current) {
 			return;
@@ -73,6 +113,7 @@ export default function ProjectWall() {
 		const canvasRect = canvasRef.current.getBoundingClientRect();
 		dragGrab.current = { id, offX: e.clientX - cardRect.left, offY: e.clientY - cardRect.top, canvasRect };
 		setGrabbedId(id);
+		setLastSelectedId(id);
 	}, []);
 
 	const onCardPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>, id: string) => {
@@ -109,6 +150,7 @@ export default function ProjectWall() {
 		const r0 = layout[id]?.rotation ?? 0;
 		rotateGrab.current = { id, cx, cy, a0, r0 };
 		setRotatingId(id);
+		setLastSelectedId(id);
 	}, [layout]);
 
 	const onRotatePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>, id: string) => {
@@ -134,7 +176,7 @@ export default function ProjectWall() {
 	const tidyRows = useCallback(() => {
 		const next: Record<string, CardPos> = {};
 		published.forEach((p, i) => { next[p.id] = defaultPos(i); });
-		setLayout(next);
+		setLayout((cur) => ({ ...next, ...(cur[GHOST_ID] ? { [GHOST_ID]: cur[GHOST_ID] } : {}) }));
 		h.showToast('↺ the wall was tidied into rows');
 	}, [published, h]);
 
@@ -143,19 +185,41 @@ export default function ProjectWall() {
 			const pos = layout[p.id] ?? defaultPos(i);
 			return { id: p.id, x: pos.x, y: pos.y, rotation: pos.rotation };
 		});
+		const ghostPos = layout[GHOST_ID] ?? defaultGhostPos();
 		setSaving(true);
 		try {
+			h.setWallGhost({ x: ghostPos.x, y: ghostPos.y, rotation: ghostPos.rotation, enabled: ghostEnabled });
 			await h.arrangeProjects(placements);
 		} finally {
 			setSaving(false);
 		}
-	}, [published, layout, h]);
+	}, [published, layout, ghostEnabled, h]);
+
+	const zIndexFor = (id: string, order: number | null) => {
+		if (grabbedId === id || rotatingId === id || lastSelectedId === id) {
+			return Z_FLOATING;
+		}
+		return order === null ? Z_GHOST_REST : Z_BASE - order;
+	};
+
+	const ghostPos = layout[GHOST_ID] ?? defaultGhostPos();
+	const ghostGrabbed = grabbedId === GHOST_ID;
+	const ghostRotating = rotatingId === GHOST_ID;
 
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
 				<span className="footnote">// drag to move · grab the ⤾ corner to tilt · published cards only.</span>
 				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+					<label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+						<button type="button" aria-pressed={ghostEnabled}
+							className={`egg-toggle egg-toggle--small${ghostEnabled ? ' egg-toggle--on' : ''}`}
+							title={ghostEnabled ? 'hide the "out with the mail" placard' : 'show the "out with the mail" placard'}
+							onClick={() => setGhostEnabled((cur) => !cur)}>
+							<span className="egg-toggle__knob" />
+						</button>
+						<span className="footnote">out with the mail</span>
+					</label>
 					<span className="chip-dashed" onClick={tidyRows}>↺ tidy into rows</span>
 					<button className="btn btn--gold" disabled={saving} onClick={() => void pinIt()}>
 						{saving ? 'pinning…' : 'pin it'}
@@ -175,7 +239,7 @@ export default function ProjectWall() {
 							style={{
 								left: `${pos.x}%`, top: `${pos.y}%`,
 								'--tilt': `${pos.rotation}deg`,
-								zIndex: grabbed || rotating ? 30 : 5 + (index % 4),
+								zIndex: zIndexFor(project.id, project.order),
 							} as React.CSSProperties}
 							onPointerDown={(e) => onCardPointerDown(e, project.id)}
 							onPointerMove={(e) => onCardPointerMove(e, project.id)}
@@ -200,6 +264,32 @@ export default function ProjectWall() {
 						</div>
 					);
 				})}
+
+				{ghostEnabled && (
+					<div
+						className={`wall-ghost${ghostGrabbed || ghostRotating ? ' wall-ghost--active' : ''}`}
+						style={{
+							left: `${ghostPos.x}%`, top: `${ghostPos.y}%`,
+							'--tilt': `${ghostPos.rotation}deg`,
+							zIndex: zIndexFor(GHOST_ID, null),
+						} as React.CSSProperties}
+						onPointerDown={(e) => onCardPointerDown(e, GHOST_ID)}
+						onPointerMove={(e) => onCardPointerMove(e, GHOST_ID)}
+						onPointerUp={(e) => onCardPointerUp(e, GHOST_ID)}
+					>
+						<div className="wall-card__tack" />
+						<span className="wall-ghost__label">out with the mail, back soon</span>
+						<div
+							className={`wall-card__rotate${ghostRotating ? ' wall-card__rotate--active' : ''}`}
+							title="drag to tilt"
+							onPointerDown={(e) => onRotatePointerDown(e, GHOST_ID)}
+							onPointerMove={(e) => onRotatePointerMove(e, GHOST_ID)}
+							onPointerUp={(e) => onRotatePointerUp(e, GHOST_ID)}
+						>
+							⤾
+						</div>
+					</div>
+				)}
 			</div>
 
 			<span className="footnote">// the wall ships to the public site on the next lantern hoist.</span>

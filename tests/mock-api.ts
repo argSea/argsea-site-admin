@@ -149,6 +149,7 @@ export class MockApi {
 			{ name: 'Fastnet Rock', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop, the last light the emigrants saw.' },
 			{ name: 'Bell Rock', pos: '56°26′N 2°23′W', line: 'built on a rock that vanishes twice a day.' },
 		],
+		wallGhost: null,
 		updatedAt: '2026-06-01T12:00:00Z',
 	};
 

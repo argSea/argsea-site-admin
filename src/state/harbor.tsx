@@ -166,7 +166,7 @@ const EMPTY_COPY: SiteCopy = {
 	heroKicker: '', heroHeadline: '', heroBody: '', dict: '',
 	eggs: { bottle: true, cat: true, lights: true },
 	catPages: CAT_PAGES_ON, catSpots: CAT_SPOTS_ON,
-	bottleProverbs: [], lighthouses: [], updatedAt: '',
+	bottleProverbs: [], lighthouses: [], wallGhost: null, updatedAt: '',
 };
 
 // Absent = on (agreed ruling): a copy doc from before the hold lacks the egg
@@ -297,6 +297,7 @@ interface HarborValue {
 
 	setCopyField:   (key: CopyTextField, value: string) => void;
 	setKeeperField: (key: keyof KeeperProfile, value: string) => void;
+	setWallGhost:   (ghost: SiteCopy['wallGhost']) => void;
 
 	toggleEgg:     (key: keyof EggFlags) => void;
 	toggleCatPage: (pageId: string) => void;
@@ -832,6 +833,14 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		queueCopySave();
 	}, [queueCopySave]);
 
+	// the ghost placard rides the same copy autosave; the wall tab drives this
+	// straight from "pin it" rather than typing, but it's the same debounced
+	// full-replace PUT as every other copy field
+	const setWallGhost = useCallback((ghost: SiteCopy['wallGhost']) => {
+		setCopy((cur) => ({ ...cur, wallGhost: ghost }));
+		queueCopySave();
+	}, [queueCopySave]);
+
 	const toggleEgg = useCallback((key: keyof EggFlags) => {
 		const on = !copyRef.current.eggs[key];
 		setCopy((cur) => ({ ...cur, eggs: { ...cur.eggs, [key]: on } }));
@@ -1177,7 +1186,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		peek, openPeek, closePeek,
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, arrangeProjects, scuttleProject, burnNote,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
-		setCopyField, setKeeperField,
+		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		saveDesign, renameDesign, deleteDesign, publishDesign,
 		saveDoodle, renameDoodle, deleteDoodle,
