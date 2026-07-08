@@ -135,3 +135,30 @@ test('hiding the ghost placard persists as disabled', async ({ page }) => {
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
 	expect(put.body.wallGhost.enabled).toBe(false);
 });
+
+test('dragging a row in the stack list restacks the wall through reorder calls', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'postcards').click();
+	await page.getByText('the wall', { exact: true }).click();
+
+	const rows = page.locator('.wall-order__row');
+	await expect(rows).toHaveCount(3);
+	// the three published cards land in saved order: p1, p2, p4
+	await expect(rows.nth(0)).toContainText('The Great Un-monolithing');
+	await expect(rows.nth(2)).toContainText('This website');
+
+	// drag the bottom row (This website / p4) up to the top of the stack
+	await rows.nth(2).dispatchEvent('dragstart', { bubbles: true });
+	await rows.nth(0).dispatchEvent('dragover', { bubbles: true });
+	await rows.nth(0).dispatchEvent('drop', { bubbles: true });
+
+	await expect(rows.nth(0)).toContainText('This website');
+
+	const reorders = () => mock.find('POST', /^\/1\/project\/[^/]+\/reorder$/);
+	await expect.poll(() => reorders().length).toBeGreaterThan(0);
+
+	// p4 was order 4, now sits on top as order 1
+	const p4 = reorders().find((r) => /\/p4\//.test(r.path));
+	expect(p4).toBeTruthy();
+	expect(p4!.body.order).toBe(1);
+});
