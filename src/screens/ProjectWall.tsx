@@ -15,11 +15,11 @@ const CANVAS_W = 1150;
 const CANVAS_H = 840;
 const ROT_LIMIT = 30;
 
-// cards are ~30% of the canvas width now, matching the public wall's
-// enlarged comp; three to a row leaves room without overlap
-const COLS = 3;
-const COL_STEP = 370;
-const ROW_STEP = 300;
+// cards are ~35% of the canvas width now, matching the public wall's
+// enlarged comp; two to a row leaves room without overlap
+const COLS = 2;
+const COL_STEP = 560;
+const ROW_STEP = 360;
 
 // the ghost placard isn't a project, so it gets its own key into the shared
 // position map rather than a project id
@@ -71,9 +71,14 @@ export default function ProjectWall() {
 	const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 
+	// the reorder list's working order, seeded from the saved project order (1
+	// on top). Dragging a row rewrites it live; the drop persists it.
+	const [orderIds, setOrderIds] = useState<string[]>(() => published.map((p) => p.id));
+
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const dragGrab = useRef<{ id: string; offX: number; offY: number; canvasRect: DOMRect } | null>(null);
 	const rotateGrab = useRef<RotateGrab | null>(null);
+	const dragRow = useRef<string | null>(null);
 
 	// a newly-published card joins the wall seeded into the tidy grid; existing
 	// placements (saved or mid-drag) are left alone
@@ -89,6 +94,13 @@ export default function ProjectWall() {
 			});
 			return changed ? next : cur;
 		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [publishedKey]);
+
+	// re-seed the list whenever the saved order lands (a restack echo, a new
+	// publish); publishedKey is the id sequence in order, so it moves with them
+	useEffect(() => {
+		setOrderIds(published.map((p) => p.id));
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [publishedKey]);
 
@@ -195,6 +207,36 @@ export default function ProjectWall() {
 		}
 	}, [published, layout, ghostEnabled, h]);
 
+	const onRowDragStart = useCallback((id: string) => {
+		dragRow.current = id;
+	}, []);
+
+	const onRowDragOver = useCallback((e: React.DragEvent<HTMLLIElement>, overId: string) => {
+		e.preventDefault();
+		const from = dragRow.current;
+		if (!from || from === overId) {
+			return;
+		}
+		setOrderIds((cur) => {
+			const next = [...cur];
+			const fi = next.indexOf(from);
+			const ti = next.indexOf(overId);
+			if (fi < 0 || ti < 0) {
+				return cur;
+			}
+			next.splice(fi, 1);
+			next.splice(ti, 0, from);
+			return next;
+		});
+	}, []);
+
+	const onRowDrop = useCallback(() => {
+		dragRow.current = null;
+		void h.restackProjects(orderIds);
+	}, [h, orderIds]);
+
+	const titleOf = (id: string) => published.find((p) => p.id === id)?.title ?? id;
+
 	const zIndexFor = (id: string, order: number | null) => {
 		if (grabbedId === id || rotatingId === id || lastSelectedId === id) {
 			return Z_FLOATING;
@@ -227,6 +269,7 @@ export default function ProjectWall() {
 				</div>
 			</div>
 
+			<div className="wall-layout">
 			<div className="project-wall" ref={canvasRef}>
 				{published.map((project, index) => {
 					const pos = layout[project.id] ?? defaultPos(index);
@@ -290,6 +333,28 @@ export default function ProjectWall() {
 						</div>
 					</div>
 				)}
+			</div>
+
+			<div className="wall-order">
+				<span className="footnote">// stack order · drag to restack · 1 on top</span>
+				<ol className="wall-order__list">
+					{orderIds.map((id, i) => (
+						<li
+							key={id}
+							className="wall-order__row"
+							draggable
+							onDragStart={() => onRowDragStart(id)}
+							onDragOver={(e) => onRowDragOver(e, id)}
+							onDrop={onRowDrop}
+							onDragEnd={() => { dragRow.current = null; }}
+						>
+							<span className="wall-order__num">{i + 1}</span>
+							<span className="wall-order__title">{titleOf(id)}</span>
+							<span className="wall-order__grip">⠿</span>
+						</li>
+					))}
+				</ol>
+			</div>
 			</div>
 
 			<span className="footnote">// the wall ships to the public site on the next lantern hoist.</span>

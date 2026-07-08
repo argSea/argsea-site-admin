@@ -286,6 +286,7 @@ interface HarborValue {
 	toggleNoteStatus:    (n: Note) => Promise<void>;
 	toggleFeatured:      (p: Project) => Promise<void>;
 	moveProject:         (p: Project, dir: -1 | 1) => Promise<void>;
+	restackProjects:     (orderedIds: string[]) => Promise<void>;
 	arrangeProjects:     (placements: { id: string; x: number; y: number; rotation: number }[]) => Promise<void>;
 	scuttleProject:      (p: Project) => Promise<void>;
 	burnNote:            (n: Note) => Promise<void>;
@@ -703,6 +704,29 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			oops(error);
 		}
 	}, [projects, oops, refreshActivity]);
+
+	// the wall's drag-reorder list hands back the full published order; order is
+	// the stack depth (1 on top), so assign sequential 1..N and persist only the
+	// cards whose order actually moved. One reorderProject call per changed card,
+	// same endpoint the rack's up-down uses (N is small; no bulk endpoint).
+	const restackProjects = useCallback(async (orderedIds: string[]) => {
+		const changed = orderedIds
+			.map((id, i) => ({ id, order: i + 1 }))
+			.filter(({ id, order }) => projects.find((p) => p.id === id)?.order !== order);
+		if (!changed.length) {
+			return;
+		}
+		try {
+			const saved = await Promise.all(changed.map(({ id, order }) => api.reorderProject(id, order)));
+			setProjects((cur) => cur
+				.map((x) => saved.find((s) => s.id === x.id) ?? x)
+				.sort(byOrder));
+			refreshActivity();
+			showToast('📌 the wall was restacked');
+		} catch (error) {
+			oops(error);
+		}
+	}, [projects, showToast, oops, refreshActivity]);
 
 	const arrangeProjects = useCallback(async (placements: { id: string; x: number; y: number; rotation: number }[]) => {
 		try {
@@ -1184,7 +1208,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchStamp, loadRevision, saveEdit, cancelEdit,
 		peek, openPeek, closePeek,
-		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, arrangeProjects, scuttleProject, burnNote,
+		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, restackProjects, arrangeProjects, scuttleProject, burnNote,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
