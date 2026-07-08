@@ -6,7 +6,7 @@
  * pills, chips, cards, inputs, labels, overlays), and the shared keyframes.
  * Screen-specific layout lives in each screen's co-located CSS file.
  *
- * The reduced-motion kill-switch at the bottom is a hard design requirement —
+ * The reduced-motion kill-switch at the bottom is a hard design requirement:
  * keep it last so nothing re-enables motion after it. Elements whose resting
  * pose is a transform carry it via --tilt so the kill-switch never breaks
  * layout.
@@ -788,7 +788,7 @@ textarea::placeholder {
 	50%      { transform: rotate(-8deg); }
 }
 
-/* ---- reduced-motion kill-switch — keep last ---- */
+/* ---- reduced-motion kill-switch, keep last ---- */
 
 @media (prefers-reduced-motion: reduce) {
 	*,

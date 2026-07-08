@@ -1,5 +1,5 @@
 // Geometry for the figurehead shop. The contract's Shape stays the only shape
-// model — this module parses path data into an editable anchor/handle form,
+// model; this module parses path data into an editable anchor/handle form,
 // serializes it back, bakes transforms into coordinates (shapes carry no
 // transform field, by contract), and smooths freehand strokes into beziers.
 import type { Shape } from './api';
@@ -10,7 +10,7 @@ export interface Pt {
 }
 
 // An anchor with optional absolute handle points. The segment from anchor a to
-// anchor b is the cubic (a, a.out ?? a, b.in ?? b, b) — a straight line when
+// anchor b is the cubic (a, a.out ?? a, b.in ?? b, b): a straight line when
 // both handles are absent.
 export interface Anchor {
 	x:    number;
@@ -31,7 +31,7 @@ export interface Box {
 	h: number;
 }
 
-/** Round to 2 decimals — keeps stored documents tidy without visible loss. */
+/** Round to 2 decimals, keeps stored documents tidy without visible loss. */
 export function round2(n: number): number {
 	return Math.round(n * 100) / 100;
 }
@@ -48,7 +48,7 @@ const PATH_TOKEN = /([MmLlHhVvCcSsQqTtAaZz])|(-?(?:\d*\.\d+|\d+)(?:e[-+]?\d+)?)/
 /**
  * Parse SVG path data into subpaths of anchors. All commands are normalized to
  * absolute cubics/lines (H/V/S/Q/T included; quadratics are raised to cubics).
- * Arcs are beyond this editor — their endpoint is kept as a straight segment.
+ * Arcs are beyond this editor; their endpoint is kept as a straight segment.
  */
 export function parsePath(d: string): SubPath[] {
 	const tokens = [...d.matchAll(PATH_TOKEN)].map((m) => m[0]);
@@ -180,7 +180,7 @@ export function parsePath(d: string): SubPath[] {
 				break;
 			}
 			case 'A': {
-				// rx ry rot large sweep x y — endpoint only, flattened to a line
+				// rx ry rot large sweep x y: endpoint only, flattened to a line
 				num(); num(); num(); num(); num();
 				lineTo({ x: base.x + num(), y: base.y + num() });
 				prevCubicCtrl = prevQuadCtrl = null;
@@ -234,7 +234,7 @@ export function cubicAt([p0, p1, p2, p3]: [Pt, Pt, Pt, Pt], t: number): Pt {
 	};
 }
 
-/** The t on segment a→b nearest to pt (sampled — plenty for hit targets). */
+/** The t on segment a→b nearest to pt (sampled, plenty for hit targets). */
 export function nearestT(a: Anchor, b: Anchor, target: Pt): number {
 	const ctrl = segmentCtrl(a, b);
 	let best = 0;
@@ -276,7 +276,7 @@ export function splitSegment(sub: SubPath, idx: number, t: number): SubPath {
 	return { ...sub, anchors };
 }
 
-// ---- transforms (baked into coordinates — shapes carry no transform) ----
+// ---- transforms (baked into coordinates, shapes carry no transform) ----
 
 type PtFn = (p: Pt) => Pt;
 
@@ -480,7 +480,7 @@ function rdp(points: Pt[], epsilon: number): Pt[] {
 
 /**
  * Turn a raw pointer trace into a smooth open bezier path: Ramer-Douglas-
- * Peucker to shed jitter, then Catmull-Rom tangents for the handles —
+ * Peucker to shed jitter, then Catmull-Rom tangents for the handles:
  * smoothness over fidelity, per the shop's charter.
  */
 export function fitPencil(points: Pt[], epsilon: number): SubPath | null {
@@ -512,7 +512,7 @@ const SHAPE_FIELDS: Record<Shape['type'], (keyof Shape)[]> = {
 };
 
 /**
- * Strip fields that don't belong to the shape's type and everything unset —
+ * Strip fields that don't belong to the shape's type and everything unset;
  * renderers write only the fields present (contract), so a rect that was once
  * an ellipse must not drag stale cx/cy onto the wire.
  */

@@ -1,6 +1,6 @@
 // The Figurehead Shop. The carver's bench for the harbor cat: a version shelf
 // per pose, and behind any design the touch-first SVG editor. Designs are
-// documents — saves are explicit, nothing here rides the copy autosave.
+// documents; saves are explicit, nothing here rides the copy autosave.
 import { useState } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { FigureheadDesign, FigureheadPose } from '../lib/api';
@@ -24,8 +24,8 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 	const publishKey = `publish-${d.id}`;
 	const current = h.designs.find((x) => x.pose === d.pose && x.published);
 	const deleteBar = d.seed
-		? 'a seed is carved — it stays'
-		: d.published ? 'lower it before scrapping it — publish another first' : null;
+		? 'a seed is carved, it stays'
+		: d.published ? 'lower it before scrapping it, publish another first' : null;
 
 	const commitRename = (value: string) => {
 		setRenaming(false);
@@ -58,7 +58,7 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 						<span className="row-title" style={{ fontSize: 18 }}>{d.label}</span>
 					)}
 					{d.published && <span className="egg-status egg-status--loose">published</span>}
-					{d.seed && <span className="egg-status" title="seeded v1 — immutable, so the shop can always sail back">seed</span>}
+					{d.seed && <span className="egg-status" title="seeded v1: immutable, so the shop can always sail back">seed</span>}
 				</div>
 				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 					{d.shapes.length} shape{d.shapes.length === 1 ? '' : 's'} · updated {relativeTime(d.updatedAt)}
@@ -67,7 +67,7 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 
 			<div className="row-actions">
 				<button type="button" className="pill" onClick={onOpen}>open</button>
-				<button type="button" className="pill pill--quiet" title="copy it onto a fresh draft — the correct-v2 loop" onClick={onCopy}>
+				<button type="button" className="pill pill--quiet" title="copy it onto a fresh draft, the correct-v2 loop" onClick={onCopy}>
 					open as new draft
 				</button>
 				{!d.seed && (
@@ -78,7 +78,7 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 						style={h.confirmKey === publishKey ? { borderColor: 'var(--gold-dash-hot)' } : undefined}
 						onClick={() => h.askConfirm(publishKey, () => void h.publishDesign(d))}>
 						{h.confirmKey === publishKey
-							? `replaces ${current?.label ?? 'nothing'} as the ${d.pose} cat on next hoist — sure?`
+							? `replaces ${current?.label ?? 'nothing'} as the ${d.pose} cat on next hoist, sure?`
 							: 'publish'}
 					</button>
 				)}
@@ -120,7 +120,7 @@ export default function FigureheadShop() {
 			<div className="screen-head__text" style={{ animation: 'fadeUp .7s ease .05s both' }}>
 				<span className="kicker">at the bow</span>
 				<span className="page-title">The Figurehead Shop</span>
-				<span className="page-sub">Where the harbor cat gets carved. Draft freely — the site only takes the published design of each pose, and only on the next hoist.</span>
+				<span className="page-sub">Where the harbor cat gets carved. Draft freely; the site only takes the published design of each pose, and only on the next hoist.</span>
 			</div>
 
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 18, animation: 'fadeUp .7s ease .15s both' }}>
@@ -143,7 +143,7 @@ export default function FigureheadShop() {
 									<ShelfRow key={d.id} d={d} onOpen={() => openDesign(d)} onCopy={() => copyDesign(d)} />
 								))}
 								{rack.length === 0 && (
-									<span className="row-sub" style={{ fontStyle: 'italic' }}>bare shelf — the seeds should be along any moment.</span>
+									<span className="row-sub" style={{ fontStyle: 'italic' }}>bare shelf, the seeds should be along any moment.</span>
 								)}
 							</div>
 

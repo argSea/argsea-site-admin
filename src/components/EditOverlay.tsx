@@ -1,6 +1,6 @@
 // The edit overlay: postcard, headstone, and note forms, the stamp designer,
 // the photo-print picker, and the earlier-printings (revisions) section.
-// "File it" on a restored draft goes through the restore endpoint — that's
+// "File it" on a restored draft goes through the restore endpoint; that's
 // the server copy-forward that makes status travel with the printing.
 import { useHarbor } from '../state/harbor';
 import type { EditState, HobbyDraft, NoteDraft, ProjectDraft } from '../state/harbor';
@@ -189,7 +189,7 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 			<label className="field">
 				<span className="field-label">back of card · the full story</span>
 				<textarea className="input input--serif" rows={6} value={draft.bodyText}
-					placeholder="the long version — what happened, what broke, what you'd do differently. renders when a card is flipped over."
+					placeholder="the long version: what happened, what broke, what you'd do differently. renders when a card is flipped over."
 					style={{ padding: '13px 14px', fontSize: 15.5, lineHeight: 1.65 }}
 					onChange={(e) => h.patchDraft({ bodyText: e.target.value })} />
 			</label>
@@ -301,7 +301,7 @@ function NoteFields({ draft }: { draft: NoteDraft }) {
 					value={draft.doodleCaption} onChange={(e) => h.patchDraft({ doodleCaption: e.target.value })} />
 			</label>
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
-				— signs itself "{h.keeper.signoff || '— j'}" on the way out
+				– signs itself "{h.keeper.signoff || '– j'}" on the way out
 			</span>
 		</div>
 	);
@@ -353,7 +353,7 @@ export default function EditOverlay() {
 							</div>
 						))}
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--periwinkle-deep)' }}>
-							// rolling back loads that printing — status travels with it — file it to keep it.
+							// rolling back loads that printing; status travels with it, file it to keep it.
 						</span>
 					</div>
 				)}

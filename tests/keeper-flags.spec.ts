@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { signIn, nav } from './office';
 
-test('the keeper autosaves the complete user doc — never role, never password', async ({ page }) => {
+test('the keeper autosaves the complete user doc, never role, never password', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the keeper').click();
 
@@ -17,7 +17,7 @@ test('the keeper autosaves the complete user doc — never role, never password'
 	expect(put.body.name).toBe('Meo');
 	expect(put.body.userName).toBe('meo');
 	expect(put.body.pronouns).toBe('he/him');
-	expect(put.body.signoff).toBe('— j');
+	expect(put.body.signoff).toBe('– j');
 	// and the fields that must never leave the office
 	expect('role' in put.body).toBe(false);
 	expect('password' in put.body).toBe(false);
@@ -38,7 +38,7 @@ test('signal flags autosave the complete singleton', async ({ page }) => {
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.quipHello).toBe('The boats run late. Charmingly.');
-	// the rest of the doc went with it — PUT is full-replace
+	// the rest of the doc went with it; PUT is full-replace
 	expect(put.body.heroHeadline).toBe('I help keep the lights on behind the news.');
 	expect(put.body.dict).toBe('1. the Argo, but for one.');
 	expect(put.body.quip404).toBeTruthy();

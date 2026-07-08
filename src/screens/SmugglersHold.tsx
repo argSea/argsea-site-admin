@@ -1,4 +1,4 @@
-// Below decks. The three easter eggs riding the copy singleton — flip them
+// Below decks. The three easter eggs riding the copy singleton: flip them
 // loose or stowed, tune the cat's rounds, edit the proverbs and the light
 // list. Saved as you type, the same debounced PUT as the signal flags.
 import type { ReactNode } from 'react';
@@ -71,7 +71,7 @@ export default function SmugglersHold() {
 			<div className="screen-head__text" style={{ animation: 'fadeUp .7s ease .05s both' }}>
 				<span className="kicker">below decks</span>
 				<span className="page-title">Smuggler's hold</span>
-				<span className="page-sub">The hidden delights stowed around the site. Flip them on, flip them off — no one's watching. (The office gremlins stay on regardless.)</span>
+				<span className="page-sub">The hidden delights stowed around the site. Flip them on, flip them off, no one's watching. (The office gremlins stay on regardless.)</span>
 			</div>
 
 			<div style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--periwinkle-deep)', animation: 'fadeUp .7s ease .12s both' }}>

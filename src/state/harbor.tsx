@@ -1,4 +1,4 @@
-// The harbor store — one provider owning every piece of office state, the way
+// The harbor store: one provider owning every piece of office state, the way
 // the design mock kept it in a single component. Screens stay markup-heavy and
 // logic-light: they read from this context and call its actions. All API
 // traffic funnels through lib/api.ts.
@@ -15,7 +15,7 @@ import { randomStamp, stampForWire } from '../lib/stamp';
 
 export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'shop' | 'media' | 'keeper' | 'marginalia';
 
-// What the shop's editor hands back on save — the document fields a PUT may
+// What the shop's editor hands back on save: the document fields a PUT may
 // change (plus pose, which only a POST uses; the server preserves it after).
 export interface DesignFields {
 	pose:    FigureheadPose;
@@ -24,34 +24,34 @@ export interface DesignFields {
 	shapes:  Shape[];
 }
 
-// What Marginalia's editor hands back on save — no pose/lifecycle, just a doc.
+// What Marginalia's editor hands back on save; no pose/lifecycle, just a doc.
 export interface DoodleFields {
 	name:    string;
 	viewBox: string;
 	shapes:  Shape[];
 }
 
-// The three live eggs and the cat's rounds — display copy shared by the hold
+// The three live eggs and the cat's rounds: display copy shared by the hold
 // screen and the toggle toasts. The keys are the frozen cross-repo contract.
 export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where: string }[] = [
 	{
 		key: 'bottle', name: 'Message in a bottle', where: 'homepage · the drifting boat',
-		blurb: 'Poke the little boat sailing across the waves and it drops a corked bottle — a proverb unrolls from it, then drifts off.',
+		blurb: 'Poke the little boat sailing across the waves and it drops a corked bottle, a proverb unrolls from it, then drifts off.',
 	},
 	{
 		key: 'cat', name: 'The harbor cat', where: 'every page · one perch per view',
-		blurb: 'The lighthouse cat, out on its rounds. One shows per page, picked from a catalog of perches across the whole site — pin it per spot and per page below.',
+		blurb: 'The lighthouse cat, out on its rounds. One shows per page, picked from a catalog of perches across the whole site; pin it per spot and per page below.',
 	},
 	{
 		key: 'lights', name: 'The light list', where: 'the 404 wreck report',
-		blurb: 'Every wreck report lists a last known position — the real coordinates of a real lighthouse. Click them and the light introduces itself.',
+		blurb: 'Every wreck report lists a last known position: the real coordinates of a real lighthouse. Click them and the light introduces itself.',
 	},
 ];
 
-// The cat's catalog of perches — a page → spots tree. The site defines the same
+// The cat's catalog of perches: a page → spots tree. The site defines the same
 // catalog (each spot carries its pose + anchor there); the copy doc only stores
 // on/off, so this repo hardcodes its own copy. The page + spot ids are the
-// FROZEN cross-repo contract, matched to the site slice — do not rename. A new
+// FROZEN cross-repo contract, matched to the site slice, do not rename. A new
 // perch is a code change in both repos that then shows up in the hold on its own.
 export interface CatSpot { id: string; label: string; hint: string }
 export interface CatPage { id: string; label: string; spots: CatSpot[] }
@@ -144,7 +144,7 @@ interface EditBase {
 	id:          string | null;
 	revisions:   Revision[];
 	restoredRev: string | null;
-	// whether the keeper typed after loading a revision — decides if a PUT
+	// whether the keeper typed after loading a revision, decides if a PUT
 	// rides on top of the restore
 	touched:     boolean;
 }
@@ -170,7 +170,7 @@ const EMPTY_COPY: SiteCopy = {
 };
 
 // Absent = on (agreed ruling): a copy doc from before the hold lacks the egg
-// fields on the wire — seed them enabled so the first autosave persists them
+// fields on the wire; seed them enabled so the first autosave persists them
 // explicitly. Nested spreads guard a partially-filled object too.
 function seedHold(doc: SiteCopy): SiteCopy {
 	return {
@@ -240,7 +240,7 @@ function noteDraft(n?: Note): NoteDraft {
 function hobbyDraft(h?: Hobby): HobbyDraft {
 	return h
 		? { name: h.name, dates: h.dates, epitaph: h.epitaph, eulogy: h.eulogy, tagsText: (h.tags ?? []).join(', '), active: h.active }
-		: { name: '', dates: `${new Date().getFullYear()} — present`, epitaph: '', eulogy: '', tagsText: '', active: true };
+		: { name: '', dates: `${new Date().getFullYear()} – present`, epitaph: '', eulogy: '', tagsText: '', active: true };
 }
 
 interface HarborValue {
@@ -411,7 +411,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const refreshActivity = useCallback(() => {
 		// fetch generously: the dirty counter reads this list, and the API's
-		// default window is only the last few entries — the bridge log slices
+		// default window is only the last few entries; the bridge log slices
 		// its own display down
 		api.listActivity(100).then(setActivity).catch(() => { /* the log is decoration; stay quiet */ });
 	}, []);
@@ -501,7 +501,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			setEdit({ ...base, type, draft: hobbyDraft(hobbies.find((h) => h.id === id)) });
 		}
 
-		// earlier printings load alongside — hobbies keep no history
+		// earlier printings load alongside; hobbies keep no history
 		if (id && type !== 'hobby') {
 			const family = type === 'project' ? api.projects : api.notes;
 			family.revisions(id, REVISIONS_SHOWN)
@@ -534,7 +534,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				return cur;
 			}
 		});
-		showToast('↺ earlier printing loaded — file it to keep it');
+		showToast('↺ earlier printing loaded, file it to keep it');
 	}, [showToast]);
 
 	const cancelEdit = useCallback(() => setEdit(null), []);
@@ -586,7 +586,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 						saved = await api.projects.update(edit.id, { ...saved, ...fields });
 					}
 					replaceProject(saved);
-					showToast(`↺ earlier printing filed — it's now ${statusLine(saved.status)}`);
+					showToast(`↺ earlier printing filed, it's now ${statusLine(saved.status)}`);
 				} else {
 					const current = projects.find((p) => p.id === edit.id);
 					if (!current) {
@@ -610,7 +610,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 						saved = await api.notes.update(edit.id, { ...saved, ...fields });
 					}
 					replaceNote(saved);
-					showToast(`↺ earlier printing filed — it's now ${statusLine(saved.status)}`);
+					showToast(`↺ earlier printing filed, it's now ${statusLine(saved.status)}`);
 				} else {
 					const current = notes.find((n) => n.id === edit.id);
 					if (!current) {
@@ -666,9 +666,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	}, [replaceNote, showToast, oops, refreshActivity]);
 
 	const toggleFeatured = useCallback(async (p: Project) => {
-		// the cap is the admin's rule, not the server's — enforce before the call
+		// the cap is the admin's rule, not the server's; enforce before the call
 		if (!p.featured && projects.filter((x) => x.featured).length >= 3) {
-			showToast('the mantel only fits three — take one down first');
+			showToast('the mantel only fits three, take one down first');
 			return;
 		}
 		try {
@@ -733,7 +733,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			return;
 		}
 		try {
-			// hobbies snapshot nothing — full-replace PUTs with swapped orders.
+			// hobbies snapshot nothing; full-replace PUTs with swapped orders.
 			// equal orders (degenerate all-zero data) would make the swap a
 			// no-op, so nudge the pair apart by 1 in the move direction instead.
 			const [movedOrder, neighborOrder] = h.order === neighbor.order
@@ -790,9 +790,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops]);
 
-	// ---- signal flags, the hold & the keeper — saved as you type (debounced) ----
+	// ---- signal flags, the hold & the keeper, saved as you type (debounced) ----
 
-	// every copy mutation rides the same debounced full-replace PUT — one save
+	// every copy mutation rides the same debounced full-replace PUT: one save
 	// path for the flag locker and the smuggler's hold alike. The echo goes
 	// through seedHold like the GET does: an API from before the hold echoes
 	// null/absent egg fields, and adopting those raw would sink the screen.
@@ -800,7 +800,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		copyEditSeq.current += 1;
 		window.clearTimeout(copySaveTimer.current);
 		copySaveTimer.current = window.setTimeout(() => {
-			// only adopt the echo if nothing was typed since this PUT went out —
+			// only adopt the echo if nothing was typed since this PUT went out;
 			// otherwise a slow response lands on top of newer keystrokes and
 			// reverts them (the follow-up save they queued still carries them to
 			// the wire). Legacy-null docs still get seeded: their echo lands with
@@ -825,7 +825,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		setCopy((cur) => ({ ...cur, eggs: { ...cur.eggs, [key]: on } }));
 		queueCopySave();
 		const def = EGG_DEFS.find((e) => e.key === key)!;
-		showToast(on ? `✧ ${def.name} — loose on the site.` : `· ${def.name} — stowed away.`);
+		showToast(on ? `✧ ${def.name}, loose on the site.` : `· ${def.name}, stowed away.`);
 	}, [queueCopySave, showToast]);
 
 	// Absent = on: a page/spot missing from the map reads enabled, so a flip off
@@ -896,7 +896,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		});
 	}, []);
 
-	// Explicit save — designs are documents, they never ride the copy autosave.
+	// Explicit save: designs are documents, they never ride the copy autosave.
 	// A null id POSTs a fresh draft; otherwise a full-replace PUT (the server
 	// preserves pose/published/seed). Returns the saved doc so the editor can
 	// adopt the new id, or null when the harbor swallowed an error.
@@ -941,7 +941,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		// the API's 409 guards, honored before the wire: seeds are carved for
 		// good, and the published design leads its pose until superseded
 		if (d.seed || d.published) {
-			showToast(d.seed ? '⚠ v1 is carved — it stays' : '⚠ publish another first — the bow needs a cat');
+			showToast(d.seed ? '⚠ v1 is carved, it stays' : '⚠ publish another first, the bow needs a cat');
 			return;
 		}
 		try {
@@ -957,7 +957,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const publishDesign = useCallback(async (d: FigureheadDesign) => {
 		try {
 			const saved = await api.figurehead.publish(d.id);
-			// the swap is atomic within the pose — mirror it locally
+			// the swap is atomic within the pose; mirror it locally
 			setDesigns((cur) => cur.map((x) =>
 				x.id === saved.id ? saved : x.pose === saved.pose ? { ...x, published: false } : x));
 			showToast(`♆ ${saved.label} leads the ${saved.pose} pose on next hoist`);
@@ -976,7 +976,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		});
 	}, []);
 
-	// Explicit save — doodles are documents, they never ride the copy
+	// Explicit save: doodles are documents, they never ride the copy
 	// autosave. A null id POSTs a fresh doodle; otherwise a full-replace PUT.
 	// Returns the saved doc so the editor can adopt the new id, or null when
 	// the harbor swallowed an error.
@@ -1030,7 +1030,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	// ---- the darkroom ----
 
-	// notes carry a doodle now, not a photo print — only projects still count
+	// notes carry a doodle now, not a photo print; only projects still count
 	const printUsage = useCallback((filename: string): number =>
 		projects.filter((p) => p.image === filename).length,
 	[projects]);
@@ -1041,7 +1041,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			showToast('the darkroom only develops images');
 			return;
 		}
-		// settle each upload on its own — one bad file must not drop the
+		// settle each upload on its own; one bad file must not drop the
 		// prints that developed fine
 		const settled = await Promise.allSettled(images.map((f) => api.media.upload(f)));
 		const developed = settled
@@ -1062,7 +1062,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const tearOffPrint = useCallback(async (m: MediaItem) => {
 		try {
 			// deleting the file does NOT touch referencing documents (pinned
-			// contract) — detaching is this client's job, via full-replace PUTs.
+			// contract), detaching is this client's job, via full-replace PUTs.
 			// Notes carry a doodle now, not a photo print, so only projects can
 			// reference one.
 			const usedProjects = projects.filter((p) => p.image === m.filename);
@@ -1094,7 +1094,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					showToast('⚓ hoisted. the site sails with the new cargo.');
 					refreshActivity();
 				} else if (lantern.state === 'failed') {
-					showToast('⚠ the hoist failed — the old lights stay on');
+					showToast('⚠ the hoist failed, the old lights stay on');
 				}
 			}
 			wasDeploying.current = false;
@@ -1120,7 +1120,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			setLantern(result.status);
 			setDeployPct(0);
 			if (!result.accepted) {
-				showToast('the boat is already out — one hoist at a time');
+				showToast('the boat is already out, one hoist at a time');
 			}
 		} catch (error) {
 			oops(error);
@@ -1135,7 +1135,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				showToast('↩ previous lantern re-hoisted. the old lights are back on.');
 				refreshActivity();
 			} else if (result.status.state === 'building' || result.status.state === 'swapping') {
-				showToast('the boat is out — wait for it to dock first');
+				showToast('the boat is out, wait for it to dock first');
 			} else {
 				showToast('⚓ no previous lantern to re-hoist');
 			}
@@ -1144,7 +1144,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
-	// changes aboard since the last hoist — activity newer than lastHoistedAt,
+	// changes aboard since the last hoist: activity newer than lastHoistedAt,
 	// lantern's own entries excluded
 	const dirtyCount = useMemo(() => {
 		const since = lantern?.lastHoistedAt ?? '';

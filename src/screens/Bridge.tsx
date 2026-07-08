@@ -10,7 +10,7 @@ import { Boat, Fish } from '../components/art';
 const STAT_TILTS = ['-.6deg', '.4deg', '-.3deg', '.5deg'];
 
 // Each log family wears its screen's glyph so the ship's log reads at a
-// glance — the figurehead lines arrive from the API and get a face here.
+// glance; the figurehead lines arrive from the API and get a face here.
 const LOG_GLYPHS: Record<string, string> = {
 	project: '✉', note: '✎', hobby: '†', sitecopy: '⚑', media: '❏',
 	user: '☸', lantern: '☀', figurehead: '♆',
@@ -113,8 +113,8 @@ export default function Bridge() {
 					</div>
 					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>1,204 ships sighted · busiest: thursday</span>
 					<div style={{ display: 'flex', flexDirection: 'column', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 12.5, lineHeight: 1.7, borderTop: '1px solid var(--border-hair)', paddingTop: 11 }}>
-						<span style={{ color: 'var(--text-body)' }}>top postcard · <span style={{ color: 'var(--gold)' }}>"Meo Wave Race" — 214 flips</span></span>
-						<span style={{ color: 'var(--text-body)' }}>top note · <span style={{ color: 'var(--text-soft)' }}>"The queue is the product" — 178 reads</span></span>
+						<span style={{ color: 'var(--text-body)' }}>top postcard · <span style={{ color: 'var(--gold)' }}>"Meo Wave Race", 214 flips</span></span>
+						<span style={{ color: 'var(--text-body)' }}>top note · <span style={{ color: 'var(--text-soft)' }}>"The queue is the product", 178 reads</span></span>
 						<span style={{ color: 'var(--text-body)' }}>ports of origin · <span style={{ color: 'var(--text-soft)' }}>search 44% · direct 31% · fediverse 25%</span></span>
 					</div>
 				</div>

@@ -48,7 +48,7 @@ test('a words stamp caps at 40 characters and refuses to sail empty', async ({ p
 	await wordsInput.pressSequentially('THIS CAPTION IS LONGER THAN FORTY CHARACTERS LONG');
 	await expect(wordsInput).toHaveValue('THIS CAPTION IS LONGER THAN FORTY CHARAC');
 
-	// and an empty caption blocks the save — text is required on the text motif
+	// and an empty caption blocks the save; text is required on the text motif
 	await wordsInput.fill('   ');
 	await overlay.getByRole('button', { name: 'save changes' }).click();
 	await expect(toast(page)).toHaveText('⚠ a words stamp needs its words');

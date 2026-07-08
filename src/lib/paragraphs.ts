@@ -1,5 +1,5 @@
 // The <p> adapter over the API's sanitized-HTML body storage (spike ruling
-// 2026-07-05: no rich-text editor — plain textarea, paragraphs on the wire).
+// 2026-07-05: no rich-text editor, plain textarea, paragraphs on the wire).
 // Save: split on blank lines, wrap each paragraph in <p>. Load: take each
 // block's text content and join with blank lines, dropping unknown tags
 // gracefully. Round-trips plain text exactly.

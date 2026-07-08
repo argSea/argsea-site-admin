@@ -1,4 +1,4 @@
-// Marginalia — the doodle desk. A grid of saved sketches, and behind any of
+// Marginalia: the doodle desk. A grid of saved sketches, and behind any of
 // them the pen+pencil editor. Modeled on the figurehead shop's shelf, minus
 // the pose racks and lifecycle chrome a doodle doesn't have.
 import { useState } from 'react';
@@ -83,7 +83,7 @@ export default function Marginalia() {
 			<div className="screen-head__text" style={{ animation: 'fadeUp .7s ease .05s both' }}>
 				<span className="kicker">at the desk</span>
 				<span className="page-title">Marginalia</span>
-				<span className="page-sub">Quick sketches for the margins of a journal entry. Draw freely — attaching one to a note comes later.</span>
+				<span className="page-sub">Quick sketches for the margins of a journal entry. Draw freely; attaching one to a note comes later.</span>
 			</div>
 
 			<div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp .7s ease .15s both' }}>
@@ -98,7 +98,7 @@ export default function Marginalia() {
 					{doodles.map((d) => <DoodleCard key={d.id} d={d} onOpen={() => openDoodle(d)} />)}
 				</div>
 				{doodles.length === 0 && (
-					<span className="row-sub" style={{ fontStyle: 'italic' }}>a bare desk — sketch something.</span>
+					<span className="row-sub" style={{ fontStyle: 'italic' }}>a bare desk, sketch something.</span>
 				)}
 
 				<button type="button" className="hold-add" onClick={freshDoodle}>
@@ -106,7 +106,7 @@ export default function Marginalia() {
 				</button>
 			</div>
 
-			<span className="footnote">// doodles here are loose pages — attaching one to a journal entry is a later trip to the desk.</span>
+			<span className="footnote">// doodles here are loose pages; attaching one to a journal entry is a later trip to the desk.</span>
 		</div>
 	);
 }

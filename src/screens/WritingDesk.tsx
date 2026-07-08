@@ -1,7 +1,7 @@
 // The writing desk. Note CRUD with the draft ⇄ publish pill, peek, and
 // confirm-to-burn. Bodies are plain text here; the <p> adapter does the wire.
-// Rows read as journal pages — cream paper, a doodle in the margin, ink
-// weather for the day — not the office's usual dark row.
+// Rows read as journal pages: cream paper, a doodle in the margin, ink
+// weather for the day, not the office's usual dark row.
 import { useHarbor } from '../state/harbor';
 import type { Note } from '../lib/api';
 import { ShapeNode } from '../components/ShapeEditor';
@@ -16,7 +16,7 @@ function Row({ note }: { note: Note }) {
 	return (
 		<div className="journal-row">
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--paper-name)', width: 90, flexShrink: 0 }}>
-				{note.date || '—'}
+				{note.date || '–'}
 			</span>
 			{doodle && (
 				<div className="journal-doodle" title={note.doodleCaption || doodle.name}>
@@ -55,7 +55,7 @@ export default function WritingDesk() {
 	const published = h.notes.filter((n) => n.status === 'published').length;
 	const blogBarLine = published >= 5
 		? `${published} published. it's officially a blog now. condolences.`
-		: `${published} published. the bar for "blog" is five. ${5 - published} to go — no rush.`;
+		: `${published} published. the bar for "blog" is five. ${5 - published} to go, no rush.`;
 
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>

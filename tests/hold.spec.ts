@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { MockApi } from './mock-api';
 import { signIn, nav, toast } from './office';
 
-// the full frozen catalog seeded on — mirrors mock-api's seed so a renamed or
+// the full frozen catalog seeded on; mirrors mock-api's seed so a renamed or
 // dropped perch id fails here, not in production
 const allSpotsOn = {
 	'hello.header': true, 'hello.hero': true, 'hello.postcard': true, 'hello.manifest': true,
@@ -21,14 +21,14 @@ test('stowing an egg autosaves the complete copy singleton', async ({ page }) =>
 
 	const bottle = page.locator('.card', { hasText: 'Message in a bottle' });
 	await bottle.getByTitle('stow it away').click();
-	await expect(toast(page)).toHaveText('· Message in a bottle — stowed away.');
+	await expect(toast(page)).toHaveText('· Message in a bottle, stowed away.');
 	await expect(page.getByText('2 of 3 loose on the site right now')).toBeVisible();
 
 	// "saved as you type" is the same debounced PUT the signal flags ride
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.eggs).toEqual({ bottle: false, cat: true, lights: true });
-	// the rest of the doc rode along — PUT is full-replace
+	// the rest of the doc rode along; PUT is full-replace
 	expect(put.body.quipHello).toBe('The boats run on schedule. Ish.');
 	expect(put.body.catPages).toMatchObject({ hello: true, p404: true });
 	expect(put.body.catSpots).toMatchObject({ 'hello.hero': true, 'p404.wreck': true });
@@ -58,7 +58,7 @@ test('a page master dims and disables its nested spots', async ({ page }) => {
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.catPages).toMatchObject({ projects: false, hello: true });
-	// spots stay untouched — the master gates them, it doesn't rewrite them
+	// spots stay untouched; the master gates them, it doesn't rewrite them
 	expect(put.body.catSpots['projects.card']).toBe(true);
 });
 
@@ -86,10 +86,10 @@ test('the light list edits in place', async ({ page }) => {
 	await page.getByPlaceholder('the light').first().fill('La Jument');
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [lightPut] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
-	expect(lightPut.body.lighthouses[0]).toEqual({ name: 'La Jument', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop — the last light the emigrants saw.' });
+	expect(lightPut.body.lighthouses[0]).toEqual({ name: 'La Jument', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop, the last light the emigrants saw.' });
 	expect(lightPut.body.lighthouses).toHaveLength(2);
 
-	// chart another light — a blank row joins the chart
+	// chart another light; a blank row joins the chart
 	const lights = page.locator('.card', { hasText: 'The light list' });
 	await lights.getByRole('button', { name: '+ chart another light' }).click();
 	await expect(lights.getByText('3 on the chart · one per wreck')).toBeVisible();
@@ -105,7 +105,7 @@ test('the proverb editor casts and tosses', async ({ page }) => {
 	const bottle = page.locator('.card', { hasText: 'Message in a bottle' });
 	await expect(bottle.getByText('2 in the bottle · one shows per poke')).toBeVisible();
 
-	// cast a new one and write it — one debounced save for both
+	// cast a new one and write it; one debounced save for both
 	await bottle.getByRole('button', { name: '+ cast a new one out' }).click();
 	await expect(bottle.getByText('3 in the bottle · one shows per poke')).toBeVisible();
 	await bottle.locator('input').nth(2).fill('The sea provides. Usually a merge conflict.');
@@ -155,8 +155,8 @@ test('a copy doc from before the hold comes up with everything loose', async ({ 
 	expect(put.body.lighthouses).toEqual([]);
 });
 
-test('null hold fields from a legacy API are seeded — on load and on the PUT echo', async ({ page }) => {
-	// the real wire shape for a pre-hold doc is JSON null, not absent keys —
+test('null hold fields from a legacy API are seeded, on load and on the PUT echo', async ({ page }) => {
+	// the real wire shape for a pre-hold doc is JSON null, not absent keys,
 	// and the API echoes those nulls straight back on the PUT
 	const mock = new MockApi();
 	mock.copyPredatesHold = true;
@@ -175,7 +175,7 @@ test('null hold fields from a legacy API are seeded — on load and on the PUT e
 	expect(put.body.bottleProverbs).toEqual([]);
 	expect(put.body.lighthouses).toEqual([]);
 
-	// the echo nulled everything again — seedHold adopts it as a fresh legacy
+	// the echo nulled everything again; seedHold adopts it as a fresh legacy
 	// doc (the server kept nothing), everything reads loose, and the screen
 	// is still standing instead of crashing on eggs being null
 	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
@@ -191,7 +191,7 @@ test('null hold fields from a legacy API are seeded — on load and on the PUT e
 });
 
 test('keystrokes typed while a slow PUT is in flight survive the echo', async ({ page }) => {
-	// W1: a proverb edited across the debounce boundary — the first half fires a
+	// W1: a proverb edited across the debounce boundary; the first half fires a
 	// save, the rest is typed while it's still on the wire. The stale echo must
 	// not revert the field, and the wire must end up with the whole string.
 	const mock = new MockApi();

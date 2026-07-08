@@ -1,5 +1,5 @@
 // The keeper's papers. Nine profile fields living on the user document,
-// saved as you type. Never sends role — the server strips it anyway.
+// saved as you type. Never sends role; the server strips it anyway.
 import { useHarbor } from '../state/harbor';
 import type { KeeperProfile } from '../lib/api';
 import { greeting } from '../lib/whimsy';

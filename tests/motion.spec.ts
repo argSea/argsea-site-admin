@@ -6,7 +6,7 @@ test.use({ contextOptions: { reducedMotion: 'reduce' } });
 test('prefers-reduced-motion kills every animation and transition', async ({ page }) => {
 	await signIn(page);
 
-	// a drifting harbor light — pure decoration, animated by default
+	// a drifting harbor light, pure decoration, animated by default
 	const dot = page.locator('.drift-dot').first();
 	expect(await dot.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
 

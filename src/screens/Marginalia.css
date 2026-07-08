@@ -1,7 +1,7 @@
 /*
  * Marginalia's layout: a shelf of saved doodles (figurehead-shop vocabulary),
  * and the editor's rail / canvas / inkwell panel. The canvas itself breaks
- * from the night-harbor card — cream paper, like a desk under a lamp — while
+ * from the night-harbor card: cream paper, like a desk under a lamp, while
  * the chrome around it stays in the office's usual dark furniture. Collapses
  * to one column at phone width, same as the shop.
  */
@@ -180,7 +180,7 @@
 	align-items: center;
 }
 
-/* inkwells, not swatches — round pots you dip a nib into */
+/* inkwells, not swatches: round pots you dip a nib into */
 .doodle-ink {
 	width: 28px;
 	height: 28px;

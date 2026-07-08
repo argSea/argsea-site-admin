@@ -29,7 +29,7 @@ test('login lands on the bridge; every read carries the bearer token; drafts sta
 	const mock = await signIn(page);
 	await expect(toast(page)).toHaveText('⚓ welcome back, keeper. token stowed.');
 
-	// auth on ALL reads — unauth reads are published-only and would lose drafts
+	// auth on ALL reads; unauth reads are published-only and would lose drafts
 	const reads = mock.calls.filter((c) => c.method === 'GET' && c.path.startsWith('/1/'));
 	expect(reads.length).toBeGreaterThan(0);
 	for (const read of reads) {
@@ -54,7 +54,7 @@ test('go ashore drops the token and returns to the door', async ({ page }) => {
 	await page.getByText('← go ashore').click();
 	await expect(page.getByText("The Harbormaster's Office")).toBeVisible();
 	expect(mock.find('GET', /^\/1\/auth\/logout\/$/)).toHaveLength(1);
-	// the stowed session is gone — a reload stays at the door
+	// the stowed session is gone; a reload stays at the door
 	await page.reload();
 	await expect(page.getByText("The Harbormaster's Office")).toBeVisible();
 });

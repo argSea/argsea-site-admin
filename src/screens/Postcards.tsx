@@ -84,7 +84,7 @@ export default function Postcards() {
 					))}
 					{featured.length < 3 && (
 						<span style={{ fontSize: 13.5, color: 'var(--text-dim)', fontStyle: 'italic' }}>
-							room on the mantel — pin a card with ☆ below
+							room on the mantel, pin a card with ☆ below
 						</span>
 					)}
 				</div>
