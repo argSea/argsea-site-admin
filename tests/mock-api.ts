@@ -334,6 +334,20 @@ export class MockApi {
 				return json(200, doc);
 			}
 		}
+		// non-destructive bulk position set for the wall; must be checked before
+		// the generic item route below, or "arrangement" reads as a project id
+		if (/^\/1\/project\/arrangement\/?$/.test(path) && method === 'PUT') {
+			const placements: { id: string; x: number; y: number; rotation: number }[] = body?.placements ?? [];
+			placements.forEach((placement) => {
+				const doc = this.projects.find((p) => p.id === placement.id);
+				if (doc) {
+					doc.wallPos = { x: placement.x, y: placement.y, rotation: placement.rotation };
+					doc.updatedAt = now();
+				}
+			});
+			const visible = this.projects.filter((p) => authed || p.status === 'published');
+			return json(200, [...visible].sort((a, b) => a.order - b.order));
+		}
 		if ((match = /^\/1\/project\/([^/]+)$/.exec(path))) {
 			return this.item(this.projects, match[1], method, body, json);
 		}

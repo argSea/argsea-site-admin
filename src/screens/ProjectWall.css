@@ -1,0 +1,101 @@
+/*
+ * The wall canvas: a dashed, dotted-grid corkboard sized to the public wall's
+ * own aspect ratio, so an admin arrangement is WYSIWYG against the site.
+ * Cards are cream postcards pinned by their top-left corner. Tokens come
+ * from global.css.
+ */
+
+.project-wall {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 1150 / 840;
+	border: 1.5px dashed var(--border-chip);
+	border-radius: 12px;
+	background-image: radial-gradient(rgba(147, 160, 232, .1) 1px, transparent 1.5px);
+	background-size: 26px 26px;
+	overflow: hidden;
+}
+
+.wall-card {
+	position: absolute;
+	width: 15%;
+	min-width: 120px;
+	box-sizing: border-box;
+	transform: rotate(var(--tilt, 0deg));
+	transition: transform .2s, box-shadow .2s;
+	background: linear-gradient(180deg, var(--paper-warm-top), var(--paper-warm-bot));
+	border: 1px solid #d8cfb6;
+	border-radius: 3px;
+	padding: 6px;
+	box-shadow: 0 8px 18px rgba(0, 0, 0, .4);
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
+}
+
+.wall-card--active {
+	cursor: grabbing;
+	box-shadow: 0 18px 34px rgba(0, 0, 0, .55);
+	transition: none;
+}
+
+.wall-card__tack {
+	position: absolute;
+	top: -4px;
+	left: 48%;
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	background: radial-gradient(circle at 35% 30%, #ecd9a4, #8a6d3b 70%);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, .5);
+	pointer-events: none;
+}
+
+.wall-card__photo {
+	width: 100%;
+	padding: 0 0 4px;
+	transform: none;
+	box-shadow: none;
+}
+
+.wall-card__photo-img {
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1.55 / 1;
+}
+
+.wall-card__title {
+	display: block;
+	font-family: var(--font-body);
+	font-style: italic;
+	font-size: 12px;
+	line-height: 1.2;
+	color: var(--paper-name);
+	padding: 5px 7px 6px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.wall-card__rotate {
+	position: absolute;
+	bottom: -9px;
+	right: -9px;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: var(--overlay-card);
+	border: 1px solid var(--gold-dash-hot);
+	color: var(--gold);
+	font-size: 12px;
+	line-height: 20px;
+	text-align: center;
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, .5);
+}
+
+.wall-card__rotate--active {
+	cursor: grabbing;
+}

@@ -286,6 +286,7 @@ interface HarborValue {
 	toggleNoteStatus:    (n: Note) => Promise<void>;
 	toggleFeatured:      (p: Project) => Promise<void>;
 	moveProject:         (p: Project, dir: -1 | 1) => Promise<void>;
+	arrangeProjects:     (placements: { id: string; x: number; y: number; rotation: number }[]) => Promise<void>;
 	scuttleProject:      (p: Project) => Promise<void>;
 	burnNote:            (n: Note) => Promise<void>;
 
@@ -701,6 +702,17 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			oops(error);
 		}
 	}, [projects, oops, refreshActivity]);
+
+	const arrangeProjects = useCallback(async (placements: { id: string; x: number; y: number; rotation: number }[]) => {
+		try {
+			const list = await api.arrangeProjects(placements);
+			setProjects([...list].sort(byOrder));
+			refreshActivity();
+			showToast('📌 the wall arrangement is pinned');
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
 
 	const scuttleProject = useCallback(async (p: Project) => {
 		try {
@@ -1163,7 +1175,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchStamp, loadRevision, saveEdit, cancelEdit,
 		peek, openPeek, closePeek,
-		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, scuttleProject, burnNote,
+		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, arrangeProjects, scuttleProject, burnNote,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,

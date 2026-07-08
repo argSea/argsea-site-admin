@@ -1,9 +1,12 @@
 // The rack. Project CRUD, ↑/↓ reorder, the mantel (featured, cap of three),
-// draft ⇄ publish pills, peek, and confirm-to-scuttle.
+// draft ⇄ publish pills, peek, and confirm-to-scuttle. A second tab, the
+// wall, hands off to ProjectWall for the drag-and-tilt arrangement.
+import { useState } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { Project } from '../lib/api';
 import { printBackground } from '../lib/prints';
 import Stamp from '../components/Stamp';
+import ProjectWall from './ProjectWall';
 
 const ROW_TILTS = ['-.4deg', '.35deg', '-.25deg', '.45deg', '-.5deg', '.3deg'];
 
@@ -51,6 +54,7 @@ function Row({ project, index }: { project: Project; index: number }) {
 
 export default function Postcards() {
 	const h = useHarbor();
+	const [tab, setTab] = useState<'rack' | 'wall'>('rack');
 	const published = h.projects.filter((p) => p.status === 'published').length;
 	const featured = h.projects.filter((p) => p.featured);
 
@@ -67,36 +71,47 @@ export default function Postcards() {
 				<button className="btn" onClick={() => h.openEdit('project', null)}>+ new postcard</button>
 			</div>
 
-			<div className="card card--gold tilt" style={{
-				'--tilt': '.3deg', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12,
-				animation: 'fadeUp .7s ease .1s both',
-			} as React.CSSProperties}>
-				<div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-					<span className="card-kicker card-kicker--gold">on the mantel · featured on the home page</span>
-					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{featured.length} of 3 spots filled</span>
-				</div>
-				<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', alignItems: 'center' }}>
-					{featured.map((p) => (
-						<span key={p.id} className="sway-chip sway-chip--gold">
-							★ {p.title}
-							<span className="chip-x" onClick={() => h.toggleFeatured(p)}>✕</span>
-						</span>
-					))}
-					{featured.length < 3 && (
-						<span style={{ fontSize: 13.5, color: 'var(--text-dim)', fontStyle: 'italic' }}>
-							room on the mantel, pin a card with ☆ below
-						</span>
-					)}
-				</div>
+			<div style={{ display: 'flex', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 12.5 }}>
+				<span className={`pill ${tab === 'rack' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('rack')}>the rack</span>
+				<span className={`pill ${tab === 'wall' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('wall')}>the wall</span>
 			</div>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp .7s ease .15s both' }}>
-				{h.projects.map((project, index) => (
-					<Row key={project.id} project={project} index={index} />
-				))}
-			</div>
+			{tab === 'wall' && <ProjectWall />}
 
-			<span className="footnote">// drafts stay in the rack. published cards catch the next boat out.</span>
+			{tab === 'rack' && (
+				<>
+					<div className="card card--gold tilt" style={{
+						'--tilt': '.3deg', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12,
+						animation: 'fadeUp .7s ease .1s both',
+					} as React.CSSProperties}>
+						<div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+							<span className="card-kicker card-kicker--gold">on the mantel · featured on the home page</span>
+							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{featured.length} of 3 spots filled</span>
+						</div>
+						<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', alignItems: 'center' }}>
+							{featured.map((p) => (
+								<span key={p.id} className="sway-chip sway-chip--gold">
+									★ {p.title}
+									<span className="chip-x" onClick={() => h.toggleFeatured(p)}>✕</span>
+								</span>
+							))}
+							{featured.length < 3 && (
+								<span style={{ fontSize: 13.5, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+									room on the mantel, pin a card with ☆ below
+								</span>
+							)}
+						</div>
+					</div>
+
+					<div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp .7s ease .15s both' }}>
+						{h.projects.map((project, index) => (
+							<Row key={project.id} project={project} index={index} />
+						))}
+					</div>
+
+					<span className="footnote">// drafts stay in the rack. published cards catch the next boat out.</span>
+				</>
+			)}
 		</div>
 	);
 }
