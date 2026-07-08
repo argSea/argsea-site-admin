@@ -40,8 +40,10 @@ function defaultPos(i: number): CardPos {
 	};
 }
 
+// mirrors the public wall's own null-ghost fallback so the admin preview
+// lands the placard where the site renders it before the first "pin it"
 function defaultGhostPos(): CardPos {
-	return { x: 70, y: 66, rotation: -3 };
+	return { x: 38, y: 68, rotation: -1.8 };
 }
 
 function initialLayout(published: Project[]): Record<string, CardPos> {
