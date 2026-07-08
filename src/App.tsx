@@ -14,6 +14,7 @@ import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
 import SmugglersHold from './screens/SmugglersHold';
 import FigureheadShop from './screens/FigureheadShop';
+import Marginalia from './screens/Marginalia';
 import Darkroom from './screens/Darkroom';
 import Keeper from './screens/Keeper';
 import Sidebar from './components/Sidebar';
@@ -27,15 +28,16 @@ import './App.css';
 const DRAWER_MAX = 600;
 
 const SCREENS: Record<Screen, () => React.JSX.Element> = {
-	dash:     Bridge,
-	projects: Postcards,
-	hobbies:  Graveyard,
-	notes:    WritingDesk,
-	copy:     SignalFlags,
-	eggs:     SmugglersHold,
-	shop:     FigureheadShop,
-	media:    Darkroom,
-	keeper:   Keeper,
+	dash:       Bridge,
+	projects:   Postcards,
+	hobbies:    Graveyard,
+	notes:      WritingDesk,
+	copy:       SignalFlags,
+	eggs:       SmugglersHold,
+	shop:       FigureheadShop,
+	marginalia: Marginalia,
+	media:      Darkroom,
+	keeper:     Keeper,
 };
 
 export default function App() {

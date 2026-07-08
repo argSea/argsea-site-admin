@@ -1,0 +1,233 @@
+/*
+ * Marginalia's layout: a shelf of saved doodles (figurehead-shop vocabulary),
+ * and the editor's rail / canvas / inkwell panel. The canvas itself breaks
+ * from the night-harbor card — cream paper, like a desk under a lamp — while
+ * the chrome around it stays in the office's usual dark furniture. Collapses
+ * to one column at phone width, same as the shop.
+ */
+
+.doodle-shelf {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+	gap: 14px;
+}
+
+.doodle-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px;
+	cursor: pointer;
+	transition: border-color .2s, transform .2s;
+}
+
+.doodle-card:hover {
+	border-color: var(--gold-dash-mid);
+	transform: translateY(-2px);
+}
+
+.doodle-card__peek {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 92px;
+	background: var(--paper);
+	border-radius: 8px;
+	padding: 8px;
+	box-sizing: border-box;
+}
+
+.doodle-card__name {
+	font-family: var(--font-display);
+	font-size: 15px;
+	color: var(--text-strong);
+}
+
+.doodle-card__meta {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	color: var(--periwinkle-deep);
+}
+
+.doodle-card__actions {
+	display: flex;
+	gap: 6px;
+	margin-top: 2px;
+}
+
+/* ---- the editor ---- */
+
+.doodle-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.doodle-topbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.doodle-dirty {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	flex-shrink: 0;
+}
+
+.doodle-body {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) 250px;
+	gap: 14px;
+	align-items: start;
+}
+
+.doodle-rail {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.doodle-tool {
+	width: 54px;
+	min-height: 46px;
+	padding: 5px 2px;
+	background: var(--card);
+	border: 1px solid var(--border-input);
+	border-radius: 10px;
+	color: var(--periwinkle);
+	font-size: 15px;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 1px;
+	transition: color .2s, border-color .2s, background .2s;
+}
+
+.doodle-tool__name {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+
+.doodle-tool:hover {
+	color: var(--gold);
+	border-color: var(--gold-dash-mid);
+}
+
+.doodle-tool[aria-pressed="true"] {
+	border: 1.5px dashed var(--gold-dash-hot);
+	color: var(--gold);
+	background: rgba(240, 217, 168, .08);
+}
+
+.doodle-tool--verb {
+	border-style: dashed;
+	color: var(--gold);
+}
+
+.doodle-tool:focus-visible,
+.doodle-ink:focus-visible {
+	outline: 2px solid var(--gold);
+	outline-offset: 2px;
+}
+
+/* the desk surface: cream paper under a lamp, not the night-harbor card */
+.doodle-canvas-wrap {
+	position: relative;
+	border-radius: 12px;
+	overflow: hidden;
+	border: 1px solid var(--paper-name);
+	background: var(--paper);
+	box-shadow: inset 0 0 0 1px rgba(61, 68, 104, .08), 0 10px 30px rgba(0, 0, 0, .35);
+	height: clamp(340px, 56vh, 620px);
+}
+
+.doodle-canvas {
+	width: 100%;
+	height: 100%;
+	display: block;
+	touch-action: none;
+	cursor: crosshair;
+}
+
+.doodle-canvas--select {
+	cursor: default;
+}
+
+.doodle-side {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	min-width: 0;
+}
+
+.doodle-panel {
+	padding: 14px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.doodle-inks {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+/* inkwells, not swatches — round pots you dip a nib into */
+.doodle-ink {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	border: 1px solid var(--border-chip);
+	box-shadow: inset 0 2px 3px rgba(0, 0, 0, .35);
+	cursor: pointer;
+	padding: 0;
+	box-sizing: border-box;
+	flex-shrink: 0;
+}
+
+.doodle-ink[aria-pressed="true"] {
+	border: 2px dashed var(--gold-dash-hot);
+}
+
+/* "dry": an empty well */
+.doodle-ink--dry {
+	background:
+		linear-gradient(to top right, transparent 44%, var(--danger) 46%, var(--danger) 54%, transparent 56%),
+		var(--well);
+}
+
+.doodle-ink--free {
+	border-style: dashed;
+	background: none;
+	box-shadow: none;
+}
+
+/* ---- phone width: rail goes horizontal, panel drops below the canvas ---- */
+
+@media (max-width: 900px) {
+	.doodle-body {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.doodle-rail {
+		flex-direction: row;
+		flex-wrap: wrap;
+	}
+
+	.doodle-tool {
+		width: 48px;
+		min-height: 48px;
+	}
+
+	.doodle-canvas-wrap {
+		height: clamp(300px, 46vh, 460px);
+	}
+}

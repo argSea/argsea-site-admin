@@ -16,6 +16,7 @@ const NAV: { id: Screen; glyph: string; label: string }[] = [
 	{ id: 'copy', glyph: '⚑', label: 'signal flags' },
 	{ id: 'eggs', glyph: '✧', label: "smuggler's hold" },
 	{ id: 'shop', glyph: '♆', label: 'the figurehead shop' },
+	{ id: 'marginalia', glyph: '✒', label: 'marginalia' },
 	{ id: 'media', glyph: '❏', label: 'the darkroom' },
 	{ id: 'keeper', glyph: '☸', label: 'the keeper' },
 ];

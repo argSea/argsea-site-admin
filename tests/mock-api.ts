@@ -207,6 +207,16 @@ export class MockApi {
 		},
 	];
 
+	doodles: Doc[] = [
+		{
+			id: 'd1', name: 'a little wave', viewBox: '0 0 100 100',
+			createdAt: '2026-07-06T12:00:00Z', updatedAt: '2026-07-06T12:00:00Z',
+			shapes: [
+				{ id: 'doodle-1', type: 'path', d: 'M10 60 Q30 40 50 60 T90 60', fill: 'none', stroke: '#232a4d', strokeWidth: 1.8, linecap: 'round' },
+			],
+		},
+	];
+
 	activity: Doc[] = [
 		{ id: 'a1', timestamp: '2026-07-05T09:30:00Z', message: 'note "The queue is the product" published', entityType: 'note', entityId: 'n1' },
 		{ id: 'a2', timestamp: '2026-07-05T09:00:00Z', message: 'postcard "This website" edited 11 times. it counts.', entityType: 'project', entityId: 'p4' },
@@ -503,6 +513,48 @@ export class MockApi {
 				}
 			}
 			return json(200, doc);
+		}
+
+		// ---- doodles (Marginalia — public read, admin-gated write) ----
+		if (/^\/1\/doodle\/?$/.test(path)) {
+			if (method === 'GET') {
+				return json(200, this.doodles);
+			}
+			if (method === 'POST') {
+				if (!authed) {
+					return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+				}
+				const doc = {
+					id: `d${this.nextId++}`, name: body.name ?? '', viewBox: body.viewBox ?? '',
+					shapes: body.shapes ?? [], createdAt: now(), updatedAt: now(),
+				};
+				this.doodles.push(doc);
+				return json(200, doc);
+			}
+		}
+		if ((match = /^\/1\/doodle\/([^/]+)$/.exec(path))) {
+			if (method === 'GET') {
+				const doc = this.doodles.find((d) => d.id === match![1]);
+				return doc ? json(200, doc) : json(404, { status: 'error', code: 404, message: 'not found' });
+			}
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
+			const doc = this.doodles.find((d) => d.id === match![1]);
+			if (!doc) {
+				return json(404, { status: 'error', code: 404, message: 'not found' });
+			}
+			if (method === 'PUT') {
+				doc.name = body.name;
+				doc.viewBox = body.viewBox;
+				doc.shapes = body.shapes ?? [];
+				doc.updatedAt = now();
+				return json(200, doc);
+			}
+			if (method === 'DELETE') {
+				this.doodles = this.doodles.filter((d) => d.id !== doc.id);
+				return json(200, { status: 'ok', code: 200 });
+			}
 		}
 
 		// ---- activity ----
