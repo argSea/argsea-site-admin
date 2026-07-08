@@ -37,6 +37,12 @@
 	--danger:           #e08a72;
 	--paper:            #e8e6df;
 	--paper-name:       #3d4468;
+	--paper-warm-top:   #efeadb;
+	--paper-warm-bot:   #e9e2d0;
+	--engrave:          rgba(110, 100, 75, .14);
+	--ink-slate:        #454a70;
+	--ink-sepia:        #8a6d3b;
+	--ink-maroon:       #9c4358;
 	--border-card:      rgba(150, 160, 220, .2);
 	--border-card-alt:  rgba(150, 160, 220, .18);
 	--border-chip:      rgba(150, 160, 220, .3);

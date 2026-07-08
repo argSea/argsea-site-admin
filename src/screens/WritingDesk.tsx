@@ -1,7 +1,7 @@
 // The writing desk. Note CRUD with the draft ⇄ publish pill, peek, and
 // confirm-to-burn. Bodies are plain text here; the <p> adapter does the wire.
-// Rows read as journal pages: cream paper, a doodle in the margin, ink
-// weather for the day, not the office's usual dark row.
+// Rows are the office's usual flat dark divider row, the shared vocabulary;
+// the one paper object left is the doodle chip tucked into the margin.
 import { useHarbor } from '../state/harbor';
 import type { Note } from '../lib/api';
 import { ShapeNode } from '../components/ShapeEditor';
@@ -14,10 +14,17 @@ function Row({ note }: { note: Note }) {
 	const inked = note.status === 'published';
 
 	return (
-		<div className="journal-row">
-			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--paper-name)', width: 90, flexShrink: 0 }}>
-				{note.date || '–'}
-			</span>
+		<div className="note-row">
+			<div className="journal-date">
+				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--periwinkle-deep)' }}>
+					{note.date || '–'}
+				</span>
+				{note.conditions && (
+					<span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontStyle: 'italic', color: 'var(--text-dim)' }}>
+						{note.conditions}
+					</span>
+				)}
+			</div>
 			{doodle && (
 				<div className="journal-doodle" title={note.doodleCaption || doodle.name}>
 					<svg viewBox={doodle.viewBox} width="100%" height="100%" style={{ overflow: 'visible' }}>
@@ -25,23 +32,17 @@ function Row({ note }: { note: Note }) {
 					</svg>
 				</div>
 			)}
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
-				{note.conditions && (
-					<span style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontStyle: 'italic', color: 'rgba(61, 68, 104, .75)' }}>
-						{note.conditions}
-					</span>
-				)}
-				<span className="row-title" style={{ fontSize: 18, color: 'var(--paper-name)' }}>{note.title}</span>
-				<span style={{ fontSize: 14, color: 'rgba(61, 68, 104, .75)', fontStyle: 'italic' }}>{note.teaser}</span>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 220, flex: 1 }}>
+				<span className="row-title" style={{ fontSize: 18 }}>{note.title}</span>
+				<span style={{ fontSize: 14, color: 'var(--text-dim)', fontStyle: 'italic' }}>{note.teaser}</span>
 			</div>
-			<div className="row-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-				<span className={`journal-status ${inked ? 'journal-status--inked' : 'journal-status--pencilled'}`}
-					onClick={() => h.toggleNoteStatus(note)}>
+			<div className="row-actions">
+				<span className={`pill ${inked ? 'pill--on' : 'pill--off'}`} onClick={() => h.toggleNoteStatus(note)}>
 					{inked ? '● inked' : '○ pencilled'}
 				</span>
-				<span className="journal-action" title="preview as it would sail" onClick={() => h.openPeek('note', note.id)}>peek</span>
-				<span className="journal-action" onClick={() => h.openEdit('note', note.id)}>edit</span>
-				<span className={`journal-action ${confirmHot ? 'journal-action--danger' : ''}`}
+				<span className="pill pill--quiet" title="preview as it would sail" onClick={() => h.openPeek('note', note.id)}>peek</span>
+				<span className="pill" onClick={() => h.openEdit('note', note.id)}>edit</span>
+				<span className={`pill ${confirmHot ? 'pill--danger' : 'pill--quiet'}`}
 					onClick={() => h.askConfirm(`note-${note.id}`, () => { void h.burnNote(note); })}>
 					{confirmHot ? 'sure? burn it.' : 'burn'}
 				</span>
@@ -68,7 +69,7 @@ export default function WritingDesk() {
 				<button className="btn" onClick={() => h.openEdit('note', null)}>+ new note</button>
 			</div>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp .7s ease .15s both' }}>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: 0, animation: 'fadeUp .7s ease .15s both' }}>
 				{h.notes.map((note) => <Row key={note.id} note={note} />)}
 			</div>
 
