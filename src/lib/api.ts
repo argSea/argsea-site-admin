@@ -48,6 +48,7 @@ export interface Project {
 	image:        string | null;
 	stamp?:       Stamp | null;
 	order:        number;
+	wallPos?:     { x: number; y: number; rotation: number } | null;
 	featured:     boolean;
 	status:       Status;
 	publishedAt:  string;
@@ -355,6 +356,12 @@ export function reorderProject(id: string, order: number): Promise<Project> {
 
 export function featureProject(id: string, featured: boolean): Promise<Project> {
 	return request<Project>('POST', `/1/project/${id}/${featured ? 'feature' : 'unfeature'}`);
+}
+
+// Non-destructive bulk set of wall positions; the response is the full
+// updated project list, same shape as the list endpoint.
+export function arrangeProjects(placements: { id: string; x: number; y: number; rotation: number }[]): Promise<Project[]> {
+	return request<Project[]>('PUT', '/1/project/arrangement', { placements });
 }
 
 // ---- hobbies (no lifecycle; reorder/retire go through full-replace PUT) ----
