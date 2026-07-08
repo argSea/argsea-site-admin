@@ -1,9 +1,10 @@
 /*
  * Marginalia's layout: a shelf of saved doodles (figurehead-shop vocabulary),
  * and the editor's rail / canvas / inkwell panel. The canvas itself breaks
- * from the night-harbor card: cream paper, like a desk under a lamp, while
- * the chrome around it stays in the office's usual dark furniture. Collapses
- * to one column at phone width, same as the shop.
+ * from the night-harbor card: bone-cream paper under a lamp, warmer than the
+ * shared --paper and engraved with a faint dot-grid, while the chrome around
+ * it stays in the office's usual dark furniture. Collapses to one column at
+ * phone width, same as the shop.
  */
 
 .doodle-shelf {
@@ -31,10 +32,28 @@
 	align-items: center;
 	justify-content: center;
 	height: 92px;
-	background: var(--paper);
+	background: linear-gradient(180deg, var(--paper-warm-top), var(--paper-warm-bot));
 	border-radius: 8px;
 	padding: 8px;
 	box-sizing: border-box;
+	transition: transform .2s;
+}
+
+/* the shelf tiles sit at a slight, alternating tilt and settle flat on hover */
+.doodle-card:nth-child(3n+1) .doodle-card__peek {
+	transform: rotate(.6deg);
+}
+
+.doodle-card:nth-child(3n+2) .doodle-card__peek {
+	transform: rotate(-.7deg);
+}
+
+.doodle-card:nth-child(3n) .doodle-card__peek {
+	transform: rotate(.4deg);
+}
+
+.doodle-card:hover .doodle-card__peek {
+	transform: rotate(0deg);
 }
 
 .doodle-card__name {
@@ -136,14 +155,19 @@
 	outline-offset: 2px;
 }
 
-/* the desk surface: cream paper under a lamp, not the night-harbor card */
+/* the desk surface: bone-cream paper under a lamp, engraved with a faint
+   dot-grid, not the night-harbor card. Not tilted: it clips under
+   overflow: hidden, and a tilt on a working canvas would cut into it. */
 .doodle-canvas-wrap {
 	position: relative;
-	border-radius: 12px;
+	border-radius: 8px;
 	overflow: hidden;
 	border: 1px solid var(--paper-name);
-	background: var(--paper);
-	box-shadow: inset 0 0 0 1px rgba(61, 68, 104, .08), 0 10px 30px rgba(0, 0, 0, .35);
+	background-image:
+		radial-gradient(var(--engrave) 1px, transparent 1.5px),
+		linear-gradient(180deg, var(--paper-warm-top), var(--paper-warm-bot));
+	background-size: 22px 22px, 100% 100%;
+	box-shadow: 0 14px 36px rgba(0, 0, 0, .4);
 	height: clamp(340px, 56vh, 620px);
 }
 

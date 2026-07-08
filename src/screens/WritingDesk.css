@@ -1,26 +1,19 @@
 /*
- * The writing desk: notes as journal pages. Each row is a scrap of --paper
- * (the same cream lifted for photo prints and the doodle shelf), not the
- * night-harbor card: the office's dark furniture stays around it, the page
- * itself is lit like something written by hand.
+ * The writing desk: notes as flat dark divider rows, the shared `.note-row`
+ * vocabulary from global.css. The only paper object left on the row is the
+ * doodle chip in the margin, pressed into the page like a hand-drawn mark.
  */
 
-.journal-row {
+.journal-date {
 	display: flex;
-	align-items: center;
-	gap: 18px;
-	flex-wrap: wrap;
-	background: var(--paper);
-	border-radius: 8px;
-	padding: 16px 18px;
-	box-shadow: 0 6px 16px rgba(0, 0, 0, .28);
-	transform: rotate(-.4deg);
-	transition: transform .2s, box-shadow .2s;
-}
-
-.journal-row:hover {
-	transform: rotate(0deg) translateY(-2px);
-	box-shadow: 0 10px 22px rgba(0, 0, 0, .32);
+	flex-direction: column;
+	gap: 4px;
+	width: 126px;
+	flex-shrink: 0;
+	align-self: stretch;
+	justify-content: center;
+	border-right: 1.5px solid rgba(181, 106, 106, .35);
+	padding: 2px 12px 2px 0;
 }
 
 .journal-doodle {
@@ -30,47 +23,10 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: rgba(61, 68, 104, .06);
-	border-radius: 6px;
-	padding: 5px;
+	background: linear-gradient(180deg, #efeadb, #e9e2d0);
+	border-radius: 3px;
+	padding: 5px 7px;
 	box-sizing: border-box;
-}
-
-.journal-status {
-	padding: 5px 12px;
-	border-radius: 999px;
-	font-family: var(--font-mono);
-	font-size: 11px;
-	letter-spacing: .04em;
-	cursor: pointer;
-	user-select: none;
-	white-space: nowrap;
-	transition: border-color .2s, color .2s;
-}
-
-.journal-status--inked {
-	border: 1.5px dashed rgba(61, 68, 104, .55);
-	color: var(--paper-name);
-}
-
-.journal-status--pencilled {
-	border: 1px solid rgba(61, 68, 104, .3);
-	color: rgba(61, 68, 104, .6);
-}
-
-.journal-action {
-	font-family: var(--font-mono);
-	font-size: 12px;
-	color: rgba(61, 68, 104, .65);
-	cursor: pointer;
-	user-select: none;
-	transition: color .2s;
-}
-
-.journal-action:hover {
-	color: var(--paper-name);
-}
-
-.journal-action--danger {
-	color: var(--danger);
+	transform: rotate(-2deg);
+	box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
 }

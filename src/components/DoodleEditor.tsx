@@ -30,7 +30,7 @@ const TOOLS: { id: Tool; glyph: string; label: string }[] = [
 ];
 
 // the desk's inkwells, one dip away; anything else through the free input
-const INKS = ['#232a4d', '#93a0e8', '#f0d9a8', '#5f6ec4'];
+const INKS = ['#454a70', '#8a6d3b', '#9c4358', '#93a0e8'];
 
 const LINECAPS: Linecap[] = ['butt', 'round', 'square'];
 const LINEJOINS: Linejoin[] = ['miter', 'round', 'bevel'];
@@ -87,7 +87,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 	const [penDraft, setPenDraft] = useState<SubPath | null>(null);
 	const [pencilTrace, setPencilTrace] = useState<Pt[] | null>(null);
 	const [defaults, setDefaults] = useState<StyleDefaults>({
-		fill: '#232a4d', stroke: '#232a4d', strokeWidth: 1.8, opacity: 1, linecap: 'round', linejoin: 'round',
+		fill: '#454a70', stroke: '#454a70', strokeWidth: 1.8, opacity: 1, linecap: 'round', linejoin: 'round',
 	});
 
 	const svgRef = useRef<SVGSVGElement>(null);
@@ -852,7 +852,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 								aria-pressed={styleOf('fill') === 'none'} aria-label="fill none"
 								onClick={() => setStyle({ fill: 'none' })} />
 							<input type="color" className="doodle-ink doodle-ink--free" aria-label="free fill color"
-								value={/^#[0-9a-fA-F]{6}$/.test(styleOf('fill')) ? styleOf('fill') : '#232a4d'}
+								value={/^#[0-9a-fA-F]{6}$/.test(styleOf('fill')) ? styleOf('fill') : '#454a70'}
 								onChange={(e) => setStyle({ fill: e.target.value })} />
 						</div>
 
@@ -867,7 +867,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 								aria-pressed={styleOf('stroke') === 'none'} aria-label="stroke none"
 								onClick={() => setStyle({ stroke: 'none' })} />
 							<input type="color" className="doodle-ink doodle-ink--free" aria-label="free stroke color"
-								value={/^#[0-9a-fA-F]{6}$/.test(styleOf('stroke')) ? styleOf('stroke') : '#232a4d'}
+								value={/^#[0-9a-fA-F]{6}$/.test(styleOf('stroke')) ? styleOf('stroke') : '#454a70'}
 								onChange={(e) => setStyle({ stroke: e.target.value })} />
 						</div>
 
