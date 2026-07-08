@@ -711,10 +711,15 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			return;
 		}
 		try {
-			// hobbies snapshot nothing — full-replace PUTs with swapped orders
+			// hobbies snapshot nothing — full-replace PUTs with swapped orders.
+			// equal orders (degenerate all-zero data) would make the swap a
+			// no-op, so nudge the pair apart by 1 in the move direction instead.
+			const [movedOrder, neighborOrder] = h.order === neighbor.order
+				? dir === 1 ? [h.order + 1, neighbor.order] : [h.order, neighbor.order + 1]
+				: [neighbor.order, h.order];
 			const [movedSaved, neighborSaved] = await Promise.all([
-				api.hobbies.update(h.id, { ...h, order: neighbor.order }),
-				api.hobbies.update(neighbor.id, { ...neighbor, order: h.order }),
+				api.hobbies.update(h.id, { ...h, order: movedOrder }),
+				api.hobbies.update(neighbor.id, { ...neighbor, order: neighborOrder }),
 			]);
 			setHobbies((cur) => cur
 				.map((x) => (x.id === movedSaved.id ? movedSaved : x.id === neighborSaved.id ? neighborSaved : x))
