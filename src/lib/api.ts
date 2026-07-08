@@ -387,6 +387,27 @@ export const figurehead = {
 	publish:   (id: string)                        => request<FigureheadDesign>('POST', `/1/figurehead/designs/${id}/publish`),
 };
 
+// ---- doodles (Marginalia's shelf and editor — no publish/seed lifecycle) ----
+
+// POST always lands as a fresh doodle; PUT edits name/viewBox/shapes only
+// (createdAt preserved server-side). Public GET (the site joins notes to
+// doodles by id); admin-gated create/update/delete.
+export interface Doodle {
+	id:        string;
+	name:      string;
+	viewBox:   string;
+	shapes:    Shape[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+export const doodle = {
+	list:   ()                     => request<Doodle[]>('GET', '/1/doodle'),
+	create: (doc: Partial<Doodle>) => request<Doodle>('POST', '/1/doodle', doc),
+	update: (id: string, doc: Doodle) => request<Doodle>('PUT', `/1/doodle/${id}`, doc),
+	remove: (id: string)           => request<void>('DELETE', `/1/doodle/${id}`),
+};
+
 // ---- site copy singleton ----
 
 export function getCopy(): Promise<SiteCopy> {

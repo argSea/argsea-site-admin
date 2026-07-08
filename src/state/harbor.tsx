@@ -6,20 +6,27 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Category, CopyTextField, EggFlags, FigureheadDesign, FigureheadPose, Hobby,
+	ActivityEntry, Category, CopyTextField, Doodle, EggFlags, FigureheadDesign, FigureheadPose, Hobby,
 	KeeperProfile, LanternStatus, Lighthouse, MediaItem, Note, Project, Revision, Shape,
 	SiteCopy, Stamp, Suggestion,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { randomStamp, stampForWire } from '../lib/stamp';
 
-export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'shop' | 'media' | 'keeper';
+export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'shop' | 'media' | 'keeper' | 'marginalia';
 
 // What the shop's editor hands back on save — the document fields a PUT may
 // change (plus pose, which only a POST uses; the server preserves it after).
 export interface DesignFields {
 	pose:    FigureheadPose;
 	label:   string;
+	viewBox: string;
+	shapes:  Shape[];
+}
+
+// What Marginalia's editor hands back on save — no pose/lifecycle, just a doc.
+export interface DoodleFields {
+	name:    string;
 	viewBox: string;
 	shapes:  Shape[];
 }
@@ -248,6 +255,7 @@ interface HarborValue {
 	keeper:      KeeperProfile;
 	activity:    ActivityEntry[];
 	designs:     FigureheadDesign[];
+	doodles:     Doodle[];
 
 	keeperName: string;
 	dirtyCount: number;
@@ -299,6 +307,10 @@ interface HarborValue {
 	deleteDesign:  (d: FigureheadDesign) => Promise<void>;
 	publishDesign: (d: FigureheadDesign) => Promise<void>;
 
+	saveDoodle:   (id: string | null, fields: DoodleFields) => Promise<Doodle | null>;
+	renameDoodle: (d: Doodle, name: string) => Promise<void>;
+	deleteDoodle: (d: Doodle) => Promise<void>;
+
 	printUsage:    (filename: string) => number;
 	developPrints: (files: Iterable<File>) => Promise<void>;
 	tearOffPrint:  (m: MediaItem) => Promise<void>;
@@ -335,6 +347,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [keeper, setKeeper] = useState<KeeperProfile>(EMPTY_KEEPER);
 	const [activity, setActivity] = useState<ActivityEntry[]>([]);
 	const [designs, setDesigns] = useState<FigureheadDesign[]>([]);
+	const [doodles, setDoodles] = useState<Doodle[]>([]);
 
 	const [toast, setToast] = useState<string | null>(null);
 	const [confirmKey, setConfirmKey] = useState<string | null>(null);
@@ -415,6 +428,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.suggestions.list().then((list) => setSuggestions([...list].sort((a, b) => a.order - b.order))).catch(oops);
 		api.media.list().then(setPrints).catch(oops);
 		api.figurehead.list().then(setDesigns).catch(oops);
+		api.doodle.list().then(setDoodles).catch(oops);
 		api.getCopy().then((doc) => setCopy(seedHold(doc))).catch(() => setCopy(EMPTY_COPY));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
 		refreshActivity();
@@ -945,6 +959,67 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
+	// ---- marginalia (doodles) ----
+
+	const replaceDoodle = useCallback((saved: Doodle) => {
+		setDoodles((cur) => {
+			const at = cur.findIndex((d) => d.id === saved.id);
+			return at === -1 ? [...cur, saved] : cur.map((d) => (d.id === saved.id ? saved : d));
+		});
+	}, []);
+
+	// Explicit save — doodles are documents, they never ride the copy
+	// autosave. A null id POSTs a fresh doodle; otherwise a full-replace PUT.
+	// Returns the saved doc so the editor can adopt the new id, or null when
+	// the harbor swallowed an error.
+	const saveDoodle = useCallback(async (id: string | null, fields: DoodleFields): Promise<Doodle | null> => {
+		try {
+			let saved: Doodle;
+			if (id) {
+				const current = doodles.find((d) => d.id === id);
+				if (!current) {
+					return null;
+				}
+				saved = await api.doodle.update(id, { ...current, ...fields });
+				showToast('✎ doodle saved to the desk');
+			} else {
+				saved = await api.doodle.create(fields);
+				showToast('✎ a fresh sketch joins the desk');
+			}
+			replaceDoodle(saved);
+			refreshActivity();
+			return saved;
+		} catch (error) {
+			oops(error);
+			return null;
+		}
+	}, [doodles, replaceDoodle, showToast, oops, refreshActivity]);
+
+	const renameDoodle = useCallback(async (d: Doodle, name: string) => {
+		const trimmed = name.trim();
+		if (!trimmed || trimmed === d.name) {
+			return;
+		}
+		try {
+			replaceDoodle(await api.doodle.update(d.id, { ...d, name: trimmed }));
+			showToast('⚒ renamed and set back down');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceDoodle, showToast, oops, refreshActivity]);
+
+	const deleteDoodle = useCallback(async (d: Doodle) => {
+		try {
+			await api.doodle.remove(d.id);
+			setDoodles((cur) => cur.filter((x) => x.id !== d.id));
+			showToast('🪓 torn out and binned');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
 	// ---- the darkroom ----
 
 	const printUsage = useCallback((filename: string): number =>
@@ -1077,7 +1152,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const value: HarborValue = {
 		session, booting, screen, goTo, signIn, goAshore,
-		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs,
+		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs, doodles,
 		keeperName, dirtyCount,
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchStamp, loadRevision, saveEdit, cancelEdit,
@@ -1087,6 +1162,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		setCopyField, setKeeperField,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		saveDesign, renameDesign, deleteDesign, publishDesign,
+		saveDoodle, renameDoodle, deleteDoodle,
 		printUsage, developPrints, tearOffPrint,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 	};
