@@ -9,6 +9,7 @@ import { INKS, MOTIF_IDS, POSTMARK_TEXTS, STAMP_TEXT_MAX, DEFAULT_STAMP, randomS
 import { printBackground } from '../lib/prints';
 import { relativeTime } from '../lib/time';
 import Stamp from './Stamp';
+import { ShapeNode } from './ShapeEditor';
 
 const CATEGORIES: Category[] = ['backend', 'games', 'this website', 'tinkering'];
 
@@ -104,6 +105,50 @@ function PrintPicker({ selected, kind }: { selected: string | null; kind: 'card'
 							: { width: 64, height: 48, borderRadius: 2, background: 'var(--well)', border: '1px dashed rgba(95,110,196,.5)', boxSizing: 'border-box' }} />
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--paper-name)', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
 							{option.name}
+						</span>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function DoodlePicker({ selected }: { selected: string | null }) {
+	const h = useHarbor();
+
+	return (
+		<div className="fieldset-dashed">
+			<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>
+				the doodle · one per note
+			</span>
+			<div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+				<div onClick={() => h.patchDraft({ doodleId: null })} style={{
+					display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', cursor: 'pointer',
+					background: 'var(--paper)', borderRadius: 4, padding: '6px 6px 5px',
+					transform: selected === null ? 'rotate(0deg)' : 'rotate(-1.2deg)',
+					transition: 'transform .2s, outline-color .2s',
+					outline: selected === null ? '2px dashed rgba(240,217,168,.9)' : '2px dashed transparent',
+					outlineOffset: 3,
+				}}>
+					<div style={{ width: 64, height: 48, borderRadius: 2, background: 'var(--well)', border: '1px dashed rgba(95,110,196,.5)', boxSizing: 'border-box' }} />
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--paper-name)' }}>none</span>
+				</div>
+				{h.doodles.map((d) => (
+					<div key={d.id} onClick={() => h.patchDraft({ doodleId: d.id })} style={{
+						display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', cursor: 'pointer',
+						background: 'var(--paper)', borderRadius: 4, padding: '6px 6px 5px',
+						transform: selected === d.id ? 'rotate(0deg)' : 'rotate(-1.2deg)',
+						transition: 'transform .2s, outline-color .2s',
+						outline: selected === d.id ? '2px dashed rgba(240,217,168,.9)' : '2px dashed transparent',
+						outlineOffset: 3,
+					}}>
+						<div style={{ width: 64, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+							<svg viewBox={d.viewBox} width="100%" height="100%" style={{ overflow: 'visible' }}>
+								{d.shapes.map((s) => <ShapeNode key={s.id} s={s} />)}
+							</svg>
+						</div>
+						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--paper-name)', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+							{d.name}
 						</span>
 					</div>
 				))}
@@ -238,12 +283,23 @@ function NoteFields({ draft }: { draft: NoteDraft }) {
 					onChange={(e) => h.patchDraft({ teaser: e.target.value })} />
 			</label>
 			<label className="field">
+				<span className="field-label">conditions · the day's weather</span>
+				<input type="text" className="input input--soft" style={{ padding: '11px 13px', fontSize: 13 }}
+					placeholder="squally, low visibility" value={draft.conditions}
+					onChange={(e) => h.patchDraft({ conditions: e.target.value })} />
+			</label>
+			<label className="field">
 				<span className="field-label">the note itself</span>
 				<textarea className="input input--serif" rows={9} value={draft.bodyText}
 					style={{ padding: '13px 14px', fontSize: 15.5, lineHeight: 1.65 }}
 					onChange={(e) => h.patchDraft({ bodyText: e.target.value })} />
 			</label>
-			<PrintPicker selected={draft.image} kind="note" />
+			<DoodlePicker selected={draft.doodleId} />
+			<label className="field">
+				<span className="field-label">doodle caption</span>
+				<input type="text" className="input input--soft" style={{ padding: '11px 13px', fontSize: 13 }}
+					value={draft.doodleCaption} onChange={(e) => h.patchDraft({ doodleCaption: e.target.value })} />
+			</label>
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 				— signs itself "{h.keeper.signoff || '— j'}" on the way out
 			</span>

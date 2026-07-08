@@ -122,11 +122,13 @@ export interface ProjectDraft {
 }
 
 export interface NoteDraft {
-	title:    string;
-	date:     string;
-	teaser:   string;
-	bodyText: string;
-	image:    string | null;
+	title:         string;
+	date:          string;
+	teaser:        string;
+	bodyText:      string;
+	conditions:    string;
+	doodleId:      string | null;
+	doodleCaption: string;
 }
 
 export interface HobbyDraft {
@@ -228,8 +230,11 @@ function monthYear(): string {
 
 function noteDraft(n?: Note): NoteDraft {
 	return n
-		? { title: n.title, date: n.date, teaser: n.teaser, bodyText: htmlToText(n.body), image: n.image }
-		: { title: '', date: monthYear(), teaser: '', bodyText: '', image: null };
+		? {
+			title: n.title, date: n.date, teaser: n.teaser, bodyText: htmlToText(n.body),
+			conditions: n.conditions, doodleId: n.doodleId, doodleCaption: n.doodleCaption,
+		}
+		: { title: '', date: monthYear(), teaser: '', bodyText: '', conditions: '', doodleId: null, doodleCaption: '' };
 }
 
 function hobbyDraft(h?: Hobby): HobbyDraft {
@@ -592,7 +597,10 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				}
 			} else if (edit.type === 'note') {
 				const d = edit.draft;
-				const fields = { title: d.title, date: d.date, teaser: d.teaser, body: textToHtml(d.bodyText), image: d.image };
+				const fields = {
+					title: d.title, date: d.date, teaser: d.teaser, body: textToHtml(d.bodyText),
+					conditions: d.conditions, doodleId: d.doodleId, doodleCaption: d.doodleCaption,
+				};
 				if (edit.id === null) {
 					replaceNote(await api.notes.create({ ...fields, status: 'draft' }));
 					showToast('✎ filed at the writing desk');
@@ -1022,9 +1030,10 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	// ---- the darkroom ----
 
+	// notes carry a doodle now, not a photo print — only projects still count
 	const printUsage = useCallback((filename: string): number =>
-		projects.filter((p) => p.image === filename).length + notes.filter((n) => n.image === filename).length,
-	[projects, notes]);
+		projects.filter((p) => p.image === filename).length,
+	[projects]);
 
 	const developPrints = useCallback(async (files: Iterable<File>) => {
 		const images = Array.from(files).filter((f) => f.type.startsWith('image/') || /\.(png|jpe?g|gif|svg|webp)$/i.test(f.name));
@@ -1053,25 +1062,22 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const tearOffPrint = useCallback(async (m: MediaItem) => {
 		try {
 			// deleting the file does NOT touch referencing documents (pinned
-			// contract) — detaching is this client's job, via full-replace PUTs
+			// contract) — detaching is this client's job, via full-replace PUTs.
+			// Notes carry a doodle now, not a photo print, so only projects can
+			// reference one.
 			const usedProjects = projects.filter((p) => p.image === m.filename);
-			const usedNotes = notes.filter((n) => n.image === m.filename);
-			const [savedProjects, savedNotes] = await Promise.all([
-				Promise.all(usedProjects.map((p) => api.projects.update(p.id, { ...p, image: null }))),
-				Promise.all(usedNotes.map((n) => api.notes.update(n.id, { ...n, image: null }))),
-			]);
+			const savedProjects = await Promise.all(usedProjects.map((p) => api.projects.update(p.id, { ...p, image: null })));
 			savedProjects.forEach(replaceProject);
-			savedNotes.forEach(replaceNote);
 			await api.media.remove(m.id);
 			setPrints((cur) => cur.filter((x) => x.id !== m.id));
-			showToast(usedProjects.length + usedNotes.length
+			showToast(usedProjects.length
 				? 'print torn off its cards and left in the sun'
 				: 'print left out in the sun');
 			refreshActivity();
 		} catch (error) {
 			oops(error);
 		}
-	}, [projects, notes, replaceProject, replaceNote, showToast, oops, refreshActivity]);
+	}, [projects, replaceProject, showToast, oops, refreshActivity]);
 
 	// ---- the lantern ----
 

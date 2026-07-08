@@ -55,7 +55,7 @@ test('editing after a roll back files the restore, then PUTs on top', async ({ p
 test('notes have printings too', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'writing desk').click();
-	await page.locator('.note-row', { hasText: 'The queue is the product' }).getByText('edit', { exact: true }).click();
+	await page.locator('.journal-row', { hasText: 'The queue is the product' }).getByText('edit', { exact: true }).click();
 
 	const overlay = page.locator('.overlay-card');
 	await overlay.getByText('roll back ↺').click();

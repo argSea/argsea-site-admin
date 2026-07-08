@@ -56,16 +56,18 @@ export interface Project {
 }
 
 export interface Note {
-	id:          string;
-	title:       string;
-	teaser:      string;
-	body:        string;        // sanitized HTML
-	date:        string;        // freeform display string
-	image:       string | null;
-	status:      Status;
-	publishedAt: string;
-	createdAt:   string;
-	updatedAt:   string;
+	id:            string;
+	title:         string;
+	teaser:        string;
+	body:          string;        // sanitized HTML
+	date:          string;        // freeform display string
+	conditions:    string;        // journal-style weather/mood line
+	doodleId:      string | null;
+	doodleCaption: string;
+	status:        Status;
+	publishedAt:   string;
+	createdAt:     string;
+	updatedAt:     string;
 }
 
 export interface Hobby {
