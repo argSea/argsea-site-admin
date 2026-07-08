@@ -1,5 +1,5 @@
 // Peek: the postcard/note rendered as the site would show it, from local
-// state. Everything here is plain React text rendering — the body HTML is
+// state. Everything here is plain React text rendering; the body HTML is
 // converted back to paragraphs, so nothing goes through innerHTML.
 import { useHarbor } from '../state/harbor';
 import { htmlToParagraphs } from '../lib/paragraphs';
@@ -55,7 +55,7 @@ export default function PeekOverlay() {
 	}
 	const doodle = peek.type === 'note' && 'doodleId' in item ? h.doodles.find((d) => d.id === item.doodleId) : undefined;
 
-	const statusLine = item.status === 'published' ? 'published — this is live' : 'draft — only you can see this';
+	const statusLine = item.status === 'published' ? 'published: this is live' : 'draft: only you can see this';
 	const paragraphs = htmlToParagraphs(item.body);
 
 	return (
@@ -120,7 +120,7 @@ export default function PeekOverlay() {
 							</div>
 						)}
 						<div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--periwinkle)', marginTop: 8 }}>
-							{h.keeper.signoff || '— j'}
+							{h.keeper.signoff || '– j'}
 						</div>
 					</div>
 				)}

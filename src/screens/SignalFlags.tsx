@@ -1,4 +1,4 @@
-// The flag locker. The SiteCopy singleton, field for field — five footer
+// The flag locker. The SiteCopy singleton, field for field: five footer
 // quips, the hero, and the dictionary entry. Saved as you type (debounced PUT).
 import { useHarbor } from '../state/harbor';
 import type { CopyTextField } from '../lib/api';

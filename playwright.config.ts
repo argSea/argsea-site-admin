@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-// The suite runs against the dev server with a route-intercepted mock API —
+// The suite runs against the dev server with a route-intercepted mock API;
 // no live API anywhere. The API origin below is never actually listening;
 // every request to it is fulfilled in-page by tests/mock-api.ts.
 export default defineConfig({

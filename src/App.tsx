@@ -1,4 +1,4 @@
-// The office shell. One screen state, no router — exactly like the design:
+// The office shell. One screen state, no router: exactly like the design:
 // login gate, sidebar + main pane, the two overlays, one toast. Below the
 // drawer breakpoint the sidebar folds behind a hamburger in a slim top bar.
 import { useEffect, useRef, useState } from 'react';
@@ -23,7 +23,7 @@ import PeekOverlay from './components/PeekOverlay';
 import { DriftDot, LighthouseMark } from './components/art';
 import './App.css';
 
-// The phone breakpoint — mirrors the site's hamburger ruling. Keep in sync
+// The phone breakpoint, mirrors the site's hamburger ruling. Keep in sync
 // with the media query in App.css.
 const DRAWER_MAX = 600;
 
@@ -68,7 +68,7 @@ export default function App() {
 	});
 
 	// A jump past the breakpoint leaves no way to close the drawer, so drop it.
-	// Watch the exact query App.css uses — a mirrored min-width would leave a
+	// Watch the exact query App.css uses; a mirrored min-width would leave a
 	// fractional-width gap between the two where neither side fires.
 	useEffect(() => {
 		const phone = window.matchMedia(`(max-width: ${DRAWER_MAX}px)`);

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { MockApi } from './mock-api';
 import { signIn, toast } from './office';
 
-test('the dirty counter beats the default activity window — lantern entries excluded', async ({ page }) => {
+test('the dirty counter beats the default activity window, lantern entries excluded', async ({ page }) => {
 	const mock = await signIn(page);
 	// seeded: EIGHT content entries newer than lastHoistedAt (more than the
 	// API's default recent window of 6), plus one lantern entry to exclude
@@ -32,7 +32,7 @@ test('a 409 on hoist adopts the in-flight status instead of erroring', async ({ 
 	await signIn(page, mock);
 
 	await page.getByRole('button', { name: 'hoist the lantern' }).click();
-	await expect(toast(page)).toHaveText('the boat is already out — one hoist at a time');
+	await expect(toast(page)).toHaveText('the boat is already out, one hoist at a time');
 });
 
 test('rollback wants a second click, then re-points the lantern', async ({ page }) => {

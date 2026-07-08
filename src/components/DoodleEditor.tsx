@@ -1,7 +1,7 @@
-// Marginalia's editor — a pen+pencil-only fork of the figurehead shop's
+// Marginalia's editor: a pen+pencil-only fork of the figurehead shop's
 // touch-first SVG canvas. Same unified pointer model, transforms baked into
 // coordinates, immutable-snapshot history, explicit save. No roles,
-// onion-skin, pose/seed lifecycle, or extra shape tools — a doodle is a name
+// onion-skin, pose/seed lifecycle, or extra shape tools; a doodle is a name
 // and a flat pile of shapes on cream paper.
 import { useEffect, useRef, useState } from 'react';
 import { useHarbor } from '../state/harbor';
@@ -95,11 +95,11 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 	const drag = useRef<Drag | null>(null);
 	const pointers = useRef(new Map<number, Pt>());
 	// child pointerdowns note what was hit; the svg handler (bubbling after
-	// them) consumes the note — pointer capture and the pointer map stay in
+	// them) consumes the note; pointer capture and the pointer map stay in
 	// one place instead of being smeared over every overlay element
 	const hitId = useRef<string | null>(null);
 	const overlayHit = useRef<Drag | null>(null);
-	// the freshest shapes across live drag updates — a pointerup in the same
+	// the freshest shapes across live drag updates; a pointerup in the same
 	// frame as a pointermove must not commit a stale render's array
 	const live = useRef<Shape[]>(doc.shapes);
 
@@ -187,7 +187,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 		zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, factor);
 	};
 
-	// React's wheel listener is passive — attach our own so the page doesn't
+	// React's wheel listener is passive; attach our own so the page doesn't
 	// scroll under a zoom gesture
 	const zoomAtRef = useRef(zoomAt);
 	zoomAtRef.current = zoomAt;
@@ -270,7 +270,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 			setNodeEdit((ne) => (ne ? { ...ne, subs: parsePathOf(hist[histAt], ne.shapeId), sel: null } : ne));
 		}
 		if (d?.kind === 'penHandle') {
-			// the pen placed this anchor on the same pointerdown — roll it back
+			// the pen placed this anchor on the same pointerdown, roll it back
 			setPenDraft((cur) => (cur && cur.anchors.length > 1
 				? { ...cur, anchors: cur.anchors.slice(0, -1) }
 				: null));
@@ -303,7 +303,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 			return;
 		}
 		if (pointers.current.size > 2) {
-			// a third finger changes nothing — but a child pointerdown may have
+			// a third finger changes nothing, but a child pointerdown may have
 			// noted a hit before this guard; drop it or the next single tap
 			// consumes a stale note
 			overlayHit.current = null;
@@ -509,7 +509,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 			}
 			case 'penHandle': {
 				if (!d.moved) {
-					// a tap places a corner anchor — no handles
+					// a tap places a corner anchor, no handles
 					setPenDraft((cur) => (cur ? {
 						...cur,
 						anchors: cur.anchors.map((a, i) => (i === cur.anchors.length - 1
@@ -524,7 +524,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 	};
 
 	// a cancelled pointer (palm rejection, OS gesture steal) must not commit a
-	// half-finished drag — roll it back instead
+	// half-finished drag, roll it back instead
 	const onPointerCancel = (e: React.PointerEvent<SVGSVGElement>) => {
 		pointers.current.delete(e.pointerId);
 		abortDrag();

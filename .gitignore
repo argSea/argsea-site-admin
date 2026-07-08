@@ -3,7 +3,7 @@ logs
 *.log
 npm-debug.log*
 
-# env — VITE_ARGSEA_API_URL lives here locally
+# env, VITE_ARGSEA_API_URL lives here locally
 .env
 .env.*
 

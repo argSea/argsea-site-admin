@@ -45,7 +45,7 @@ export class MockApi {
 	// an API deployed before the hold serves AND echoes JSON null for the egg
 	// fields, whatever the client sends
 	copyPredatesHold = false;
-	// ms to hold the copy PUT response — lets a spec type over an in-flight save
+	// ms to hold the copy PUT response; lets a spec type over an in-flight save
 	copyPutLatency = 0;
 
 	projects: Doc[] = [
@@ -55,7 +55,7 @@ export class MockApi {
 			shortDesc: 'One giant app became many small, well-behaved services.',
 			body: '<p>Readers never noticed.</p>\n<p>That was the point.</p>',
 			moral: 'Moral: the best migrations are the boring ones.',
-			postcardTo: 'everyone', postcardFrom: 'justin', postmarked: '2024 — ongoing',
+			postcardTo: 'everyone', postcardFrom: 'justin', postmarked: '2024 – ongoing',
 			slug: 'un-monolithing', image: 'unmonolith-diagram.png',
 			stamp: { shape: 'rect', motif: 'lighthouse', ink: '#f0d9a8', cents: '3¢' },
 			order: 1, featured: true, status: 'published',
@@ -75,7 +75,7 @@ export class MockApi {
 			id: 'p3', title: 'The home lab', category: 'tinkering',
 			tags: ['plex', 'linux'], shortDesc: 'A small fleet of machines that mostly behave.',
 			body: '', moral: 'Moral: some hobbies are load-bearing.',
-			postcardTo: 'the family', postcardFrom: 'the server closet', postmarked: '2021 — forever',
+			postcardTo: 'the family', postcardFrom: 'the server closet', postmarked: '2021 – forever',
 			slug: 'home-lab', image: 'homelab-rack.jpg',
 			order: 3, featured: false, status: 'draft',
 			publishedAt: '', createdAt: '2026-05-03T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
@@ -101,15 +101,15 @@ export class MockApi {
 		{
 			id: 'n2', title: 'The home lab ate my weekend', teaser: 'A confession, with uptime charts.',
 			body: '<h2>an heading the sanitizer let through</h2><p>kept <em>text</em> here</p>',
-			date: '—', conditions: '', doodleId: null, doodleCaption: '', status: 'draft',
+			date: '–', conditions: '', doodleId: null, doodleCaption: '', status: 'draft',
 			publishedAt: '', createdAt: '2026-05-02T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
 	];
 
 	hobbies: Doc[] = [
-		{ id: 'h1', name: 'The home lab', dates: '2021 — present', active: true, epitaph: '', eulogy: 'One tweak from perfect, forever.', order: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
+		{ id: 'h1', name: 'The home lab', dates: '2021 – present', active: true, epitaph: '', eulogy: 'One tweak from perfect, forever.', order: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
 		{ id: 'h2', name: 'CachyOS tinkering', dates: 'always', active: true, epitaph: '', eulogy: 'The day job wearing a hat.', order: 2, createdAt: '2026-01-02T00:00:00Z', updatedAt: '2026-01-02T00:00:00Z' },
-		{ id: 'h3', name: 'Piano', dates: '2023 — 2024', active: false, epitaph: '† got good enough', eulogy: 'Quietly closed the lid.', order: 3, createdAt: '2026-01-03T00:00:00Z', updatedAt: '2026-01-03T00:00:00Z' },
+		{ id: 'h3', name: 'Piano', dates: '2023 – 2024', active: false, epitaph: '† got good enough', eulogy: 'Quietly closed the lid.', order: 3, createdAt: '2026-01-03T00:00:00Z', updatedAt: '2026-01-03T00:00:00Z' },
 		{ id: 'h4', name: 'Running', dates: 'one summer', active: false, epitaph: '† it was a phase', eulogy: 'The shoes remain, as evidence.', order: 4, createdAt: '2026-01-04T00:00:00Z', updatedAt: '2026-01-04T00:00:00Z' },
 	];
 
@@ -146,7 +146,7 @@ export class MockApi {
 			'Ship the boring version. Boring floats.',
 		],
 		lighthouses: [
-			{ name: 'Fastnet Rock', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop — the last light the emigrants saw.' },
+			{ name: 'Fastnet Rock', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop, the last light the emigrants saw.' },
 			{ name: 'Bell Rock', pos: '56°26′N 2°23′W', line: 'built on a rock that vanishes twice a day.' },
 		],
 		updatedAt: '2026-06-01T12:00:00Z',
@@ -226,7 +226,7 @@ export class MockApi {
 		{ id: 'a6', timestamp: '2026-07-05T08:20:00Z', message: 'hobby "Running" edited', entityType: 'hobby', entityId: 'h4' },
 		{ id: 'a7', timestamp: '2026-07-05T08:10:00Z', message: 'note "The home lab ate my weekend" edited', entityType: 'note', entityId: 'n2' },
 		{ id: 'a8', timestamp: '2026-07-05T08:00:00Z', message: 'signal flags re-flown', entityType: 'sitecopy', entityId: 'c1' },
-		{ id: 'a9', timestamp: '2026-07-04T21:00:00Z', message: 'lantern hoisted — site rebuilt in 41s', entityType: 'lantern', entityId: 'l1' },
+		{ id: 'a9', timestamp: '2026-07-04T21:00:00Z', message: 'lantern hoisted, site rebuilt in 41s', entityType: 'lantern', entityId: 'l1' },
 		{ id: 'a10', timestamp: '2026-07-03T12:00:00Z', message: 'hobby "Running" moved to the graveyard (again)', entityType: 'hobby', entityId: 'h4' },
 	];
 
@@ -235,12 +235,12 @@ export class MockApi {
 			{
 				id: 'r2', entityType: 'project', entityId: 'p1', isCurrent: true,
 				snapshot: JSON.stringify(this.projects[0]),
-				summary: '“The Great Un-monolithing” — current printing', createdAt: '2026-06-01T12:00:00Z',
+				summary: '“The Great Un-monolithing”, current printing', createdAt: '2026-06-01T12:00:00Z',
 			},
 			{
 				id: 'r1', entityType: 'project', entityId: 'p1', isCurrent: false,
 				snapshot: JSON.stringify({ ...this.projects[0], title: 'The Great Un-monolithing (early draft)', status: 'draft', publishedAt: '' }),
-				summary: '“The Great Un-monolithing (early draft)” — before the polish', createdAt: '2026-05-15T12:00:00Z',
+				summary: '“The Great Un-monolithing (early draft)”, before the polish', createdAt: '2026-05-15T12:00:00Z',
 			},
 		],
 		n1: [
@@ -258,7 +258,7 @@ export class MockApi {
 		title: 'Senior Software Engineer, Post-Gazette',
 		bio: 'Backend engineer keeping the lights on behind the news.',
 		email: 'hello@argsea.com', github: 'github.com/argsea', linkedin: 'linkedin.com/in/argsea',
-		signoff: '— j',
+		signoff: '– j',
 	};
 
 	lantern: Doc = { state: 'idle', startedAt: '', finishedAt: '', lastHoistedAt: LAST_HOISTED, output: '' };
@@ -430,7 +430,7 @@ export class MockApi {
 			}
 			if (method === 'PUT') {
 				this.copy = { ...body, id: this.copy.id, updatedAt: now() };
-				// echo this write's snapshot, held if a spec asked for latency —
+				// echo this write's snapshot, held if a spec asked for latency,
 				// a later PUT reassigns this.copy, so the captured echo stays put
 				const echo = serve(this.copy);
 				return this.copyPutLatency
@@ -453,7 +453,7 @@ export class MockApi {
 				return json(200, this.figureheads);
 			}
 			if (method === 'POST') {
-				// always lands as a draft — published/seed in the body are ignored
+				// always lands as a draft; published/seed in the body are ignored
 				if (body?.pose !== 'perched' && body?.pose !== 'lying') {
 					return json(400, { status: 'error', code: 400, message: 'bad pose' });
 				}
@@ -479,7 +479,7 @@ export class MockApi {
 			}
 			if (method === 'PUT') {
 				if (doc.seed) {
-					return json(409, { status: 'error', code: 409, message: 'a seed is carved — copy it instead' });
+					return json(409, { status: 'error', code: 409, message: 'a seed is carved, copy it instead' });
 				}
 				// label/viewBox/shapes only; pose/published/seed/createdAt preserved
 				doc.label = body.label;
@@ -490,7 +490,7 @@ export class MockApi {
 			}
 			if (method === 'DELETE') {
 				if (doc.seed || doc.published) {
-					return json(409, { status: 'error', code: 409, message: doc.seed ? 'a seed is carved — it stays' : 'lower it before scrapping it' });
+					return json(409, { status: 'error', code: 409, message: doc.seed ? 'a seed is carved, it stays' : 'lower it before scrapping it' });
 				}
 				this.figureheads = this.figureheads.filter((d) => d.id !== doc.id);
 				return json(200, { status: 'ok', code: 200 });
@@ -515,7 +515,7 @@ export class MockApi {
 			return json(200, doc);
 		}
 
-		// ---- doodles (Marginalia — public read, admin-gated write) ----
+		// ---- doodles (Marginalia, public read, admin-gated write) ----
 		if (/^\/1\/doodle\/?$/.test(path)) {
 			if (method === 'GET') {
 				return json(200, this.doodles);

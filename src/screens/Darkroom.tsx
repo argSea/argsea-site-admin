@@ -17,7 +17,7 @@ function Tile({ print, index }: { print: MediaItem; index: number }) {
 
 	const tearOff = () => {
 		if (usedBy && !confirmHot) {
-			h.showToast(`⚠ still glued to ${usedBy} card${usedBy > 1 ? 's' : ''} — click again to tear it off`);
+			h.showToast(`⚠ still glued to ${usedBy} card${usedBy > 1 ? 's' : ''}, click again to tear it off`);
 		}
 		h.askConfirm(`media-${print.id}`, () => { void h.tearOffPrint(print); });
 	};

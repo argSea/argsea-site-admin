@@ -32,12 +32,12 @@ test('tearing off a used print warns, detaches via a PUT with image: null, then 
 	const mock = await signIn(page);
 	await nav(page, 'the darkroom').click();
 
-	// homelab-rack.jpg is glued to project p3 — notes carry a doodle now, not a print
+	// homelab-rack.jpg is glued to project p3; notes carry a doodle now, not a print
 	const tile = page.locator('.tilt', { hasText: 'homelab-rack.jpg' });
 	await expect(tile.getByText('on 1 card')).toBeVisible();
 
 	await tile.locator('.print-del').click();
-	await expect(toast(page)).toHaveText('⚠ still glued to 1 card — click again to tear it off');
+	await expect(toast(page)).toHaveText('⚠ still glued to 1 card, click again to tear it off');
 	expect(mock.find('DELETE', /^\/1\/media\//)).toHaveLength(0);
 
 	await tile.locator('.print-del').click();

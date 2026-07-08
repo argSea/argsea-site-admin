@@ -19,13 +19,13 @@ test('a new postcard is filed as a draft with a <p>-wrapped body and a valid sta
 	expect(create.body.title).toBe('Test Card');
 	expect(create.body.status).toBe('draft');
 	expect(create.body.body).toBe('<p>para one</p>\n<p>para two</p>');
-	// fresh cards carry a surprise stamp — always inside the API's enums
+	// fresh cards carry a surprise stamp; always inside the API's enums
 	expect(['rect', 'circle']).toContain(create.body.stamp.shape);
 	expect(['lighthouse', 'boat', 'sun', 'wave', 'moon', 'anchor', 'text']).toContain(create.body.stamp.motif);
 	expect(['#f0d9a8', '#93a0e8']).toContain(create.body.stamp.ink);
 });
 
-test('editing a stampless card never invents a stamp ({} is invalid — omit entirely)', async ({ page }) => {
+test('editing a stampless card never invents a stamp ({} is invalid, omit entirely)', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'postcards').click();
 	const row = page.locator('.content-row', { hasText: 'The home lab' });
@@ -59,10 +59,10 @@ test('the mantel only fits three', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'postcards').click();
 
-	// three seeded featured cards — a fourth is refused client-side
+	// three seeded featured cards; a fourth is refused client-side
 	const draftRow = page.locator('.content-row', { hasText: 'The home lab' });
 	await draftRow.getByText('☆ feature').click();
-	await expect(toast(page)).toHaveText('the mantel only fits three — take one down first');
+	await expect(toast(page)).toHaveText('the mantel only fits three, take one down first');
 	expect(mock.find('POST', /feature$/)).toHaveLength(0);
 
 	// take one down from the mantel chips, then the spot is free

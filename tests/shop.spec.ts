@@ -15,7 +15,7 @@ test('the shelf lists both poses, seeds published and marked', async ({ page }) 
 	const seedRow = perched.locator('.shelf-row', { hasText: 'v1' });
 	await expect(seedRow.getByText('published')).toBeVisible();
 	await expect(seedRow.getByText('seed', { exact: true })).toBeVisible();
-	// seeds cannot be relabeled — the PUT would 409
+	// seeds cannot be relabeled; the PUT would 409
 	await expect(seedRow.getByRole('button', { name: 'rename' })).toHaveCount(0);
 
 	const draftRow = perched.locator('.shelf-row', { hasText: 'second fitting' });
@@ -27,7 +27,7 @@ test('rename rides a full PUT that only changes the label', async ({ page }) => 
 	const mock = await signIn(page);
 	await nav(page, 'the figurehead shop').click();
 
-	// the row's title becomes the input, so the row no longer matches by text —
+	// the row's title becomes the input, so the row no longer matches by text;
 	// while renaming, the shelf holds exactly one design-label input
 	await page.locator('.shelf-row', { hasText: 'second fitting' }).getByRole('button', { name: 'rename' }).click();
 	await page.getByLabel('design label').fill('third fitting');
@@ -48,7 +48,7 @@ test('delete honors the seed and published guards, scraps a draft', async ({ pag
 
 	// a seed's delete is barred outright
 	const seedRow = page.locator('.card', { hasText: 'Perched' }).locator('.shelf-row', { hasText: 'v1' });
-	await expect(seedRow.getByTitle('a seed is carved — it stays')).toBeDisabled();
+	await expect(seedRow.getByTitle('a seed is carved, it stays')).toBeDisabled();
 
 	// the draft goes, on the second (armed) click
 	const draftRow = page.locator('.shelf-row', { hasText: 'second fitting' });
@@ -66,19 +66,19 @@ test('publish arms a confirm naming the swap, then swaps the pill', async ({ pag
 	const perched = page.locator('.card', { hasText: 'Perched' });
 	const draftRow = perched.locator('.shelf-row', { hasText: 'second fitting' });
 	await draftRow.getByRole('button', { name: 'publish' }).click();
-	const armed = draftRow.getByRole('button', { name: 'replaces v1 as the perched cat on next hoist — sure?' });
+	const armed = draftRow.getByRole('button', { name: 'replaces v1 as the perched cat on next hoist, sure?' });
 	await expect(armed).toBeVisible();
 	await armed.click();
 
 	await expect(toast(page)).toHaveText('♆ second fitting leads the perched pose on next hoist');
 	expect(mock.find('POST', /^\/1\/figurehead\/designs\/fh3\/publish$/)).toHaveLength(1);
 
-	// exactly one published per pose — the pill moved off the seed
+	// exactly one published per pose; the pill moved off the seed
 	await expect(draftRow.getByText('published')).toBeVisible();
 	const seedRow = perched.locator('.shelf-row', { hasText: 'v1' });
 	await expect(seedRow.getByText('published')).toHaveCount(0);
 	// and the freshly published draft can no longer be scrapped
-	await expect(draftRow.getByTitle('lower it before scrapping it — publish another first')).toBeDisabled();
+	await expect(draftRow.getByTitle('lower it before scrapping it, publish another first')).toBeDisabled();
 });
 
 test("figurehead lines wear their glyph in the ship's log", async ({ page }) => {

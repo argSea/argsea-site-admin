@@ -1,5 +1,5 @@
 // Stamp-designer vocabulary and the surprise-me generator, verbatim from the
-// design. The enums here are the API's closed vocabulary — the designer only
+// design. The enums here are the API's closed vocabulary; the designer only
 // ever produces valid stamps, so {} never reaches the wire.
 
 import type { Stamp, StampInk, StampMotif } from './api';
@@ -30,7 +30,7 @@ export function randomStamp(): Stamp {
 /**
  * Shape a designer stamp for the wire: cents ride on rect only, text on the
  * text motif only (trimmed, capped at 40), and a text motif without words is
- * invalid — callers block the save instead of sending it.
+ * invalid; callers block the save instead of sending it.
  */
 export function stampForWire(stamp: Stamp): Stamp {
 	const wire: Stamp = { shape: stamp.shape, motif: stamp.motif, ink: stamp.ink };

@@ -1,8 +1,8 @@
-// The figurehead editor — a touch-first SVG canvas over the contract's shape
+// The figurehead editor: a touch-first SVG canvas over the contract's shape
 // JSON. One pointer model for mouse and touch: single pointer drives the
 // active tool, a second finger always pinches the view. Transforms bake into
 // coordinates (shapes carry no transform field, by contract), history is
-// immutable snapshots of the shapes array, and saving is explicit — designs
+// immutable snapshots of the shapes array, and saving is explicit; designs
 // are documents, not copy fields.
 import { useEffect, useRef, useState } from 'react';
 import { useHarbor } from '../state/harbor';
@@ -23,7 +23,7 @@ export interface EditorDoc {
 	seed:      boolean;
 }
 
-/** Render one contract shape. Absent fields stay absent — the SVG default. */
+/** Render one contract shape. Absent fields stay absent (the SVG default). */
 export function ShapeNode({ s, override }: { s: Shape; override?: React.SVGAttributes<SVGElement> }) {
 	const common: React.SVGAttributes<SVGElement> = {
 		fill: s.fill, stroke: s.stroke, strokeWidth: s.strokeWidth, opacity: s.opacity,
@@ -142,7 +142,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 	const [onionId, setOnionId] = useState('');
 	const [armOrigin, setArmOrigin] = useState(false);
 
-	// an armed origin without a target is meaningless — disarm with the selection
+	// an armed origin without a target is meaningless; disarm with the selection
 	useEffect(() => {
 		if (!selId) {
 			setArmOrigin(false);
@@ -154,11 +154,11 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 	const drag = useRef<Drag | null>(null);
 	const pointers = useRef(new Map<number, Pt>());
 	// child pointerdowns note what was hit; the svg handler (bubbling after
-	// them) consumes the note — pointer capture and the pointer map stay in
+	// them) consumes the note; pointer capture and the pointer map stay in
 	// one place instead of being smeared over every overlay element
 	const hitId = useRef<string | null>(null);
 	const overlayHit = useRef<Drag | null>(null);
-	// the freshest shapes across live drag updates — a pointerup in the same
+	// the freshest shapes across live drag updates; a pointerup in the same
 	// frame as a pointermove must not commit a stale render's array
 	const live = useRef<Shape[]>(doc.shapes);
 
@@ -246,7 +246,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 		zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, factor);
 	};
 
-	// React's wheel listener is passive — attach our own so the page doesn't
+	// React's wheel listener is passive; attach our own so the page doesn't
 	// scroll under a zoom gesture
 	const zoomAtRef = useRef(zoomAt);
 	zoomAtRef.current = zoomAt;
@@ -329,7 +329,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			setNodeEdit((ne) => (ne ? { ...ne, subs: parsePathOf(hist[histAt], ne.shapeId), sel: null } : ne));
 		}
 		if (d?.kind === 'penHandle') {
-			// the pen placed this anchor on the same pointerdown — roll it back
+			// the pen placed this anchor on the same pointerdown, roll it back
 			setPenDraft((cur) => (cur && cur.anchors.length > 1
 				? { ...cur, anchors: cur.anchors.slice(0, -1) }
 				: null));
@@ -363,7 +363,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			return;
 		}
 		if (pointers.current.size > 2) {
-			// a third finger changes nothing — but a child pointerdown may have
+			// a third finger changes nothing, but a child pointerdown may have
 			// noted a hit before this guard; drop it or the next single tap
 			// consumes a stale note
 			overlayHit.current = null;
@@ -371,7 +371,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			return;
 		}
 
-		// an armed origin tap outranks everything the tap might land on —
+		// an armed origin tap outranks everything the tap might land on:
 		// shapes, selection handles, the lot
 		if (armOrigin && selId) {
 			overlayHit.current = null;
@@ -599,7 +599,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			}
 			case 'penHandle': {
 				if (!d.moved) {
-					// a tap places a corner anchor — no handles
+					// a tap places a corner anchor, no handles
 					setPenDraft((cur) => (cur ? {
 						...cur,
 						anchors: cur.anchors.map((a, i) => (i === cur.anchors.length - 1
@@ -614,7 +614,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 	};
 
 	// a cancelled pointer (palm rejection, OS gesture steal) must not commit a
-	// half-finished drag — roll it back instead
+	// half-finished drag, roll it back instead
 	const onPointerCancel = (e: React.PointerEvent<SVGSVGElement>) => {
 		pointers.current.delete(e.pointerId);
 		abortDrag();
@@ -685,7 +685,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 	// ---- layers ----
 
 	const moveLayer = (id: string, dir: -1 | 1) => {
-		// display list is topmost-first; render order is the array — up in the
+		// display list is topmost-first; render order is the array: up in the
 		// panel means later in the array
 		const at = live.current.findIndex((s) => s.id === id);
 		const to = at + dir;
@@ -735,7 +735,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 			viewBox: doc.viewBox,
 			shapes: live.current.map(cleanShape),
 		};
-		// a seed is carved — saving carves a fresh draft copy instead of a PUT
+		// a seed is carved, saving carves a fresh draft copy instead of a PUT
 		const saved = await h.saveDesign(meta.seed ? null : docId, fields);
 		if (saved) {
 			setDocId(saved.id);
@@ -798,11 +798,11 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 
 			{meta.seed ? (
 				<div className="shop-banner shop-banner--seed">
-					◆ v1 is carved — the seed itself can't change. saving carves a fresh draft copy onto the shelf.
+					◆ v1 is carved; the seed itself can't change. saving carves a fresh draft copy onto the shelf.
 				</div>
 			) : meta.published && (
 				<div className="shop-banner">
-					⚠ this design is on the bow — it's the live {doc.pose} cat. edits here go out with the next hoist, no publish needed.
+					⚠ this design is on the bow, it's the live {doc.pose} cat. edits here go out with the next hoist, no publish needed.
 				</div>
 			)}
 
@@ -1101,7 +1101,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 											}
 										}} />
 									<select className="input shop-layer__role" aria-label="role" value={s.role ?? ''}
-										title="role tag — drives the site's canonical animations"
+										title="role tag: drives the site's canonical animations"
 										onClick={(e) => e.stopPropagation()}
 										onChange={(e) => {
 											const role = e.target.value as ShapeRole | '';
@@ -1109,10 +1109,10 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 												? { role }
 												: { role: undefined, origin: undefined });
 										}}>
-										{ROLES.map((r) => <option key={r} value={r}>{r || '—'}</option>)}
+										{ROLES.map((r) => <option key={r} value={r}>{r || '–'}</option>)}
 									</select>
 									{s.role && (
-										<button type="button" className="shop-mini" title="set the animation origin — then tap the canvas"
+										<button type="button" className="shop-mini" title="set the animation origin, then tap the canvas"
 											aria-pressed={armOrigin && selId === s.id}
 											onClick={(e) => {
 												e.stopPropagation();
@@ -1129,7 +1129,7 @@ export default function ShapeEditor({ doc, onClose }: { doc: EditorDoc; onClose:
 								</div>
 							))}
 							{shapes.length === 0 && (
-								<span className="row-sub" style={{ fontStyle: 'italic', fontSize: 13 }}>a bare hull — draw something.</span>
+								<span className="row-sub" style={{ fontStyle: 'italic', fontSize: 13 }}>a bare hull, draw something.</span>
 							)}
 						</div>
 					</div>

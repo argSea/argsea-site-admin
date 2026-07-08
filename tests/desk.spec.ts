@@ -59,18 +59,18 @@ test('the note publish pill uses the lifecycle endpoint', async ({ page }) => {
 	expect(mock.find('POST', /^\/1\/note\/n2\/publish$/)).toHaveLength(1);
 });
 
-test('peek renders the note as text — paragraphs, print, and the sign-off', async ({ page }) => {
+test('peek renders the note as text: paragraphs, print, and the sign-off', async ({ page }) => {
 	await signIn(page);
 	await nav(page, 'writing desk').click();
 	await page.locator('.journal-row', { hasText: 'The queue is the product' }).getByText('peek', { exact: true }).click();
 
 	const peek = page.locator('.overlay-card');
-	await expect(peek.getByText('draft — only you can see this')).toHaveCount(0);
-	await expect(peek.getByText('published — this is live')).toBeVisible();
+	await expect(peek.getByText('draft: only you can see this')).toHaveCount(0);
+	await expect(peek.getByText('published: this is live')).toBeVisible();
 	await expect(peek.getByText('A decade of publishing systems.')).toBeVisible();
 	await expect(peek.getByText('The queue was the product all along.')).toBeVisible();
-	await expect(peek.getByText('— j')).toBeVisible();
-	// nothing was injected as markup — the body renders in one text node
+	await expect(peek.getByText('– j')).toBeVisible();
+	// nothing was injected as markup; the body renders in one text node
 	expect(await peek.locator('h2').count()).toBe(0);
 	await page.keyboard.press('Escape');
 	await expect(peek).toHaveCount(0);

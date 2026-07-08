@@ -5,14 +5,14 @@
 // API sharp edges honored here (caravan plan, "API contract caveats", plus the
 // pinned slice4 contract):
 //   - item routes reject a trailing slash; collections accept both; auth
-//     routes REQUIRE one — encoded per function, never guessed by callers
+//     routes REQUIRE one, encoded per function, never guessed by callers
 //   - unauthenticated reads are published-only, so every request carries the
-//     bearer token when one is held — drafts vanish from the lists otherwise
+//     bearer token when one is held; drafts vanish from the lists otherwise
 //   - content endpoints return bare entities/arrays; the legacy
 //     {status,code,...} wrapper survives only on user/auth/delete responses
 //   - PUT is full-replace: omitted fields are CLEARED. Callers must send the
 //     complete document (lifecycle fields are preserved server-side)
-//   - timestamps are fixed-width RFC3339 strings — string sort == chronological
+//   - timestamps are fixed-width RFC3339 strings: string sort == chronological
 //   - an empty list is [], never null
 
 export type Category = 'backend' | 'games' | 'this website' | 'tinkering';
@@ -22,7 +22,7 @@ export type StampShape = 'rect' | 'circle';
 export type StampMotif = 'lighthouse' | 'boat' | 'sun' | 'wave' | 'moon' | 'anchor' | 'text';
 export type StampInk = '#f0d9a8' | '#93a0e8';
 
-// A postcard's corner stamp/postmark. Optional on the wire — {} is invalid,
+// A postcard's corner stamp/postmark. Optional on the wire; {} is invalid,
 // so an unset stamp is omitted from the document entirely.
 export interface Stamp {
 	shape:  StampShape;
@@ -90,7 +90,7 @@ export interface Suggestion {
 }
 
 // The smuggler's hold rides the copy singleton. These field names are the
-// frozen cross-repo contract (the site and the API build against them — do
+// frozen cross-repo contract (the site and the API build against them, do
 // not rename). A copy doc from before the hold omits them on the wire; the
 // harbor seeds absent fields enabled on load (absent = on, agreed ruling) so
 // the first autosave persists them explicitly.
@@ -125,7 +125,7 @@ export interface SiteCopy {
 	updatedAt:      string;
 }
 
-// The copy keys the flag locker edits as plain text — the hold's egg fields
+// The copy keys the flag locker edits as plain text; the hold's egg fields
 // have actions of their own.
 export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses'>;
 
@@ -137,7 +137,7 @@ export type ShapeRole = 'tail' | 'eyes' | 'body';
 export type Linecap = 'butt' | 'round' | 'square';
 export type Linejoin = 'miter' | 'round' | 'bevel';
 
-// One structured shape of a design document — never raw markup (XSS decision).
+// One structured shape of a design document, never raw markup (XSS decision).
 // An absent optional field means the SVG attribute default; renderers write
 // only the fields present. Stroke-only shapes carry explicit fill: "none".
 export interface Shape {
@@ -213,7 +213,7 @@ export interface LanternStatus {
 	output:        string;
 }
 
-// The nine public profile fields the keeper edits — a subset of the user doc
+// The nine public profile fields the keeper edits: a subset of the user doc
 // (pinned contract: no separate keeper entity; this data lives on the user).
 export interface KeeperProfile {
 	name:     string;
@@ -248,7 +248,7 @@ export class ApiError extends Error {
 const API_URL: string = import.meta.env.VITE_ARGSEA_API_URL ?? 'http://localhost:8181';
 
 // The bearer token rides along on EVERY request once set (unauth reads are
-// published-only — an unauthenticated admin would silently lose its drafts).
+// published-only; an unauthenticated admin would silently lose its drafts).
 let bearer: string | null = null;
 
 export function setBearer(token: string | null): void {
@@ -257,7 +257,7 @@ export function setBearer(token: string | null): void {
 
 /**
  * Resolve an API media url (web_path-relative) against the API host. The
- * result lands inside CSS url("…") strings, so it is URI-encoded — a quote in
+ * result lands inside CSS url("…") strings, so it is URI-encoded; a quote in
  * a filename must never escape the CSS string.
  */
 export function mediaUrl(url: string): string {
@@ -292,7 +292,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 			if (parsed && typeof parsed.message === 'string') {
 				message = parsed.message;
 			}
-		} catch { /* non-JSON error body — keep the status code */ }
+		} catch { /* non-JSON error body, keep the status code */ }
 		throw new ApiError(response.status, message);
 	}
 
@@ -348,7 +348,7 @@ export const projects = contentApi<Project>('project');
 export const notes = contentApi<Note>('note');
 
 // Lifecycle-style rack endpoints (pinned contract: activity-logged, no
-// revision snapshot — reordering must not spam revisions)
+// revision snapshot; reordering must not spam revisions)
 export function reorderProject(id: string, order: number): Promise<Project> {
 	return request<Project>('POST', `/1/project/${id}/reorder`, { order });
 }
@@ -357,7 +357,7 @@ export function featureProject(id: string, featured: boolean): Promise<Project> 
 	return request<Project>('POST', `/1/project/${id}/${featured ? 'feature' : 'unfeature'}`);
 }
 
-// ---- hobbies (no lifecycle — reorder/retire go through full-replace PUT) ----
+// ---- hobbies (no lifecycle; reorder/retire go through full-replace PUT) ----
 
 export const hobbies = {
 	list:   ()                       => request<Hobby[]>('GET', '/1/hobby/'),
@@ -379,7 +379,7 @@ export const suggestions = {
 // POST always lands as a draft (published/seed in the body are ignored); PUT
 // edits label/viewBox/shapes only (pose, published, seed, createdAt preserved
 // server-side, 409 on a seed); DELETE 409s for published designs and seeds;
-// publish is atomic within the pose — hoist first, then lower the previous.
+// publish is atomic within the pose: hoist first, then lower the previous.
 export const figurehead = {
 	published: ()                                  => request<FigureheadDesign[]>('GET', '/1/figurehead/published'),
 	list:      ()                                  => request<FigureheadDesign[]>('GET', '/1/figurehead/designs'),
@@ -389,7 +389,7 @@ export const figurehead = {
 	publish:   (id: string)                        => request<FigureheadDesign>('POST', `/1/figurehead/designs/${id}/publish`),
 };
 
-// ---- doodles (Marginalia's shelf and editor — no publish/seed lifecycle) ----
+// ---- doodles (Marginalia's shelf and editor, no publish/seed lifecycle) ----
 
 // POST always lands as a fresh doodle; PUT edits name/viewBox/shapes only
 // (createdAt preserved server-side). Public GET (the site joins notes to
@@ -422,7 +422,7 @@ export function putCopy(doc: SiteCopy): Promise<SiteCopy> {
 
 // ---- ship's log ----
 
-/** The API defaults to a small recent window — pass a limit and mean it. */
+/** The API defaults to a small recent window; pass a limit and mean it. */
 export function listActivity(limit: number): Promise<ActivityEntry[]> {
 	return request<ActivityEntry[]>('GET', `/1/activity/?limit=${limit}`);
 }
@@ -451,7 +451,7 @@ export function getUser(userId: string): Promise<Record<string, unknown>> {
 
 /**
  * Save the keeper's papers. PUT is full-replace, so the current user doc is
- * fetched and the profile fields merged over it — and `role` is never sent
+ * fetched and the profile fields merged over it, and `role` is never sent
  * (the server strips it anyway; admin is granted only by direct DB update).
  */
 export async function saveProfile(userId: string, profile: KeeperProfile): Promise<void> {
@@ -476,7 +476,7 @@ export async function hoist(): Promise<HoistResult> {
 	const headers: Record<string, string> = bearer ? { Authorization: `Bearer ${bearer}` } : {};
 	const response = await fetch(`${API_URL}/1/lantern/hoist`, { method: 'POST', headers });
 
-	// 409 still carries the in-flight status — adopt it instead of throwing
+	// 409 still carries the in-flight status; adopt it instead of throwing
 	if (response.status === 202 || response.status === 409) {
 		return { accepted: response.status === 202, status: await response.json() };
 	}
@@ -486,14 +486,14 @@ export async function hoist(): Promise<HoistResult> {
 }
 
 export interface RollbackResult {
-	ok:     boolean;  // false = 409 — hoist in flight OR no previous build
+	ok:     boolean;  // false = 409: hoist in flight OR no previous build
 	status: LanternStatus;
 }
 
 /**
  * 200 = re-pointed at the previous build. 409 carries the LanternStatus body
  * too (integrator pin 2026-07-05, mirroring hoist): a deploying state means a
- * hoist is in flight, a non-deploying one means there is no previous build —
+ * hoist is in flight, a non-deploying one means there is no previous build;
  * callers tell the two apart by the status fields, not the body shape.
  */
 export async function lanternRollback(): Promise<RollbackResult> {

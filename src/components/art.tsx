@@ -1,4 +1,4 @@
-// The little harbor drawings, traced from the design. All decorative — every
+// The little harbor drawings, traced from the design. All decorative; every
 // animation dies under prefers-reduced-motion via the global kill-switch.
 import type { CSSProperties } from 'react';
 

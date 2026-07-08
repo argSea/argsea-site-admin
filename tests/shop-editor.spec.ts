@@ -21,7 +21,7 @@ test('a drawn rect lands in the layers and saves through a POST draft', async ({
 	const mock = await openShop(page);
 	await page.locator('.card', { hasText: 'Perched' }).getByRole('button', { name: '+ carve a fresh blank' }).click();
 
-	await expect(page.getByText('a bare hull — draw something.')).toBeVisible();
+	await expect(page.getByText('a bare hull, draw something.')).toBeVisible();
 	await page.getByRole('button', { name: 'rect' }).click();
 	await dragOnCanvas(page, [.35, .35], [.6, .6]);
 
@@ -50,7 +50,7 @@ test('the nodes tool drags an anchor and the reshaped path rides the PUT', async
 	await page.locator('.shelf-row', { hasText: 'second fitting' }).getByRole('button', { name: 'open', exact: true }).click();
 
 	await page.getByRole('button', { name: 'nodes' }).click();
-	// the name input bubbles the click up to the row — a reliable target
+	// the name input bubbles the click up to the row; a reliable target
 	await page.locator('[data-layer="arc"]').getByLabel('layer name').click();
 	await expect(page.locator('.shop-node')).toHaveCount(2);
 
@@ -85,7 +85,7 @@ test('undo and redo walk the shapes history', async ({ page }) => {
 	await expect(page.locator('.shop-layer')).toHaveCount(1);
 	await page.getByTitle('undo').click();
 	await expect(page.locator('.shop-layer')).toHaveCount(0);
-	// undone all the way back to the opened document — clean again
+	// undone all the way back to the opened document, clean again
 	await expect(page.getByText('○ saved')).toBeVisible();
 	await page.getByTitle('redo').click();
 	await expect(page.locator('.shop-layer')).toHaveCount(1);
@@ -100,7 +100,7 @@ test('an armed origin picker disarms on Escape', async ({ page }) => {
 
 	const moonRow = page.locator('[data-layer="moon"]');
 	await moonRow.getByLabel('role').selectOption('eyes');
-	await moonRow.getByTitle('set the animation origin — then tap the canvas').click();
+	await moonRow.getByTitle('set the animation origin, then tap the canvas').click();
 	await expect(page.getByText('tap the canvas to plant the origin')).toBeVisible();
 
 	await page.keyboard.press('Escape');
@@ -118,7 +118,7 @@ test('role tag and canvas-tapped origin round-trip through the PUT payload', asy
 
 	const moonRow = page.locator('[data-layer="moon"]');
 	await moonRow.getByLabel('role').selectOption('eyes');
-	await moonRow.getByTitle('set the animation origin — then tap the canvas').click();
+	await moonRow.getByTitle('set the animation origin, then tap the canvas').click();
 	await expect(page.getByText('tap the canvas to plant the origin')).toBeVisible();
 	const box = (await page.locator('.shop-canvas').boundingBox())!;
 	await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);

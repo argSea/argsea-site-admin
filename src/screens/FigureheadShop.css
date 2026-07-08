@@ -1,7 +1,7 @@
 /*
  * The figurehead shop's layout: shelf rows on dashed dividers (hold
  * vocabulary), and the editor's rail / canvas / panels grid. Everything
- * collapses to one column at phone width — the rail turns horizontal and the
+ * collapses to one column at phone width: the rail turns horizontal and the
  * panels stack under the canvas. Tokens come from global.css.
  */
 
@@ -297,7 +297,7 @@
 		height: clamp(300px, 46vh, 460px);
 	}
 
-	/* the panels get the full width back — restore proper touch targets */
+	/* the panels get the full width back: restore proper touch targets */
 	.shop-mini {
 		width: 30px;
 		height: 30px;
