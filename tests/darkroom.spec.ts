@@ -41,7 +41,7 @@ test('tearing off a used print warns, detaches via a PUT with image: null, then 
 	expect(mock.find('DELETE', /^\/1\/media\//)).toHaveLength(0);
 
 	await tile.locator('.print-del').click();
-	await expect(toast(page)).toHaveText('print torn off its cards and left in the sun');
+	await expect(toast(page)).toHaveText('print torn off its lights and left in the sun');
 
 	// the detach PUT carries the COMPLETE document (full-replace!) with image null
 	const projectPut = mock.find('PUT', /^\/1\/project\/p3$/)[0];
@@ -53,21 +53,18 @@ test('tearing off a used print warns, detaches via a PUT with image: null, then 
 });
 
 test('an unused print goes quietly', async ({ page }) => {
+	// image/images are pass-through only now (no picker left in the edit
+	// form), so a freshly developed print, never attached to anything, is the
+	// straightforward way to reach a zero-usage tile
 	const mock = await signIn(page);
-	// detach p1 from its print first so m1 is unused
-	await nav(page, 'postcards').click();
-	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
-	await row.getByText('edit', { exact: true }).click();
-	await page.locator('.overlay-card').getByText('no print').click();
-	await page.locator('.overlay-card').getByRole('button', { name: 'save changes' }).click();
-	await expect(page.locator('.overlay-card')).toHaveCount(0);
-	expect(mock.find('PUT', /^\/1\/project\/p1$/)[0].body.image).toBeNull();
-
 	await nav(page, 'the darkroom').click();
-	const tile = page.locator('.tilt', { hasText: 'unmonolith-diagram.png' });
+	await page.locator('input[type="file"]').setInputFiles({ name: 'freestanding.png', mimeType: 'image/png', buffer: PNG });
+	await expect(page.getByText('freestanding.png')).toBeVisible();
+
+	const tile = page.locator('.tilt', { hasText: 'freestanding.png' });
 	await expect(tile.getByText(/on \d+ card/)).toHaveCount(0);
 	await tile.locator('.print-del').click();
 	await tile.locator('.print-del').click();
 	await expect(toast(page)).toHaveText('print left out in the sun');
-	expect(mock.find('DELETE', /^\/1\/media\/m1$/)).toHaveLength(1);
+	expect(mock.find('DELETE', /^\/1\/media\//)).toHaveLength(1);
 });

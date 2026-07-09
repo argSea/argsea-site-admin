@@ -3,7 +3,7 @@ import { signIn, nav, toast } from './office';
 
 test('rolling back loads the earlier printing into the form', async ({ page }) => {
 	await signIn(page);
-	await nav(page, 'postcards').click();
+	await nav(page, 'projects').click();
 	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
 
 	const overlay = page.locator('.overlay-card');
@@ -17,7 +17,7 @@ test('rolling back loads the earlier printing into the form', async ({ page }) =
 
 test('filing an untouched restored draft goes through the restore endpoint: status travels', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'postcards').click();
+	await nav(page, 'projects').click();
 	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
 	await expect(row.getByText('● published')).toBeVisible();
 	await row.getByText('edit', { exact: true }).click();
@@ -37,7 +37,7 @@ test('filing an untouched restored draft goes through the restore endpoint: stat
 
 test('editing after a roll back files the restore, then PUTs on top', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'postcards').click();
+	await nav(page, 'projects').click();
 	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
 
 	const overlay = page.locator('.overlay-card');

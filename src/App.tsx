@@ -8,7 +8,7 @@ import { useEscapeKey } from './lib/useEscapeKey';
 import { PROVERBS } from './lib/whimsy';
 import Login from './screens/Login';
 import Bridge from './screens/Bridge';
-import Postcards from './screens/Postcards';
+import Projects from './screens/Projects';
 import Graveyard from './screens/Graveyard';
 import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
@@ -29,7 +29,7 @@ const DRAWER_MAX = 600;
 
 const SCREENS: Record<Screen, () => React.JSX.Element> = {
 	dash:       Bridge,
-	projects:   Postcards,
+	projects:   Projects,
 	hobbies:    Graveyard,
 	notes:      WritingDesk,
 	copy:       SignalFlags,
