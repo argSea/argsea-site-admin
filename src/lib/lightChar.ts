@@ -165,7 +165,7 @@ export function randomLight(current: Light): Light {
 	const period = !RHYTHM_KINDS.includes(kind)
 		? 0
 		: kind === 'morse'
-			? 4 + Math.floor(Math.random() * 27)
+			? 6 + Math.floor(Math.random() * 25)
 			: 2 + Math.floor(Math.random() * 11);
 	const letter = kind === 'morse' ? LETTERS[Math.floor(Math.random() * LETTERS.length)] : '';
 	return { ...current, kind, color, period, letter };

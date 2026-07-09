@@ -58,19 +58,32 @@ const KIND_HINT: Record<LightKind, string> = {
 
 const EXTINGUISHED_MAX = 40;
 
+// The rhythm slider's range per kind: morse needs room for its letter's
+// pattern (the longest letters, J/Q/Y, run 5.2s of code, so the api floors
+// it at 6), the rest keep the design's 2-12s.
+const RHYTHM_RANGE: Record<'morse' | 'rest', { min: number; max: number }> = {
+	morse: { min: 6, max: 30 },
+	rest:  { min: 2, max: 12 },
+};
+
 function LightEditor({ draft }: { draft: ProjectDraft }) {
 	const h = useHarbor();
 	const light = draft.light;
+	const range = light.kind === 'morse' ? RHYTHM_RANGE.morse : RHYTHM_RANGE.rest;
 
 	// fixed/quick/veryquick hold no dialed-in rhythm, so switching onto one of
 	// them drops the period; switching onto a rhythm kind keeps whatever was
-	// already dialed in, or seeds one, clamped into morse's tighter 4-30s
-	// range. the letter only ever means something on morse, so it clears the
-	// moment the kind steps off it, and gets a starting pick the moment it steps on.
+	// already dialed in, or seeds one, clamped into the target kind's slider
+	// range so the thumb never pins past its own ends. the letter only ever
+	// means something on morse, so it clears the moment the kind steps off it,
+	// and gets a starting pick the moment it steps on.
 	const setKind = (kind: LightKind) => {
-		const period = !RHYTHM_KINDS.includes(kind)
-			? 0
-			: kind === 'morse' ? Math.min(30, Math.max(4, light.period || 8)) : (light.period || 5);
+		if (!RHYTHM_KINDS.includes(kind)) {
+			h.patchLight({ kind, period: 0, letter: '' });
+			return;
+		}
+		const target = kind === 'morse' ? RHYTHM_RANGE.morse : RHYTHM_RANGE.rest;
+		const period = Math.min(target.max, Math.max(target.min, light.period || (kind === 'morse' ? 8 : 5)));
 		h.patchLight({ kind, period, letter: kind === 'morse' ? (light.letter || 'A') : '' });
 	};
 
@@ -119,7 +132,7 @@ function LightEditor({ draft }: { draft: ProjectDraft }) {
 						<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the rhythm</span>
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--gold)' }}>every {light.period} seconds</span>
 					</div>
-					<input type="range" min={light.kind === 'morse' ? 4 : 2} max={light.kind === 'morse' ? 30 : 12} step={1} value={light.period}
+					<input type="range" min={range.min} max={range.max} step={1} value={light.period}
 						onChange={(e) => h.patchLight({ period: parseInt(e.target.value, 10) })}
 						style={{ width: '100%', accentColor: 'var(--periwinkle)', margin: 0 }} />
 				</div>

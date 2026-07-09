@@ -109,7 +109,7 @@ test('the kind chips drive the mono code and hide the rhythm slider on fixed', a
 	await expect(toast(page)).toHaveText('🕯 the light was filed');
 });
 
-test('quick and veryquick hide the rhythm slider; morse shows a 4-30s range and a letter picker that clears when the kind moves on', async ({ page }) => {
+test('quick and veryquick hide the rhythm slider; morse shows a 6-30s range and a letter picker that clears when the kind moves on', async ({ page }) => {
 	await signIn(page);
 	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
@@ -133,12 +133,21 @@ test('quick and veryquick hide the rhythm slider; morse shows a 4-30s range and 
 	await expect(letterPicker).toBeVisible();
 	const slider = overlay.locator('input[type="range"]');
 	await expect(slider).toHaveCount(1);
-	await expect(slider).toHaveAttribute('min', '4');
+	await expect(slider).toHaveAttribute('min', '6');
 	await expect(slider).toHaveAttribute('max', '30');
 	await expect(overlay.getByText(/^Mo\(.\) W \d+s$/)).toBeVisible();
 
 	await letterPicker.selectOption('Z');
 	await expect(overlay.getByText('Mo(Z) W 8s')).toBeVisible();
+
+	// a long morse rhythm clamps into the target slider's range on the way
+	// out, so the thumb never pins past its own max with a lying label
+	await slider.fill('30');
+	await expect(overlay.getByText('every 30 seconds', { exact: true })).toBeVisible();
+	await overlay.getByText('flashing', { exact: true }).click();
+	await expect(slider).toHaveValue('12');
+	await expect(overlay.getByText('every 12 seconds', { exact: true })).toBeVisible();
+	await overlay.getByText('morse', { exact: true }).click();
 
 	// leaving morse clears the letter; coming back seeds a fresh one, not the stale pick
 	await overlay.getByText('fixed · steady', { exact: true }).click();
