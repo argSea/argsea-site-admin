@@ -18,25 +18,27 @@ function Row({ project, index }: { project: Project; index: number }) {
 	const charLine = project.firstLit ? `${codeFor(light)} · first lit ${project.firstLit}` : codeFor(light);
 
 	return (
-		<div className="content-row tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
-			<Lamp light={light} size={10} haloScale={3.4} />
-			{project.image && (
+		<div className="content-row content-row--decked tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
+			<div className="content-row__deck">
+				<Lamp light={light} size={10} haloScale={3.4} />
 				<div className="photo-thumb">
-					<div className="photo-thumb__img" style={{ background: printBackground(h.prints, project.image) }} />
+					<div className={`photo-thumb__img${project.image ? '' : ' photo-thumb__img--empty'}`}
+						style={project.image ? { background: printBackground(h.prints, project.image) } : undefined} />
 				</div>
-			)}
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: 1 }}>
-				<div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-					<span className="row-title">{project.title}</span>
-					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{project.category}</span>
-					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '.07em', color: light.extinguished ? 'var(--text-dim)' : 'var(--gold)' }}>
-						{charLine}
-					</span>
+				<div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: 1 }}>
+					<div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+						<span className="row-title">{project.title}</span>
+						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{project.category}</span>
+						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '.07em', color: light.extinguished ? 'var(--text-dim)' : 'var(--gold)' }}>
+							{charLine}
+						</span>
+					</div>
+					<span className="row-sub">{project.shortDesc}</span>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle)' }}>{(project.tags ?? []).join(' · ')}</span>
 				</div>
-				<span className="row-sub">{project.shortDesc}</span>
-				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle)' }}>{(project.tags ?? []).join(' · ')}</span>
 			</div>
-			<div className="row-actions" style={{ paddingRight: 36 }}>
+			<div className="content-row__divider" />
+			<div className="row-actions">
 				<span className="pill pill--arrow" title="move up the rack" onClick={() => h.moveProject(project, -1)}>↑</span>
 				<span className="pill pill--arrow" title="move down the rack" onClick={() => h.moveProject(project, 1)}>↓</span>
 				<span className={`pill ${project.featured ? 'pill--on' : 'pill--feat-off'}`} onClick={() => h.toggleFeatured(project)}>
