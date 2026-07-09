@@ -29,8 +29,8 @@ test.describe('at phone width', () => {
 	test('a nav tap switches screens and closes the drawer', async ({ page }) => {
 		await signIn(page);
 		await burger(page).click();
-		await nav(page, 'projects').click();
-		await expect(page.getByText('Projects', { exact: true })).toBeVisible();
+		await nav(page, 'the light list').click();
+		await expect(page.getByText('The light list', { exact: true })).toBeVisible();
 		await expect(sidebar(page)).toBeHidden();
 	});
 

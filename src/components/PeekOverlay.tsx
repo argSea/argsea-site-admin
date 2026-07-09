@@ -1,10 +1,12 @@
-// Peek: the postcard/note rendered as the site would show it, from local
+// Peek: the light entry/note rendered as the site would show it, from local
 // state. Everything here is plain React text rendering; the body HTML is
 // converted back to paragraphs, so nothing goes through innerHTML.
 import { useHarbor } from '../state/harbor';
 import { htmlToParagraphs } from '../lib/paragraphs';
 import { printBackground } from '../lib/prints';
+import { codeFor, DEFAULT_LIGHT, wordsFor } from '../lib/lightChar';
 import { ShapeNode } from './ShapeEditor';
+import Lamp from './Lamp';
 import type { Doodle } from '../lib/api';
 
 function PhotoPrint({ image, wide }: { image: string; wide?: boolean }) {
@@ -69,39 +71,58 @@ export default function PeekOverlay() {
 					<span className="pill" style={{ color: 'var(--text-body)' }} onClick={h.closePeek}>close ✕</span>
 				</div>
 
-				{peek.type === 'project' && 'shortDesc' in item && (
-					<div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(20px, 4vw, 36px)', padding: 'clamp(20px, 4vw, 30px)' }}>
-						<div style={{ flex: 1.5, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 14 }}>
-							<div style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(24px, 4vw, 32px)', color: 'var(--text-strong)', lineHeight: 1.15 }}>
-								{item.title}
+				{peek.type === 'project' && 'shortDesc' in item && (() => {
+					const light = item.light ?? DEFAULT_LIGHT;
+					const dark = Boolean(light.extinguished);
+					// the gallery's first print leads; the dormant single-print field
+					// only fills in for a light that predates the gallery
+					const leadPrint = item.images && item.images.length > 0 ? item.images[0] : item.image;
+
+					return (
+						<div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(20px, 4vw, 36px)', padding: 'clamp(20px, 4vw, 30px)' }}>
+							<div style={{ flex: 1.5, minWidth: 260, display: 'flex', flexDirection: 'column', gap: 14 }}>
+								<div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+									<Lamp light={light} size={18} haloScale={3.8} />
+									<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+										<span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(24px, 4vw, 32px)', color: 'var(--text-strong)', lineHeight: 1.15 }}>
+											{item.title}
+										</span>
+										<div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+											<span className={`pill ${dark ? 'pill--off' : 'pill--on'}`}>{dark ? `dark · ${light.extinguished}` : '● lit'}</span>
+											<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, letterSpacing: '.1em', color: 'var(--text-soft)' }}>{codeFor(light)}</span>
+										</div>
+									</div>
+								</div>
+								<span style={{ fontSize: 14.5, fontStyle: 'italic', color: 'var(--text-quip)' }}>{wordsFor(light)}</span>
+								<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--periwinkle)' }}>
+									first lit · <span style={{ color: 'var(--text-soft)' }}>{item.firstLit}</span>
+								</span>
+								{paragraphs.length > 0 && (
+									<div style={{ fontSize: 16.5, lineHeight: 1.65, color: 'var(--text-body-strong)', whiteSpace: 'pre-line' }}>
+										{paragraphs.join('\n\n')}
+									</div>
+								)}
+								<div style={{ fontSize: 15, color: 'var(--text-quip)', fontStyle: 'italic', marginTop: 4 }}>{item.moral}</div>
+								{!leadPrint && (
+									<div style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle)', marginTop: 'auto' }}>
+										{item.tags.join('  ·  ')}
+									</div>
+								)}
 							</div>
-							<div style={{ fontSize: 16.5, lineHeight: 1.65, color: 'var(--text-body-strong)' }}>{item.shortDesc}</div>
-							{paragraphs.length > 0 && (
-								<div style={{ fontSize: 16.5, lineHeight: 1.65, color: 'var(--text-body-strong)', whiteSpace: 'pre-line' }}>
-									{paragraphs.join('\n\n')}
+							{leadPrint && (
+								<div style={{
+									flex: 1, minWidth: 200, borderLeft: '1.5px dashed var(--border-input)',
+									paddingLeft: 'clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 16,
+								}}>
+									<PhotoPrint image={leadPrint} />
+									<div style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle)', marginTop: 'auto' }}>
+										{item.tags.join('  ·  ')}
+									</div>
 								</div>
 							)}
-							<div style={{ fontSize: 15, color: 'var(--text-quip)', fontStyle: 'italic', marginTop: 4 }}>{item.moral}</div>
 						</div>
-						<div style={{
-							flex: 1, minWidth: 200, borderLeft: '1.5px dashed var(--border-input)',
-							paddingLeft: 'clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 16,
-						}}>
-							{item.image && <PhotoPrint image={item.image} />}
-							<div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 13, lineHeight: 1.7 }}>
-								<span style={{ color: 'var(--periwinkle-deep)' }}>to:</span>
-								<span style={{ color: 'var(--text-soft)' }}>{item.postcardTo}</span>
-								<span style={{ color: 'var(--periwinkle-deep)', marginTop: 6 }}>from:</span>
-								<span style={{ color: 'var(--text-soft)' }}>{item.postcardFrom}</span>
-								<span style={{ color: 'var(--periwinkle-deep)', marginTop: 6 }}>postmarked:</span>
-								<span style={{ color: 'var(--text-soft)' }}>{item.postmarked}</span>
-							</div>
-							<div style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle)', marginTop: 'auto' }}>
-								{item.tags.join('  ·  ')}
-							</div>
-						</div>
-					</div>
-				)}
+					);
+				})()}
 
 				{peek.type === 'note' && 'teaser' in item && (
 					<div style={{ padding: 'clamp(22px, 4vw, 32px)', display: 'flex', flexDirection: 'column', gap: 14 }}>

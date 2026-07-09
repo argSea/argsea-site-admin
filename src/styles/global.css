@@ -354,12 +354,23 @@ textarea::placeholder {
 }
 
 .photo-thumb {
-	background: var(--paper);
 	border-radius: 3px;
 	padding: 4px 4px 9px;
-	transform: rotate(-2deg);
 	flex-shrink: 0;
+	box-sizing: border-box;
+}
+
+/* cream is a physical paper prop, reserved for a real print */
+.photo-thumb--paper {
+	background: var(--paper);
+	transform: rotate(-2deg);
 	box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+}
+
+/* print-less: a quiet dark blank, not an empty paper frame */
+.photo-thumb--empty {
+	background: var(--well);
+	border: 1px solid var(--border-input);
 }
 
 .photo-thumb__img {

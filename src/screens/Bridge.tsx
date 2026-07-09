@@ -31,12 +31,12 @@ export default function Bridge() {
 	const stats = [
 		{ label: 'ships sighted', value: '1,204', sub: 'visitors this week. one was mom.' },
 		{ label: 'lighthouse uptime', value: '99.98%', sub: 'the .02 was planned. mostly.' },
-		{ label: 'postcards', value: `${pubProjects} / ${h.projects.length}`, sub: 'published / in the rack' },
+		{ label: 'lights burning', value: `${pubProjects} / ${h.projects.length}`, sub: 'lit / on the list' },
 		{ label: 'graveyard census', value: String(resting), sub: 'resting. none dead.' },
 	];
 
 	const errands = [
-		{ label: 'write a new postcard', run: () => { h.goTo('projects'); h.openEdit('project', null); } },
+		{ label: 'kindle a light', run: () => { h.goTo('projects'); h.openEdit('project', null); } },
 		{ label: 'draft a note', run: () => { h.goTo('notes'); h.openEdit('note', null); } },
 		{ label: 'pick up a hobby (again)', run: () => { h.goTo('hobbies'); h.openEdit('hobby', null); } },
 		{ label: 'hoist the lantern', run: () => { void h.hoistLantern(); } },
