@@ -61,7 +61,7 @@ export const CAT_CATALOG: CatPage[] = [
 		id: 'hello', label: 'Hello', spots: [
 			{ id: 'hello.header', label: 'The nav link', hint: 'lounging on the hello nav link' },
 			{ id: 'hello.hero', label: 'The hero', hint: 'peeking beside the hero headline' },
-			{ id: 'hello.postcard', label: 'An open postcard', hint: 'on a postcard when it opens' },
+			{ id: 'hello.postcard', label: 'An open light entry', hint: 'on a light entry when it opens' },
 			{ id: 'hello.manifest', label: 'The cargo manifest', hint: 'at the end of the manifest list' },
 			{ id: 'hello.graveyard', label: 'The hobby graveyard', hint: 'among the graveyard chips' },
 			{ id: 'hello.contact', label: 'The contact lighthouse', hint: 'by the contact-band lighthouse' },
@@ -71,8 +71,8 @@ export const CAT_CATALOG: CatPage[] = [
 		id: 'projects', label: 'Projects', spots: [
 			{ id: 'projects.header', label: 'The nav link', hint: 'lounging on the projects nav link' },
 			{ id: 'projects.filterTag', label: 'The filter chip', hint: 'on the active filter chip' },
-			{ id: 'projects.card', label: 'A project card', hint: 'on a project card corner' },
-			{ id: 'projects.overlay', label: 'The postcard back', hint: 'on a postcard when it flips open' },
+			{ id: 'projects.card', label: 'A register row', hint: 'on a register row' },
+			{ id: 'projects.overlay', label: 'The light entry', hint: 'peeking from an open light entry' },
 		],
 	},
 	{
