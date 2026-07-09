@@ -7,11 +7,11 @@ import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
 	ActivityEntry, Category, CopyTextField, Doodle, EggFlags, FigureheadDesign, FigureheadPose, Hobby,
-	KeeperProfile, LanternStatus, Lighthouse, MediaItem, Note, Project, Revision, Shape,
-	SiteCopy, Stamp, Suggestion,
+	KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Revision, Shape,
+	SiteCopy, Suggestion,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
-import { randomStamp, stampForWire } from '../lib/stamp';
+import { DEFAULT_LIGHT } from '../lib/lightChar';
 
 export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'shop' | 'media' | 'keeper' | 'marginalia';
 
@@ -108,17 +108,15 @@ export interface Session {
 }
 
 export interface ProjectDraft {
-	title:        string;
-	category:     Category;
-	tagsText:     string;
-	shortDesc:    string;
-	bodyText:     string;
-	moral:        string;
-	postcardTo:   string;
-	postcardFrom: string;
-	postmarked:   string;
-	image:        string | null;
-	stamp:        Stamp | null;
+	title:     string;
+	category:  Category;
+	tagsText:  string;
+	shortDesc: string;
+	bodyText:  string;
+	moral:     string;
+	images:    string[];  // gallery, first print leads
+	light:     Light;
+	firstLit:  string;
 }
 
 export interface NoteDraft {
@@ -212,15 +210,11 @@ function projectDraft(p?: Project): ProjectDraft {
 		? {
 			title: p.title, category: p.category, tagsText: p.tags.join(', '),
 			shortDesc: p.shortDesc, bodyText: htmlToText(p.body), moral: p.moral,
-			postcardTo: p.postcardTo, postcardFrom: p.postcardFrom, postmarked: p.postmarked,
-			image: p.image, stamp: p.stamp ?? null,
+			images: p.images ?? [], light: p.light ?? DEFAULT_LIGHT, firstLit: p.firstLit,
 		}
 		: {
 			title: '', category: 'backend', tagsText: '', shortDesc: '', bodyText: '',
-			moral: 'Moral: ', postcardTo: '', postcardFrom: '',
-			// a fresh postcard gets a surprise stamp, like the design; existing
-			// cards without one stay stampless unless the designer is touched
-			postmarked: String(new Date().getFullYear()), image: null, stamp: randomStamp(),
+			moral: 'Moral: ', images: [], light: DEFAULT_LIGHT, firstLit: '',
 		};
 }
 
@@ -273,7 +267,7 @@ interface HarborValue {
 	edit:         EditState | null;
 	openEdit:     (type: EditType, id: string | null) => void;
 	patchDraft:   (patch: Partial<ProjectDraft & NoteDraft & HobbyDraft>) => void;
-	patchStamp:   (stamp: Stamp) => void;
+	patchLight:   (patch: Partial<Light>) => void;
 	loadRevision: (revision: Revision) => void;
 	saveEdit:     () => Promise<void>;
 	cancelEdit:   () => void;
@@ -286,7 +280,6 @@ interface HarborValue {
 	toggleNoteStatus:    (n: Note) => Promise<void>;
 	toggleFeatured:      (p: Project) => Promise<void>;
 	moveProject:         (p: Project, dir: -1 | 1) => Promise<void>;
-	restackProjects:     (orderedIds: string[]) => Promise<void>;
 	arrangeProjects:     (placements: { id: string; x: number; y: number; rotation: number }[]) => Promise<void>;
 	scuttleProject:      (p: Project) => Promise<void>;
 	burnNote:            (n: Note) => Promise<void>;
@@ -517,9 +510,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		setEdit((cur) => (cur ? { ...cur, touched: true, draft: { ...cur.draft, ...patch } } as EditState : cur));
 	}, []);
 
-	const patchStamp = useCallback((stamp: Stamp) => {
+	const patchLight = useCallback((patch: Partial<Light>) => {
 		setEdit((cur) => (cur && cur.type === 'project'
-			? { ...cur, touched: true, draft: { ...cur.draft, stamp } }
+			? { ...cur, touched: true, draft: { ...cur.draft, light: { ...cur.draft.light, ...patch } } }
 			: cur));
 	}, []);
 
@@ -569,20 +562,15 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		try {
 			if (edit.type === 'project') {
 				const d = edit.draft;
-				if (d.stamp && d.stamp.motif === 'text' && !(d.stamp.text ?? '').trim()) {
-					showToast('⚠ a words stamp needs its words');
-					return;
-				}
 				const fields = {
 					title: d.title, category: d.category,
 					tags: d.tagsText.split(',').map((t) => t.trim()).filter(Boolean),
 					shortDesc: d.shortDesc, body: textToHtml(d.bodyText), moral: d.moral,
-					postcardTo: d.postcardTo, postcardFrom: d.postcardFrom, postmarked: d.postmarked,
-					image: d.image, stamp: d.stamp ? stampForWire(d.stamp) : undefined,
+					images: d.images, light: d.light, firstLit: d.firstLit,
 				};
 				if (edit.id === null) {
 					replaceProject(await api.projects.create({ ...fields, status: 'draft' }));
-					showToast('✉ new postcard in the rack');
+					showToast('🕯 a light was kindled, into the rack');
 				} else if (edit.restoredRev) {
 					let saved = await api.projects.restore(edit.id, edit.restoredRev);
 					if (edit.touched) {
@@ -595,8 +583,12 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					if (!current) {
 						return;
 					}
+					// PUT is full-replace: postcardTo/From/postmarked/stamp/image are
+					// dormant, no longer edited here, so they ride through from the
+					// fetched document. Without this spread the first edit on any
+					// light would wipe them for good.
 					replaceProject(await api.projects.update(edit.id, { ...current, ...fields }));
-					showToast('✉ postcard filed');
+					showToast('🕯 the light was filed');
 				}
 			} else if (edit.type === 'note') {
 				const d = edit.draft;
@@ -671,12 +663,12 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const toggleFeatured = useCallback(async (p: Project) => {
 		// the cap is the admin's rule, not the server's; enforce before the call
 		if (!p.featured && projects.filter((x) => x.featured).length >= 3) {
-			showToast('the mantel only fits three, take one down first');
+			showToast('the window only fits three, take one down first');
 			return;
 		}
 		try {
 			replaceProject(await api.featureProject(p.id, !p.featured));
-			showToast(p.featured ? '☆ taken down from the mantel' : '★ up on the mantel');
+			showToast(p.featured ? '☆ taken out of the window' : '★ set in the front window');
 			refreshActivity();
 		} catch (error) {
 			oops(error);
@@ -705,35 +697,12 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [projects, oops, refreshActivity]);
 
-	// the wall's drag-reorder list hands back the full published order; order is
-	// the stack depth (1 on top), so assign sequential 1..N and persist only the
-	// cards whose order actually moved. One reorderProject call per changed card,
-	// same endpoint the rack's up-down uses (N is small; no bulk endpoint).
-	const restackProjects = useCallback(async (orderedIds: string[]) => {
-		const changed = orderedIds
-			.map((id, i) => ({ id, order: i + 1 }))
-			.filter(({ id, order }) => projects.find((p) => p.id === id)?.order !== order);
-		if (!changed.length) {
-			return;
-		}
-		try {
-			const saved = await Promise.all(changed.map(({ id, order }) => api.reorderProject(id, order)));
-			setProjects((cur) => cur
-				.map((x) => saved.find((s) => s.id === x.id) ?? x)
-				.sort(byOrder));
-			refreshActivity();
-			showToast('📌 the wall was restacked');
-		} catch (error) {
-			oops(error);
-		}
-	}, [projects, showToast, oops, refreshActivity]);
-
 	const arrangeProjects = useCallback(async (placements: { id: string; x: number; y: number; rotation: number }[]) => {
 		try {
 			const list = await api.arrangeProjects(placements);
 			setProjects([...list].sort(byOrder));
 			refreshActivity();
-			showToast('📌 the wall arrangement is pinned');
+			showToast('📌 the coast was pinned');
 		} catch (error) {
 			oops(error);
 		}
@@ -1075,9 +1044,10 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	// ---- the darkroom ----
 
-	// notes carry a doodle now, not a photo print; only projects still count
+	// notes carry a doodle now, not a photo print; only projects still count.
+	// A print counts once per project even if it leads AND rides the gallery.
 	const printUsage = useCallback((filename: string): number =>
-		projects.filter((p) => p.image === filename).length,
+		projects.filter((p) => p.image === filename || (p.images ?? []).includes(filename)).length,
 	[projects]);
 
 	const developPrints = useCallback(async (files: Iterable<File>) => {
@@ -1109,14 +1079,18 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			// deleting the file does NOT touch referencing documents (pinned
 			// contract), detaching is this client's job, via full-replace PUTs.
 			// Notes carry a doodle now, not a photo print, so only projects can
-			// reference one.
-			const usedProjects = projects.filter((p) => p.image === m.filename);
-			const savedProjects = await Promise.all(usedProjects.map((p) => api.projects.update(p.id, { ...p, image: null })));
+			// reference one, either as the lead image or loose in the gallery.
+			const usedProjects = projects.filter((p) => p.image === m.filename || (p.images ?? []).includes(m.filename));
+			const savedProjects = await Promise.all(usedProjects.map((p) => api.projects.update(p.id, {
+				...p,
+				image: p.image === m.filename ? null : p.image,
+				images: (p.images ?? []).filter((name) => name !== m.filename),
+			})));
 			savedProjects.forEach(replaceProject);
 			await api.media.remove(m.id);
 			setPrints((cur) => cur.filter((x) => x.id !== m.id));
 			showToast(usedProjects.length
-				? 'print torn off its cards and left in the sun'
+				? 'print torn off its lights and left in the sun'
 				: 'print left out in the sun');
 			refreshActivity();
 		} catch (error) {
@@ -1206,9 +1180,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs, doodles,
 		keeperName, dirtyCount,
 		toast, showToast, confirmKey, askConfirm,
-		edit, openEdit, patchDraft, patchStamp, loadRevision, saveEdit, cancelEdit,
+		edit, openEdit, patchDraft, patchLight, loadRevision, saveEdit, cancelEdit,
 		peek, openPeek, closePeek,
-		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, restackProjects, arrangeProjects, scuttleProject, burnNote,
+		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, arrangeProjects, scuttleProject, burnNote,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,

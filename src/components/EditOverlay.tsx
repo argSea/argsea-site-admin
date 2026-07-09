@@ -1,20 +1,20 @@
-// The edit overlay: postcard, headstone, and note forms, the stamp designer,
-// the photo-print picker, and the earlier-printings (revisions) section.
+// The edit overlay: project, headstone, and note forms, the light designer,
+// the gallery picker, and the earlier-printings (revisions) section.
 // "File it" on a restored draft goes through the restore endpoint; that's
 // the server copy-forward that makes status travel with the printing.
 import { useHarbor } from '../state/harbor';
 import type { EditState, HobbyDraft, NoteDraft, ProjectDraft } from '../state/harbor';
-import type { Category, Stamp as StampData } from '../lib/api';
-import { INKS, MOTIF_IDS, POSTMARK_TEXTS, STAMP_TEXT_MAX, DEFAULT_STAMP, randomStamp } from '../lib/stamp';
+import type { Category, LightColor, LightKind } from '../lib/api';
+import { codeFor, randomLight, wordsFor } from '../lib/lightChar';
 import { printBackground } from '../lib/prints';
 import { relativeTime } from '../lib/time';
-import Stamp from './Stamp';
+import Lamp from './Lamp';
 import { ShapeNode } from './ShapeEditor';
 
 const CATEGORIES: Category[] = ['backend', 'games', 'this website', 'tinkering'];
 
 const KICKERS: Record<EditState['type'], string> = {
-	project: 'postcard · ',
+	project: 'light · ',
 	hobby:   'headstone · ',
 	note:    'note · ',
 };
@@ -30,84 +30,166 @@ function DesignerChip({ selected, label, onClick }: { selected: boolean; label: 
 	);
 }
 
-function StampDesigner({ draft }: { draft: ProjectDraft }) {
+const KIND_OPTIONS: { id: LightKind; label: string }[] = [
+	{ id: 'fixed',  label: 'fixed · steady' },
+	{ id: 'flash',  label: 'flashing' },
+	{ id: 'occult', label: 'occulting' },
+	{ id: 'iso',    label: 'isophase' },
+];
+
+const COLOR_OPTIONS: { id: LightColor; label: string }[] = [
+	{ id: 'white', label: 'white' },
+	{ id: 'green', label: 'green · the playful ones' },
+	{ id: 'red',   label: 'red · kept for home' },
+];
+
+const KIND_HINT: Record<LightKind, string> = {
+	fixed:  'a steady beam, never blinking. for the things that must simply always be on.',
+	flash:  'mostly dark, then one bright flash. for the dramatic ones, you notice when it speaks.',
+	occult: 'mostly lit, with a brief eclipse. for the reliable ones with scheduled pauses.',
+	iso:    'half light, half dark, evenly. for the ones rebuilt as often as they run.',
+};
+
+const EXTINGUISHED_MAX = 40;
+
+function LightEditor({ draft }: { draft: ProjectDraft }) {
 	const h = useHarbor();
-	// an untouched empty stamp shows the default; any chip press makes it real
-	const stamp = draft.stamp ?? DEFAULT_STAMP;
-	const set = (patch: Partial<StampData>) => h.patchStamp({ ...stamp, ...patch });
+	const light = draft.light;
+
+	// fixed holds no rhythm, so switching onto it drops the period; switching
+	// off it keeps whatever rhythm was already dialed in, or seeds one
+	const setKind = (kind: LightKind) => h.patchLight({ kind, period: kind === 'fixed' ? 0 : (light.period || 5) });
 
 	return (
-		<div className="fieldset-dashed" style={{ gap: 14 }}>
+		<div className="fieldset-dashed" style={{ gap: 16 }}>
 			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the stamp · top-right corner</span>
-				<span className="chip-dashed" onClick={() => h.patchStamp(randomStamp())}>⚄ surprise me</span>
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the light · how it burns on the coast</span>
+				<span className="chip-dashed" onClick={() => h.patchLight(randomLight(light))}>⚄ let the sea decide</span>
 			</div>
 			<div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
 				<div style={{
 					width: 96, height: 96, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
 					background: 'var(--well)', border: '1px solid var(--border-input)', borderRadius: 8,
 				}}>
-					<Stamp stamp={stamp} scale={1.5} />
+					<Lamp light={light} size={16} haloScale={3.5} />
 				</div>
-				<div style={{ display: 'flex', flexDirection: 'column', gap: 9, flex: 1, minWidth: 230 }}>
-					<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-						<DesignerChip selected={stamp.shape === 'rect'} label="stamp"
-							onClick={() => set({ shape: 'rect', cents: stamp.cents || '3¢' })} />
-						<DesignerChip selected={stamp.shape === 'circle'} label="postmark"
-							onClick={() => set({ shape: 'circle' })} />
-						{INKS.map((ink) => (
-							<DesignerChip key={ink} selected={stamp.ink === ink}
-								label={ink === '#f0d9a8' ? 'gold ink' : 'periwinkle ink'}
-								onClick={() => set({ ink })} />
-						))}
-					</div>
-					<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-						{[...MOTIF_IDS, 'text' as const].map((motif) => (
-							<DesignerChip key={motif} selected={stamp.motif === motif}
-								label={motif === 'text' ? 'words' : motif}
-								onClick={() => set(motif === 'text' ? { motif, text: stamp.text || POSTMARK_TEXTS[1] } : { motif })} />
-						))}
-					</div>
-					{stamp.motif === 'text' && (
-						<input type="text" className="input" placeholder="AIR MAIL" maxLength={STAMP_TEXT_MAX}
-							value={stamp.text ?? ''}
-							onChange={(e) => set({ text: e.target.value })}
-							style={{ padding: '9px 12px', fontSize: 12, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--text-soft)' }} />
-					)}
+				<div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 230 }}>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, letterSpacing: '.1em', color: 'var(--gold)' }}>{codeFor(light)}</span>
+					<span style={{ fontSize: 14.5, fontStyle: 'italic', color: 'var(--text-body)', lineHeight: 1.5 }}>{wordsFor(light)}</span>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
+						// its signature: how a stranger tells this light from the others on the coast.
+					</span>
 				</div>
 			</div>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the pattern</span>
+				<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+					{KIND_OPTIONS.map((opt) => (
+						<DesignerChip key={opt.id} selected={light.kind === opt.id} label={opt.label} onClick={() => setKind(opt.id)} />
+					))}
+				</div>
+				<span style={{ fontSize: 13.5, fontStyle: 'italic', color: 'var(--text-dim)' }}>{KIND_HINT[light.kind]}</span>
+			</div>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the color</span>
+				<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+					{COLOR_OPTIONS.map((opt) => (
+						<DesignerChip key={opt.id} selected={light.color === opt.id} label={opt.label}
+							onClick={() => h.patchLight({ color: opt.id })} />
+					))}
+				</div>
+			</div>
+			{light.kind !== 'fixed' && (
+				<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+					<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
+						<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the rhythm</span>
+						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--gold)' }}>every {light.period} seconds</span>
+					</div>
+					<input type="range" min={2} max={12} step={1} value={light.period}
+						onChange={(e) => h.patchLight({ period: parseInt(e.target.value, 10) })}
+						style={{ width: '100%', accentColor: 'var(--periwinkle)', margin: 0 }} />
+				</div>
+			)}
+			<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+				<label className="field">
+					<span className="field-label">extinguished</span>
+					<input type="text" className="input" style={{ maxWidth: 260 }} maxLength={EXTINGUISHED_MAX}
+						placeholder="leave empty while it burns" value={light.extinguished}
+						onChange={(e) => h.patchLight({ extinguished: e.target.value })} />
+				</label>
+				<span style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--text-dim)' }}>
+					a year here puts the light out · it stays on the list, just dark
+				</span>
+			</div>
+			<label className="field">
+				<span className="field-label">first lit</span>
+				<input type="text" className="input" style={{ maxWidth: 110 }} placeholder="2026"
+					value={draft.firstLit} onChange={(e) => h.patchDraft({ firstLit: e.target.value })} />
+			</label>
 		</div>
 	);
 }
 
-function PrintPicker({ selected, kind }: { selected: string | null; kind: 'card' | 'note' }) {
+const GALLERY_MAX = 12;
+
+function GalleryPicker({ images }: { images: string[] }) {
 	const h = useHarbor();
-	const options: { name: string; image: string | null }[] =
-		[{ name: 'no print', image: null }, ...h.prints.map((p) => ({ name: p.filename, image: p.filename }))];
+	const available = h.prints.filter((print) => !images.includes(print.filename));
+
+	const add = (filename: string) => {
+		if (images.length >= GALLERY_MAX) {
+			h.showToast(`the gallery only holds ${GALLERY_MAX} prints`);
+			return;
+		}
+		h.patchDraft({ images: [...images, filename] });
+	};
+	const remove = (index: number) => h.patchDraft({ images: images.filter((_, i) => i !== index) });
+	const move = (index: number, dir: -1 | 1) => {
+		const at = index + dir;
+		if (at < 0 || at >= images.length) {
+			return;
+		}
+		const next = [...images];
+		[next[index], next[at]] = [next[at], next[index]];
+		h.patchDraft({ images: next });
+	};
 
 	return (
 		<div className="fieldset-dashed">
 			<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>
-				the photo print · one per {kind}
+				the gallery · shown with the entry
 			</span>
+			{images.length > 0 && (
+				<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+					{images.map((name, index) => (
+						<div key={`${name}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+							<div style={{ width: 44, height: 32, borderRadius: 2, flexShrink: 0, background: printBackground(h.prints, name) }} />
+							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--text-soft)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+								{name}{index === 0 && <span style={{ color: 'var(--gold)' }}> · lead print</span>}
+							</span>
+							<span className="pill pill--arrow" onClick={() => move(index, -1)}>↑</span>
+							<span className="pill pill--arrow" onClick={() => move(index, 1)}>↓</span>
+							<span className="print-del" onClick={() => remove(index)}>✕</span>
+						</div>
+					))}
+				</div>
+			)}
 			<div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-				{options.map((option) => (
-					<div key={option.name} onClick={() => h.patchDraft({ image: option.image })} style={{
+				{available.map((print) => (
+					<div key={print.filename} onClick={() => add(print.filename)} style={{
 						display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', cursor: 'pointer',
-						background: 'var(--paper)', borderRadius: 4, padding: '6px 6px 5px',
-						transform: selected === option.image ? 'rotate(0deg)' : 'rotate(-1.2deg)',
-						transition: 'transform .2s, outline-color .2s',
-						outline: selected === option.image ? '2px dashed rgba(240,217,168,.9)' : '2px dashed transparent',
-						outlineOffset: 3,
+						background: 'var(--paper)', borderRadius: 4, padding: '6px 6px 5px', transform: 'rotate(-1.2deg)',
+						transition: 'transform .2s',
 					}}>
-						<div style={option.image
-							? { width: 64, height: 48, borderRadius: 2, background: printBackground(h.prints, option.image) }
-							: { width: 64, height: 48, borderRadius: 2, background: 'var(--well)', border: '1px dashed rgba(95,110,196,.5)', boxSizing: 'border-box' }} />
+						<div style={{ width: 64, height: 48, borderRadius: 2, background: printBackground(h.prints, print.filename) }} />
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--paper-name)', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-							{option.name}
+							{print.filename}
 						</span>
 					</div>
 				))}
+				{available.length === 0 && (
+					<span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-dim)' }}>every print is already in the gallery</span>
+				)}
 			</div>
 		</div>
 	);
@@ -198,28 +280,8 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 				<input type="text" className="input input--serif-italic" value={draft.moral}
 					onChange={(e) => h.patchDraft({ moral: e.target.value })} />
 			</label>
-			<div className="fieldset-dashed">
-				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the address block</span>
-				<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-					<label className="field">
-						<span className="field-label" style={{ textTransform: 'none', letterSpacing: 'normal' }}>to:</span>
-						<input type="text" className="input input--soft" style={{ padding: '9px 12px' }} value={draft.postcardTo}
-							onChange={(e) => h.patchDraft({ postcardTo: e.target.value })} />
-					</label>
-					<label className="field">
-						<span className="field-label" style={{ textTransform: 'none', letterSpacing: 'normal' }}>from:</span>
-						<input type="text" className="input input--soft" style={{ padding: '9px 12px' }} value={draft.postcardFrom}
-							onChange={(e) => h.patchDraft({ postcardFrom: e.target.value })} />
-					</label>
-					<label className="field">
-						<span className="field-label" style={{ textTransform: 'none', letterSpacing: 'normal' }}>postmarked:</span>
-						<input type="text" className="input input--soft" style={{ padding: '9px 12px' }} value={draft.postmarked}
-							onChange={(e) => h.patchDraft({ postmarked: e.target.value })} />
-					</label>
-				</div>
-			</div>
-			<StampDesigner draft={draft} />
-			<PrintPicker selected={draft.image} kind="card" />
+			<LightEditor draft={draft} />
+			<GalleryPicker images={draft.images} />
 		</div>
 	);
 }

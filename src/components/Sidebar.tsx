@@ -10,7 +10,7 @@ import { Boat, HarborCat, LighthouseMark } from './art';
 
 const NAV: { id: Screen; glyph: string; label: string }[] = [
 	{ id: 'dash', glyph: '✦', label: 'the bridge' },
-	{ id: 'projects', glyph: '✉', label: 'postcards' },
+	{ id: 'projects', glyph: '✺', label: 'projects' },
 	{ id: 'hobbies', glyph: '†', label: 'the graveyard' },
 	{ id: 'notes', glyph: '✎', label: 'writing desk' },
 	{ id: 'copy', glyph: '⚑', label: 'signal flags' },

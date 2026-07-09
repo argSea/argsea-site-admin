@@ -1,215 +1,75 @@
 /*
- * The wall canvas: a dashed, dotted-grid corkboard sized to the public wall's
- * own aspect ratio, so an admin arrangement is WYSIWYG against the site.
- * Cards are cream postcards pinned by their top-left corner. Tokens come
- * from global.css.
+ * The coast: a wide night band, sky fading into a dim sea, a scatter of
+ * faint stars (subtle, not a light show). Lamps sit on top, dragged by their
+ * center point like a pin on a chart. Tokens come from global.css where the
+ * palette already covers them; the rest is coast-specific, so it stays here.
  */
 
-.wall-layout {
-	display: flex;
-	gap: 14px;
-	align-items: flex-start;
-}
-
-.project-wall {
+.coast-canvas {
 	position: relative;
-	flex: 1 1 auto;
-	min-width: 0;
-	aspect-ratio: 1150 / 840;
-	border: 1.5px dashed var(--border-chip);
+	width: 100%;
+	aspect-ratio: 1000 / 320;
 	border-radius: 12px;
-	background-image: radial-gradient(rgba(147, 160, 232, .1) 1px, transparent 1.5px);
-	background-size: 26px 26px;
-	overflow: hidden;
-}
-
-.wall-order {
-	flex: 0 0 200px;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.wall-order__list {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-
-.wall-order__row {
-	display: flex;
-	align-items: center;
-	gap: 9px;
-	padding: 7px 9px;
-	border: 1px solid var(--border-chip);
-	border-radius: 7px;
-	background: var(--overlay-card);
-	cursor: grab;
-	user-select: none;
-}
-
-.wall-order__row:active {
-	cursor: grabbing;
-}
-
-.wall-order__num {
-	font-family: var(--font-mono);
-	font-size: 11px;
-	color: var(--gold);
-	width: 14px;
-	text-align: right;
-	flex: none;
-}
-
-.wall-order__title {
-	font-family: var(--font-body);
-	font-size: 12.5px;
-	color: var(--text-body);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	flex: 1;
-}
-
-.wall-order__grip {
-	color: var(--text-dim);
-	font-size: 12px;
-	flex: none;
-}
-
-@media (max-width: 720px) {
-	.wall-layout {
-		flex-direction: column;
-	}
-
-	.wall-order {
-		flex: 1 1 auto;
-		width: 100%;
-	}
-}
-
-.wall-card {
-	position: absolute;
-	/* uniform width, the public wall's largest slot (~400px at the 1150 ref) */
-	width: 35%;
-	min-width: 240px;
 	box-sizing: border-box;
-	transform: rotate(var(--tilt, 0deg));
-	transition: transform .2s, box-shadow .2s;
-	background: linear-gradient(180deg, var(--paper-warm-top), var(--paper-warm-bot));
-	border: 1px solid #d8cfb6;
-	border-radius: 3px;
-	padding: 6px;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, .28);
-	cursor: grab;
-	touch-action: none;
-	user-select: none;
+	overflow: hidden;
+	border: 1px solid var(--border-card);
+	background:
+		radial-gradient(1px 1px at 8% 18%, rgba(240, 217, 168, .5), transparent 60%),
+		radial-gradient(1px 1px at 21% 10%, rgba(240, 217, 168, .3), transparent 60%),
+		radial-gradient(1px 1px at 38% 26%, rgba(240, 217, 168, .4), transparent 60%),
+		radial-gradient(1px 1px at 55% 14%, rgba(240, 217, 168, .25), transparent 60%),
+		radial-gradient(1px 1px at 69% 22%, rgba(240, 217, 168, .4), transparent 60%),
+		radial-gradient(1px 1px at 84% 12%, rgba(240, 217, 168, .3), transparent 60%),
+		radial-gradient(1px 1px at 94% 24%, rgba(240, 217, 168, .35), transparent 60%),
+		linear-gradient(180deg, #0a0c18 0%, #0d1024 46%, #131a33 66%, #0a0e1c 100%);
 }
 
-.wall-card--active {
-	cursor: grabbing;
-	box-shadow: 0 6px 14px rgba(0, 0, 0, .38);
-	transition: none;
-}
-
-.wall-card__tack {
+.coast-canvas::after {
+	/* the sea: a dim band across the lower third, one hairline horizon */
+	content: '';
 	position: absolute;
-	top: -4px;
-	left: 48%;
-	width: 9px;
-	height: 9px;
-	border-radius: 50%;
-	background: radial-gradient(circle at 35% 30%, #b95069, #843a4c 70%);
-	box-shadow: 0 1px 3px rgba(0, 0, 0, .5);
+	inset: auto 0 0 0;
+	height: 36%;
+	background: linear-gradient(180deg, rgba(95, 110, 196, .12), rgba(10, 14, 28, .4));
+	border-top: 1px solid rgba(147, 160, 232, .16);
 	pointer-events: none;
 }
 
-.wall-card__photo {
-	width: 100%;
-	padding: 0 0 4px;
-	transform: none;
-	box-shadow: none;
+.coast-lamp {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
 }
 
-.wall-card__photo-img {
-	width: 100%;
-	height: auto;
-	aspect-ratio: 1.55 / 1;
+.coast-lamp--active {
+	cursor: grabbing;
+	z-index: 20;
 }
 
-.wall-card__title {
-	display: block;
+.coast-lamp__title {
 	font-family: var(--font-body);
 	font-style: italic;
-	font-size: 12px;
+	font-size: 11.5px;
 	line-height: 1.2;
-	color: var(--paper-name);
-	padding: 5px 7px 6px;
+	color: var(--text-soft);
 	white-space: nowrap;
+	max-width: 130px;
 	overflow: hidden;
 	text-overflow: ellipsis;
+	background: rgba(11, 14, 28, .55);
+	padding: 2px 7px;
+	border-radius: 999px;
+	pointer-events: none;
 }
 
-.wall-card__rotate {
-	position: absolute;
-	bottom: -9px;
-	right: -9px;
-	width: 22px;
-	height: 22px;
-	border-radius: 50%;
-	background: var(--overlay-card);
-	border: 1px solid var(--gold-dash-hot);
-	color: var(--gold);
-	font-size: 12px;
-	line-height: 20px;
-	text-align: center;
-	cursor: grab;
-	touch-action: none;
-	user-select: none;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, .5);
-}
-
-.wall-card__rotate--active {
-	cursor: grabbing;
-}
-
-/*
- * The "out with the mail" ghost placard: a dashed-border notice, not a
- * postcard, pinned and draggable like one. It shares the card's tack,
- * pointer handlers, and tilt vocabulary, so most of it rides .wall-card__*.
- */
-.wall-ghost {
-	position: absolute;
-	width: 26%;
-	min-width: 190px;
-	box-sizing: border-box;
-	transform: rotate(var(--tilt, 0deg));
-	transition: transform .2s, box-shadow .2s;
-	background: var(--paper-warm-top);
-	border: 1.5px dashed #8a6d3b;
-	border-radius: 3px;
-	padding: 14px 10px;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, .28);
-	cursor: grab;
-	touch-action: none;
-	user-select: none;
-	text-align: center;
-}
-
-.wall-ghost--active {
-	cursor: grabbing;
-	box-shadow: 0 6px 14px rgba(0, 0, 0, .38);
-	transition: none;
-}
-
-.wall-ghost__label {
-	display: block;
-	font-family: var(--font-body);
-	font-style: italic;
-	font-size: 12.5px;
-	line-height: 1.35;
-	color: var(--paper-name);
+@media (max-width: 720px) {
+	.coast-canvas {
+		aspect-ratio: 4 / 3;
+	}
 }

@@ -23,13 +23,29 @@ export type StampMotif = 'lighthouse' | 'boat' | 'sun' | 'wave' | 'moon' | 'anch
 export type StampInk = '#f0d9a8' | '#93a0e8';
 
 // A postcard's corner stamp/postmark. Optional on the wire; {} is invalid,
-// so an unset stamp is omitted from the document entirely.
+// so an unset stamp is omitted from the document entirely. Dormant
+// postcard-era field: no longer written by the admin, kept typed so old
+// documents and revisions still round-trip.
 export interface Stamp {
 	shape:  StampShape;
 	motif:  StampMotif;
 	ink:    StampInk;
 	cents?: string;  // rect stamps only, e.g. "3¢"
 	text?:  string;  // motif 'text' only, required then, ≤40 chars after trim
+}
+
+export type LightKind = 'fixed' | 'flash' | 'occult' | 'iso';
+export type LightColor = 'white' | 'red' | 'green';
+
+// A light's navigational characteristic: how it burns on the coast. Period is
+// the seconds one full cycle takes for the blinking kinds, 0 on fixed.
+// Extinguished is a freeform year string; any non-empty value means the
+// light is dark (an abandoned project) while it stays on the list.
+export interface Light {
+	kind:         LightKind;
+	color:        LightColor;
+	period:       number;
+	extinguished: string;
 }
 
 // Wire types mirror the argsea-site-api domain structs field-for-field.
@@ -41,12 +57,15 @@ export interface Project {
 	shortDesc:    string;       // "front of card"
 	body:         string;       // sanitized HTML long-form
 	moral:        string;
-	postcardTo:   string;
-	postcardFrom: string;
-	postmarked:   string;       // freeform display string
+	postcardTo:   string;       // dormant postcard-era field, pass-through only
+	postcardFrom: string;       // dormant postcard-era field, pass-through only
+	postmarked:   string;       // dormant postcard-era field, pass-through only
 	slug:         string;
-	image:        string | null;
-	stamp?:       Stamp | null;
+	image:        string | null;       // dormant single-print field, pass-through only
+	stamp?:       Stamp | null;        // dormant postcard-era field, pass-through only
+	light:        Light | null;        // arrives null, not undefined; null burns as fixed white
+	images:       string[] | null;     // gallery media names, first print leads; null like tags
+	firstLit:     string;
 	order:        number;
 	wallPos?:     { x: number; y: number; rotation: number } | null;
 	featured:     boolean;

@@ -36,8 +36,8 @@ test('login lands on the bridge; every read carries the bearer token; drafts sta
 		expect(read.headers['authorization'], `${read.path} must be authed`).toBe('Bearer test-token');
 	}
 
-	// and the draft postcard is in the rack
-	await nav(page, 'postcards').click();
+	// and the draft light is in the rack
+	await nav(page, 'projects').click();
 	await expect(page.getByText('The home lab', { exact: true })).toBeVisible();
 	await expect(page.getByText('○ draft')).toBeVisible();
 });
