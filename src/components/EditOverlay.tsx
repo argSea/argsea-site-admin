@@ -5,7 +5,7 @@
 import { useHarbor } from '../state/harbor';
 import type { EditState, HobbyDraft, NoteDraft, ProjectDraft } from '../state/harbor';
 import type { Category, LightColor, LightKind } from '../lib/api';
-import { codeFor, randomLight, wordsFor } from '../lib/lightChar';
+import { codeFor, LETTERS, randomLight, RHYTHM_KINDS, wordsFor } from '../lib/lightChar';
 import { printBackground } from '../lib/prints';
 import { relativeTime } from '../lib/time';
 import Lamp from './Lamp';
@@ -31,10 +31,13 @@ function DesignerChip({ selected, label, onClick }: { selected: boolean; label: 
 }
 
 const KIND_OPTIONS: { id: LightKind; label: string }[] = [
-	{ id: 'fixed',  label: 'fixed · steady' },
-	{ id: 'flash',  label: 'flashing' },
-	{ id: 'occult', label: 'occulting' },
-	{ id: 'iso',    label: 'isophase' },
+	{ id: 'fixed',     label: 'fixed · steady' },
+	{ id: 'flash',     label: 'flashing' },
+	{ id: 'occult',    label: 'occulting' },
+	{ id: 'iso',       label: 'isophase' },
+	{ id: 'quick',     label: 'quick' },
+	{ id: 'veryquick', label: 'very quick' },
+	{ id: 'morse',     label: 'morse' },
 ];
 
 const COLOR_OPTIONS: { id: LightColor; label: string }[] = [
@@ -44,21 +47,45 @@ const COLOR_OPTIONS: { id: LightColor; label: string }[] = [
 ];
 
 const KIND_HINT: Record<LightKind, string> = {
-	fixed:  'a steady beam, never blinking. for the things that must simply always be on.',
-	flash:  'mostly dark, then one bright flash. for the dramatic ones, you notice when it speaks.',
-	occult: 'mostly lit, with a brief eclipse. for the reliable ones with scheduled pauses.',
-	iso:    'half light, half dark, evenly. for the ones rebuilt as often as they run.',
+	fixed:     'a steady beam, never blinking. for the things that must simply always be on.',
+	flash:     'mostly dark, then one bright flash. for the dramatic ones, you notice when it speaks.',
+	occult:    'mostly lit, with a brief eclipse. for the reliable ones with scheduled pauses.',
+	iso:       'half light, half dark, evenly. for the ones rebuilt as often as they run.',
+	quick:     'a fast, steady pulse, about once a second. for the ones you build in a weekend.',
+	veryquick: 'twice as fast again, urgent. for the ones that will not sit still.',
+	morse:     'spells a letter in international code, then rests. for the ones with a name worth spelling out.',
 };
 
 const EXTINGUISHED_MAX = 40;
 
+// The rhythm slider's range per kind: morse needs room for its letter's
+// pattern (the longest letters, J/Q/Y, run 5.2s of code, so the api floors
+// it at 6), the rest keep the design's 2-12s.
+const RHYTHM_RANGE: Record<'morse' | 'rest', { min: number; max: number }> = {
+	morse: { min: 6, max: 30 },
+	rest:  { min: 2, max: 12 },
+};
+
 function LightEditor({ draft }: { draft: ProjectDraft }) {
 	const h = useHarbor();
 	const light = draft.light;
+	const range = light.kind === 'morse' ? RHYTHM_RANGE.morse : RHYTHM_RANGE.rest;
 
-	// fixed holds no rhythm, so switching onto it drops the period; switching
-	// off it keeps whatever rhythm was already dialed in, or seeds one
-	const setKind = (kind: LightKind) => h.patchLight({ kind, period: kind === 'fixed' ? 0 : (light.period || 5) });
+	// fixed/quick/veryquick hold no dialed-in rhythm, so switching onto one of
+	// them drops the period; switching onto a rhythm kind keeps whatever was
+	// already dialed in, or seeds one, clamped into the target kind's slider
+	// range so the thumb never pins past its own ends. the letter only ever
+	// means something on morse, so it clears the moment the kind steps off it,
+	// and gets a starting pick the moment it steps on.
+	const setKind = (kind: LightKind) => {
+		if (!RHYTHM_KINDS.includes(kind)) {
+			h.patchLight({ kind, period: 0, letter: '' });
+			return;
+		}
+		const target = kind === 'morse' ? RHYTHM_RANGE.morse : RHYTHM_RANGE.rest;
+		const period = Math.min(target.max, Math.max(target.min, light.period || (kind === 'morse' ? 8 : 5)));
+		h.patchLight({ kind, period, letter: kind === 'morse' ? (light.letter || 'A') : '' });
+	};
 
 	return (
 		<div className="fieldset-dashed" style={{ gap: 16 }}>
@@ -99,16 +126,25 @@ function LightEditor({ draft }: { draft: ProjectDraft }) {
 					))}
 				</div>
 			</div>
-			{light.kind !== 'fixed' && (
+			{RHYTHM_KINDS.includes(light.kind) && (
 				<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 					<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
 						<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the rhythm</span>
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--gold)' }}>every {light.period} seconds</span>
 					</div>
-					<input type="range" min={2} max={12} step={1} value={light.period}
+					<input type="range" min={range.min} max={range.max} step={1} value={light.period}
 						onChange={(e) => h.patchLight({ period: parseInt(e.target.value, 10) })}
 						style={{ width: '100%', accentColor: 'var(--periwinkle)', margin: 0 }} />
 				</div>
+			)}
+			{light.kind === 'morse' && (
+				<label className="field">
+					<span className="field-label">the letter · spelled in morse</span>
+					<select className="input" style={{ maxWidth: 90 }} value={light.letter}
+						onChange={(e) => h.patchLight({ letter: e.target.value })}>
+						{LETTERS.map((l) => <option key={l} value={l}>{l}</option>)}
+					</select>
+				</label>
 			)}
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 				<label className="field">
@@ -251,7 +287,7 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 			</label>
 			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 				<label className="field">
-					<span className="field-label">berth (category)</span>
+					<span className="field-label">station (category)</span>
 					<select className="input" value={draft.category}
 						onChange={(e) => h.patchDraft({ category: e.target.value as Category })}>
 						{CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
@@ -264,14 +300,14 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 				</label>
 			</div>
 			<label className="field">
-				<span className="field-label">front of card · short description</span>
+				<span className="field-label">the register line · short description</span>
 				<textarea className="input input--serif" rows={2} value={draft.shortDesc}
 					onChange={(e) => h.patchDraft({ shortDesc: e.target.value })} />
 			</label>
 			<label className="field">
-				<span className="field-label">back of card · the full story</span>
+				<span className="field-label">the entry · the full story</span>
 				<textarea className="input input--serif" rows={6} value={draft.bodyText}
-					placeholder="the long version: what happened, what broke, what you'd do differently. renders when a card is flipped over."
+					placeholder="the long version: what happened, what broke, what you'd do differently. renders in the light's full entry."
 					style={{ padding: '13px 14px', fontSize: 15.5, lineHeight: 1.65 }}
 					onChange={(e) => h.patchDraft({ bodyText: e.target.value })} />
 			</label>

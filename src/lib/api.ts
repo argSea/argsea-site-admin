@@ -34,17 +34,21 @@ export interface Stamp {
 	text?:  string;  // motif 'text' only, required then, ≤40 chars after trim
 }
 
-export type LightKind = 'fixed' | 'flash' | 'occult' | 'iso';
+export type LightKind = 'fixed' | 'flash' | 'occult' | 'iso' | 'quick' | 'veryquick' | 'morse';
 export type LightColor = 'white' | 'red' | 'green';
 
 // A light's navigational characteristic: how it burns on the coast. Period is
-// the seconds one full cycle takes for the blinking kinds, 0 on fixed.
-// Extinguished is a freeform year string; any non-empty value means the
-// light is dark (an abandoned project) while it stays on the list.
+// the seconds one full cycle takes for the kinds whose rhythm the keeper
+// dials in; fixed has none, and quick/veryquick blink at rates set by
+// convention, so nothing is stored for them either. Letter is the single
+// A-Z character a morse light spells, empty on every other kind. Extinguished
+// is a freeform year string; any non-empty value means the light is dark (an
+// abandoned project) while it stays on the list.
 export interface Light {
 	kind:         LightKind;
 	color:        LightColor;
 	period:       number;
+	letter:       string;
 	extinguished: string;
 }
 
@@ -54,7 +58,7 @@ export interface Project {
 	title:        string;
 	category:     Category;
 	tags:         string[];
-	shortDesc:    string;       // "front of card"
+	shortDesc:    string;       // "the register line"
 	body:         string;       // sanitized HTML long-form
 	moral:        string;
 	postcardTo:   string;       // dormant postcard-era field, pass-through only

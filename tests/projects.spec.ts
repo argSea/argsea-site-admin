@@ -3,13 +3,13 @@ import { signIn, nav, toast } from './office';
 
 test('a new light is filed as a draft, defaulting to fixed white and no gallery', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	await page.getByRole('button', { name: '+ kindle a light' }).click();
 
 	const overlay = page.locator('.overlay-card');
 	await overlay.getByLabel('title').fill('Test Light');
-	await overlay.getByLabel('front of card · short description').fill('a light for testing');
-	await overlay.getByLabel('back of card · the full story').fill('para one\n\npara two');
+	await overlay.getByLabel('the register line · short description').fill('a light for testing');
+	await overlay.getByLabel('the entry · the full story').fill('para one\n\npara two');
 	await overlay.getByRole('button', { name: 'file it' }).click();
 
 	await expect(toast(page)).toHaveText('🕯 a light was kindled, into the rack');
@@ -19,7 +19,7 @@ test('a new light is filed as a draft, defaulting to fixed white and no gallery'
 	expect(create.body.title).toBe('Test Light');
 	expect(create.body.status).toBe('draft');
 	expect(create.body.body).toBe('<p>para one</p>\n<p>para two</p>');
-	expect(create.body.light).toEqual({ kind: 'fixed', color: 'white', period: 0, extinguished: '' });
+	expect(create.body.light).toEqual({ kind: 'fixed', color: 'white', period: 0, letter: '', extinguished: '' });
 	expect(create.body.images).toEqual([]);
 	// the postcard-era fields are dormant now; a fresh light never invents any of them
 	expect('stamp' in create.body).toBe(false);
@@ -29,7 +29,7 @@ test('a new light is filed as a draft, defaulting to fixed white and no gallery'
 
 test('editing a light preserves the dormant postcard-era fields (full-replace pass-through)', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
 	await row.getByText('edit', { exact: true }).click();
 
@@ -49,9 +49,28 @@ test('editing a light preserves the dormant postcard-era fields (full-replace pa
 	expect(put.body.image).toBe('unmonolith-diagram.png');
 });
 
+test('a morse light\'s letter rides the full-replace PUT unharmed', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'This website' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	await overlay.getByLabel('title').fill('This website, renamed');
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('🕯 the light was filed');
+
+	// letter never touches the form on a title-only edit; without it riding
+	// through with the rest of light this PUT would clear the letter to ""
+	const [put] = mock.find('PUT', /^\/1\/project\/p4$/);
+	expect(put.body.title).toBe('This website, renamed');
+	expect(put.body.light.kind).toBe('morse');
+	expect(put.body.light.letter).toBe('J');
+});
+
 test('editing a stampless light never invents a stamp ({} is invalid, omit entirely)', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'The home lab' });
 	await row.getByText('edit', { exact: true }).click();
 
@@ -70,7 +89,7 @@ test('editing a stampless light never invents a stamp ({} is invalid, omit entir
 
 test('the kind chips drive the mono code and hide the rhythm slider on fixed', async ({ page }) => {
 	await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
 	await row.getByText('edit', { exact: true }).click();
 
@@ -90,9 +109,56 @@ test('the kind chips drive the mono code and hide the rhythm slider on fixed', a
 	await expect(toast(page)).toHaveText('🕯 the light was filed');
 });
 
+test('quick and veryquick hide the rhythm slider; morse shows a 6-30s range and a letter picker that clears when the kind moves on', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	// seeded flash, white, 8s: the slider starts visible
+	await expect(overlay.locator('input[type="range"]')).toHaveCount(1);
+
+	await overlay.getByText('quick', { exact: true }).click();
+	await expect(overlay.getByText('Q W', { exact: true })).toBeVisible();
+	await expect(overlay.locator('input[type="range"]')).toHaveCount(0);
+	await expect(overlay.getByLabel('the letter · spelled in morse')).toHaveCount(0);
+
+	await overlay.getByText('very quick', { exact: true }).click();
+	await expect(overlay.getByText('VQ W', { exact: true })).toBeVisible();
+	await expect(overlay.locator('input[type="range"]')).toHaveCount(0);
+
+	await overlay.getByText('morse', { exact: true }).click();
+	const letterPicker = overlay.getByLabel('the letter · spelled in morse');
+	await expect(letterPicker).toBeVisible();
+	const slider = overlay.locator('input[type="range"]');
+	await expect(slider).toHaveCount(1);
+	await expect(slider).toHaveAttribute('min', '6');
+	await expect(slider).toHaveAttribute('max', '30');
+	await expect(overlay.getByText(/^Mo\(.\) W \d+s$/)).toBeVisible();
+
+	await letterPicker.selectOption('Z');
+	await expect(overlay.getByText('Mo(Z) W 8s')).toBeVisible();
+
+	// a long morse rhythm clamps into the target slider's range on the way
+	// out, so the thumb never pins past its own max with a lying label
+	await slider.fill('30');
+	await expect(overlay.getByText('every 30 seconds', { exact: true })).toBeVisible();
+	await overlay.getByText('flashing', { exact: true }).click();
+	await expect(slider).toHaveValue('12');
+	await expect(overlay.getByText('every 12 seconds', { exact: true })).toBeVisible();
+	await overlay.getByText('morse', { exact: true }).click();
+
+	// leaving morse clears the letter; coming back seeds a fresh one, not the stale pick
+	await overlay.getByText('fixed · steady', { exact: true }).click();
+	await expect(letterPicker).toHaveCount(0);
+	await overlay.getByText('morse', { exact: true }).click();
+	await expect(overlay.getByLabel('the letter · spelled in morse')).toHaveValue('A');
+});
+
 test('extinguishing a light adds a dark chip on the row, orthogonal to publish state', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
 	await row.getByText('edit', { exact: true }).click();
 
@@ -111,7 +177,7 @@ test('extinguishing a light adds a dark chip on the row, orthogonal to publish s
 
 test('the gallery adds, reorders, and removes prints, and sends images alongside the untouched legacy image', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
 	await row.getByText('edit', { exact: true }).click();
 
@@ -131,7 +197,7 @@ test('the gallery adds, reorders, and removes prints, and sends images alongside
 
 test('the publish pill goes through the lifecycle endpoint, not PUT', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'The home lab' });
 	await row.getByText('○ draft').click();
 	await expect(toast(page)).toHaveText('● stamped and published');
@@ -142,7 +208,7 @@ test('the publish pill goes through the lifecycle endpoint, not PUT', async ({ p
 
 test('the front window only fits three', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 
 	// three seeded featured lights; a fourth is refused client-side
 	const draftRow = page.locator('.content-row', { hasText: 'The home lab' });
@@ -162,7 +228,7 @@ test('the front window only fits three', async ({ page }) => {
 
 test('moving a light down the rack swaps orders via two reorder calls', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 
 	const titles = page.locator('.content-row .row-title');
 	await expect(titles.first()).toHaveText('The Great Un-monolithing');
@@ -178,7 +244,7 @@ test('moving a light down the rack swaps orders via two reorder calls', async ({
 
 test('scuttling takes two clicks', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
 
 	await row.getByText('scuttle', { exact: true }).click();
@@ -187,4 +253,25 @@ test('scuttling takes two clicks', async ({ page }) => {
 	await expect(toast(page)).toHaveText('🌊 scuttled. the sea keeps its secrets.');
 	await expect(row).toHaveCount(0);
 	expect(mock.find('DELETE', /^\/1\/project\/p2$/)).toHaveLength(1);
+});
+
+test('peek renders a project as a light entry: status pill, mono code, decoded line, first lit, moral, and tags', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'This website' });
+	await row.getByText('peek', { exact: true }).click();
+
+	const peek = page.locator('.overlay-card');
+	await expect(peek.getByText('This website')).toBeVisible();
+	await expect(peek.getByText('● lit')).toBeVisible();
+	await expect(peek.getByText('Mo(J) W 8s')).toBeVisible();
+	await expect(peek.getByText('morse white, blinking J every 8 seconds')).toBeVisible();
+	await expect(peek.getByText('first lit')).toBeVisible();
+	await expect(peek.getByText('2026')).toBeVisible();
+	await expect(peek.getByText('Moral: the portfolio is also the hobby.')).toBeVisible();
+	await expect(peek.getByText('html  ·  whimsy')).toBeVisible();
+
+	// the postcard-era fields the peek used to show are gone
+	await expect(peek.getByText('to:')).toHaveCount(0);
+	await expect(peek.getByText('postmarked:')).toHaveCount(0);
 });

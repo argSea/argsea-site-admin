@@ -15,6 +15,10 @@ interface CardPos { x: number; y: number }
 
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
+// half of .coast-lamp__title's max-width (130px); keeps a lamp's title pill
+// off the canvas edge instead of clipping under the canvas's overflow:hidden
+const LABEL_HALF_WIDTH = 65;
+
 // spreads a fresh light evenly along the shore, staggered in elevation so a
 // straight run of lamps doesn't land in a dead flat line
 const ROW_Y = [40, 62, 30, 70, 48, 56];
@@ -40,9 +44,21 @@ export default function ProjectWall() {
 	const [layout, setLayout] = useState<Record<string, CardPos>>(() => initialLayout(published));
 	const [grabbedId, setGrabbedId] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
+	const [canvasWidth, setCanvasWidth] = useState(0);
 
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const dragId = useRef<string | null>(null);
+
+	// tracked live so a title's clamp math holds at any width, narrow phones included
+	useEffect(() => {
+		const el = canvasRef.current;
+		if (!el) {
+			return;
+		}
+		const observer = new ResizeObserver(([entry]) => setCanvasWidth(entry.contentRect.width));
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, []);
 
 	// a newly-published light joins the coast seeded into the default spread;
 	// existing placements (saved or mid-drag) are left alone
@@ -136,6 +152,15 @@ export default function ProjectWall() {
 					const pos = layout[project.id] ?? defaultPos(0, 1);
 					const grabbed = grabbedId === project.id;
 					const light = project.light ?? DEFAULT_LIGHT;
+
+					// the title sits centered under the lamp; pull it inward once the
+					// lamp itself is close enough to an edge that the pill would clip
+					const centerPx = (pos.x / 100) * canvasWidth;
+					const clampedPx = canvasWidth > LABEL_HALF_WIDTH * 2
+						? clamp(centerPx, LABEL_HALF_WIDTH, canvasWidth - LABEL_HALF_WIDTH)
+						: centerPx;
+					const titleShift = clampedPx - centerPx;
+
 					return (
 						<div
 							key={project.id}
@@ -146,7 +171,7 @@ export default function ProjectWall() {
 							onPointerUp={(e) => onPointerUp(e, project.id)}
 						>
 							<Lamp light={light} size={12} haloScale={3.6} />
-							<span className="coast-lamp__title">{project.title}</span>
+							<span className="coast-lamp__title" style={{ transform: `translateX(${titleShift}px)` }}>{project.title}</span>
 						</div>
 					);
 				})}

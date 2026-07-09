@@ -37,7 +37,7 @@ test('login lands on the bridge; every read carries the bearer token; drafts sta
 	}
 
 	// and the draft light is in the rack
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	await expect(page.getByText('The home lab', { exact: true })).toBeVisible();
 	await expect(page.getByText('○ draft')).toBeVisible();
 });

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { Project } from '../lib/api';
 import { printBackground } from '../lib/prints';
-import { codeFor, DEFAULT_LIGHT } from '../lib/lightChar';
+import { codeFor, DEFAULT_LIGHT, GLOW_RGB } from '../lib/lightChar';
 import Lamp from '../components/Lamp';
 import ProjectWall from './ProjectWall';
 
@@ -21,7 +21,7 @@ function Row({ project, index }: { project: Project; index: number }) {
 		<div className="content-row content-row--decked tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
 			<div className="content-row__deck">
 				<Lamp light={light} size={10} haloScale={3.4} />
-				<div className="photo-thumb">
+				<div className={`photo-thumb${project.image ? ' photo-thumb--paper' : ' photo-thumb--empty'}`}>
 					<div className={`photo-thumb__img${project.image ? '' : ' photo-thumb__img--empty'}`}
 						style={project.image ? { background: printBackground(h.prints, project.image) } : undefined} />
 				</div>
@@ -29,7 +29,7 @@ function Row({ project, index }: { project: Project; index: number }) {
 					<div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
 						<span className="row-title">{project.title}</span>
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{project.category}</span>
-						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '.07em', color: light.extinguished ? 'var(--text-dim)' : 'var(--gold)' }}>
+						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '.07em', color: light.extinguished ? 'var(--text-dim)' : `rgb(${GLOW_RGB[light.color]})` }}>
 							{charLine}
 						</span>
 					</div>
@@ -73,7 +73,7 @@ export default function Projects() {
 			<div className="screen-head">
 				<div className="screen-head__text">
 					<span className="kicker">the watch</span>
-					<span className="page-title">Projects</span>
+					<span className="page-title">The light list</span>
 					<span className="page-sub">
 						{h.projects.length} on the list · {published} published · {drafts} draft{drafts === 1 ? '' : 's'}
 					</span>

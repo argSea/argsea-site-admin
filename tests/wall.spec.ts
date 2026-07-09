@@ -4,7 +4,7 @@ import { signIn, nav, toast } from './office';
 
 test('dragging a light on the coast, then pinning it, sends percent coords keyed by id with rotation passed through', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	await page.getByText('the coast', { exact: true }).click();
 
 	const canvas = page.locator('.coast-canvas');
@@ -43,7 +43,7 @@ test('dragging a light on the coast, then pinning it, sends percent coords keyed
 
 test('tidy into rows resets the local layout without touching the API', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	await page.getByText('the coast', { exact: true }).click();
 
 	await page.getByText('↺ tidy into rows').click();
@@ -53,7 +53,7 @@ test('tidy into rows resets the local layout without touching the API', async ({
 
 test('only published lights land on the coast', async ({ page }) => {
 	await signIn(page);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	await page.getByText('the coast', { exact: true }).click();
 
 	// p1, p2, p4 are published; p3 (The home lab) is a draft
@@ -65,7 +65,7 @@ test('an existing wall position rides through as the coast placement, rotation i
 	const mock = new MockApi();
 	mock.projects.find((p) => p.id === 'p4')!.wallPos = { x: 61, y: 24, rotation: -4.2 };
 	await signIn(page, mock);
-	await nav(page, 'projects').click();
+	await nav(page, 'the light list').click();
 	await page.getByText('the coast', { exact: true }).click();
 
 	await page.getByRole('button', { name: 'pin it' }).click();
