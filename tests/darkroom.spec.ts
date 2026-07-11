@@ -6,6 +6,20 @@ const PNG = Buffer.from(
 	'base64',
 );
 
+test('the search field filters the prints client-side and updates the count line', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the darkroom').click();
+
+	await expect(page.getByText('7 prints hanging to dry.')).toBeVisible();
+	await page.getByPlaceholder('search the prints...').fill('homelab');
+	await expect(page.getByText('1 of 7 prints match.')).toBeVisible();
+	await expect(page.getByText('homelab-rack.jpg')).toBeVisible();
+	await expect(page.getByText('unmonolith-diagram.png')).toHaveCount(0);
+
+	// client-side only: nothing new goes over the wire for a search
+	expect(mock.find('GET', /^\/1\/media\/?$/)).toHaveLength(1);
+});
+
 test('developing a print uploads multipart and hangs the tile', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the darkroom').click();
