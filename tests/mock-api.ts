@@ -60,6 +60,9 @@ export class MockApi {
 			stamp: { shape: 'rect', motif: 'lighthouse', ink: '#f0d9a8', cents: '3¢' },
 			light: { kind: 'flash', color: 'white', period: 8, letter: '', extinguished: '' },
 			images: ['unmonolith-diagram.png'], firstLit: '2024',
+			facts: [{ heading: 'ownership', fact: 'design to operations, solo' }, { heading: 'scale', fact: '40 services and climbing' }],
+			caseStudy: '## The starting point\n\nOne app, every team, one deploy queue.',
+			noteIds: ['n1'], flagship: true,
 			order: 1, featured: true, status: 'published',
 			publishedAt: '2026-06-01T12:00:00Z', createdAt: '2026-05-01T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
@@ -72,6 +75,7 @@ export class MockApi {
 			stamp: { shape: 'circle', motif: 'text', ink: '#93a0e8', text: 'DAILY SINCE 1786' },
 			light: { kind: 'flash', color: 'green', period: 4, letter: '', extinguished: '' },
 			images: [], firstLit: '2020',
+			facts: [], caseStudy: '', noteIds: [], flagship: false,
 			order: 2, featured: true, status: 'published',
 			publishedAt: '2026-06-01T12:00:00Z', createdAt: '2026-05-02T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
@@ -83,6 +87,7 @@ export class MockApi {
 			slug: 'home-lab', image: 'homelab-rack.jpg',
 			light: { kind: 'fixed', color: 'red', period: 0, letter: '', extinguished: '' },
 			images: ['homelab-rack.jpg'], firstLit: '2021',
+			facts: [], caseStudy: '', noteIds: [], flagship: false,
 			order: 3, featured: false, status: 'draft',
 			publishedAt: '', createdAt: '2026-05-03T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
@@ -94,6 +99,7 @@ export class MockApi {
 			slug: 'this-website', image: null, stamp: { shape: 'circle', motif: 'lighthouse', ink: '#f0d9a8' },
 			light: { kind: 'morse', color: 'white', period: 8, letter: 'J', extinguished: '' },
 			images: [], firstLit: '2026',
+			facts: [], caseStudy: '', noteIds: [], flagship: false,
 			order: 4, featured: true, status: 'published',
 			publishedAt: '2026-06-01T12:00:00Z', createdAt: '2026-05-04T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
@@ -115,10 +121,30 @@ export class MockApi {
 	];
 
 	hobbies: Doc[] = [
-		{ id: 'h1', name: 'The home lab', dates: '2021 – present', active: true, epitaph: '', eulogy: 'One tweak from perfect, forever.', order: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z' },
-		{ id: 'h2', name: 'CachyOS tinkering', dates: 'always', active: true, epitaph: '', eulogy: 'The day job wearing a hat.', order: 2, createdAt: '2026-01-02T00:00:00Z', updatedAt: '2026-01-02T00:00:00Z' },
-		{ id: 'h3', name: 'Piano', dates: '2023 – 2024', active: false, epitaph: '† got good enough', eulogy: 'Quietly closed the lid.', order: 3, createdAt: '2026-01-03T00:00:00Z', updatedAt: '2026-01-03T00:00:00Z' },
-		{ id: 'h4', name: 'Running', dates: 'one summer', active: false, epitaph: '† it was a phase', eulogy: 'The shoes remain, as evidence.', order: 4, createdAt: '2026-01-04T00:00:00Z', updatedAt: '2026-01-04T00:00:00Z' },
+		{
+			id: 'h1', name: 'The home lab', dates: '2021 – present', active: true, epitaph: '', eulogy: 'One tweak from perfect, forever.',
+			service: '2021 - present', char: 'F W', marker: 'stone', wear: 0, disposition: 'still on watch',
+			log: 'One tweak from perfect, forever.', lastLog: '', found: '', cause: '', return: '',
+			order: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
+		},
+		{
+			id: 'h2', name: 'CachyOS tinkering', dates: 'always', active: true, epitaph: '', eulogy: 'The day job wearing a hat.',
+			service: 'always', char: 'F W', marker: 'stone', wear: 0, disposition: 'still on watch',
+			log: 'The day job wearing a hat.', lastLog: '', found: '', cause: '', return: '',
+			order: 2, createdAt: '2026-01-02T00:00:00Z', updatedAt: '2026-01-02T00:00:00Z',
+		},
+		{
+			id: 'h3', name: 'Piano', dates: '2023 – 2024', active: false, epitaph: '† got good enough', eulogy: 'Quietly closed the lid.',
+			service: '2023 - 2024', char: 'Fl W 3s', marker: 'stone', wear: 0.15, disposition: 'occasionally haunting',
+			log: 'Quietly closed the lid.', lastLog: '', found: '', cause: '', return: '',
+			order: 3, createdAt: '2026-01-03T00:00:00Z', updatedAt: '2026-01-03T00:00:00Z',
+		},
+		{
+			id: 'h4', name: 'Running', dates: 'one summer', active: false, epitaph: '† it was a phase', eulogy: 'The shoes remain, as evidence.',
+			service: 'one summer', char: 'Fl W 8s', marker: 'sticks', wear: 0.65, disposition: 'vanished without trace',
+			log: 'The shoes remain, as evidence.', lastLog: '', found: '', cause: '', return: '',
+			order: 4, createdAt: '2026-01-04T00:00:00Z', updatedAt: '2026-01-04T00:00:00Z',
+		},
 	];
 
 	suggestions: Doc[] = [
@@ -129,6 +155,11 @@ export class MockApi {
 	media: Doc[] = [
 		{ id: 'm1', filename: 'unmonolith-diagram.png', url: '/media/images/unmonolith-diagram.png', createdAt: '2026-05-01T12:00:00Z' },
 		{ id: 'm2', filename: 'homelab-rack.jpg', url: '/media/images/homelab-rack.jpg', createdAt: '2026-05-02T12:00:00Z' },
+		{ id: 'm3', filename: 'meo-wave-title.png', url: '/media/images/meo-wave-title.png', createdAt: '2026-05-03T12:00:00Z' },
+		{ id: 'm4', filename: 'meo-wave-track1.png', url: '/media/images/meo-wave-track1.png', createdAt: '2026-05-03T12:01:00Z' },
+		{ id: 'm5', filename: 'meo-wave-track2.png', url: '/media/images/meo-wave-track2.png', createdAt: '2026-05-03T12:02:00Z' },
+		{ id: 'm6', filename: 'meo-wave-track3.png', url: '/media/images/meo-wave-track3.png', createdAt: '2026-05-03T12:03:00Z' },
+		{ id: 'm7', filename: 'meo-wave-track4.png', url: '/media/images/meo-wave-track4.png', createdAt: '2026-05-03T12:04:00Z' },
 	];
 
 	copy: Doc = {
@@ -335,7 +366,7 @@ export class MockApi {
 			}
 			if (method === 'POST') {
 				const doc = {
-					...body, id: `p${this.nextId++}`, slug: '',
+					...body, id: `p${this.nextId++}`, slug: body.slug ?? '',
 					order: Math.max(0, ...this.projects.map((p) => p.order)) + 1, featured: false,
 					status: body.status ?? 'draft', publishedAt: '', createdAt: now(), updatedAt: now(),
 				};

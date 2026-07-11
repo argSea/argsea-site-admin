@@ -6,8 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Category, CopyTextField, Doodle, EggFlags, FigureheadDesign, FigureheadPose, Hobby,
-	KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Revision, Shape,
+	ActivityEntry, Category, CopyTextField, Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose, Hobby,
+	KeeperProfile, LanternStatus, Light, Lighthouse, Marker, MediaItem, Note, Project, Revision, Shape,
 	SiteCopy, Suggestion,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
@@ -114,9 +114,14 @@ export interface ProjectDraft {
 	shortDesc: string;
 	bodyText:  string;
 	moral:     string;
-	images:    string[];  // gallery, first print leads
+	images:    string[];  // station archive, first print leads, max 6
 	light:     Light;
 	firstLit:  string;
+	slug:      string;
+	facts:     Fact[];     // heading/fact pairs, max 6
+	caseStudy: string;     // the full log, markdown
+	noteIds:   string[];   // tied notes, by stable id
+	flagship:  boolean;
 }
 
 export interface NoteDraft {
@@ -130,12 +135,22 @@ export interface NoteDraft {
 }
 
 export interface HobbyDraft {
-	name:     string;
-	dates:    string;
-	epitaph:  string;
-	eulogy:   string;
-	tagsText: string;
-	active:   boolean;
+	name:        string;
+	dates:       string;    // dormant
+	epitaph:     string;    // dormant
+	eulogy:      string;    // dormant
+	tagsText:    string;    // dormant
+	active:      boolean;
+	service:     string;
+	char:        string;
+	marker:      Marker;
+	wear:        number;
+	disposition: string;
+	log:         string;
+	lastLog:     string;
+	found:       string;
+	cause:       string;
+	return:      string;
 }
 
 interface EditBase {
@@ -211,10 +226,13 @@ function projectDraft(p?: Project): ProjectDraft {
 			title: p.title, category: p.category, tagsText: p.tags.join(', '),
 			shortDesc: p.shortDesc, bodyText: htmlToText(p.body), moral: p.moral,
 			images: p.images ?? [], light: p.light ?? DEFAULT_LIGHT, firstLit: p.firstLit,
+			slug: p.slug, facts: (p.facts ?? []).map((f) => ({ ...f })), caseStudy: p.caseStudy ?? '',
+			noteIds: [...(p.noteIds ?? [])], flagship: p.flagship,
 		}
 		: {
 			title: '', category: 'backend', tagsText: '', shortDesc: '', bodyText: '',
 			moral: 'Moral: ', images: [], light: DEFAULT_LIGHT, firstLit: '',
+			slug: '', facts: [], caseStudy: '', noteIds: [], flagship: false,
 		};
 }
 
@@ -233,8 +251,16 @@ function noteDraft(n?: Note): NoteDraft {
 
 function hobbyDraft(h?: Hobby): HobbyDraft {
 	return h
-		? { name: h.name, dates: h.dates, epitaph: h.epitaph, eulogy: h.eulogy, tagsText: (h.tags ?? []).join(', '), active: h.active }
-		: { name: '', dates: `${new Date().getFullYear()} – present`, epitaph: '', eulogy: '', tagsText: '', active: true };
+		? {
+			name: h.name, dates: h.dates, epitaph: h.epitaph, eulogy: h.eulogy, tagsText: (h.tags ?? []).join(', '),
+			active: h.active, service: h.service, char: h.char, marker: h.marker || 'stone', wear: h.wear || 0,
+			disposition: h.disposition, log: h.log, lastLog: h.lastLog, found: h.found, cause: h.cause, return: h.return,
+		}
+		: {
+			name: '', dates: `${new Date().getFullYear()} – present`, epitaph: '', eulogy: '', tagsText: '', active: true,
+			service: `${new Date().getFullYear()} - present`, char: 'Fl W 4s', marker: 'stone', wear: 0,
+			disposition: 'still on watch', log: '', lastLog: '', found: '', cause: '', return: '',
+		};
 }
 
 interface HarborValue {
@@ -279,10 +305,12 @@ interface HarborValue {
 	toggleProjectStatus: (p: Project) => Promise<void>;
 	toggleNoteStatus:    (n: Note) => Promise<void>;
 	toggleFeatured:      (p: Project) => Promise<void>;
+	toggleFlagship:      (p: Project) => Promise<void>;
 	moveProject:         (p: Project, dir: -1 | 1) => Promise<void>;
 	arrangeProjects:     (placements: { id: string; x: number; y: number; rotation: number }[]) => Promise<void>;
 	strikeProject:       (p: Project) => Promise<void>;
 	burnNote:            (n: Note) => Promise<void>;
+	toggleNoteTie:       (p: Project, noteId: string) => Promise<void>;
 
 	moveHobby:      (h: Hobby, dir: -1 | 1) => Promise<void>;
 	retireRevive:   (h: Hobby) => Promise<void>;
@@ -567,6 +595,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					tags: d.tagsText.split(',').map((t) => t.trim()).filter(Boolean),
 					shortDesc: d.shortDesc, body: textToHtml(d.bodyText), moral: d.moral,
 					images: d.images, light: d.light, firstLit: d.firstLit,
+					slug: d.slug, facts: d.facts, caseStudy: d.caseStudy, noteIds: d.noteIds, flagship: d.flagship,
 				};
 				if (edit.id === null) {
 					replaceProject(await api.projects.create({ ...fields, status: 'draft' }));
@@ -675,6 +704,18 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [projects, replaceProject, showToast, oops, refreshActivity]);
 
+	// no cap, no server rule: exactly one flagship is a site-side convention
+	// the admin only hints at, per the pinned contract
+	const toggleFlagship = useCallback(async (p: Project) => {
+		try {
+			replaceProject(await api.projects.update(p.id, { ...p, flagship: !p.flagship }));
+			showToast(p.flagship ? '⚐ flagship struck' : '⚑ flagship run up the mast');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceProject, showToast, oops, refreshActivity]);
+
 	const moveProject = useCallback(async (p: Project, dir: -1 | 1) => {
 		const rack = [...projects].sort(byOrder);
 		const at = rack.findIndex((x) => x.id === p.id);
@@ -730,6 +771,19 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
+	// the writing desk's half of the note↔light tie: ties key by stable ids
+	// (ruling 6), so the toggle writes the OTHER document, the project's
+	// noteIds, immediately, rather than riding the note's own draft save
+	const toggleNoteTie = useCallback(async (p: Project, noteId: string) => {
+		const tied = (p.noteIds ?? []).includes(noteId);
+		const noteIds = tied ? (p.noteIds ?? []).filter((id) => id !== noteId) : [...(p.noteIds ?? []), noteId];
+		try {
+			replaceProject(await api.projects.update(p.id, { ...p, noteIds }));
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceProject, oops]);
+
 	const moveHobby = useCallback(async (h: Hobby, dir: -1 | 1) => {
 		// reorder stays inside the hobby's own group (learning vs resting)
 		const group = hobbies.filter((x) => x.active === h.active).sort(byOrder);
@@ -760,10 +814,11 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const retireRevive = useCallback(async (h: Hobby) => {
 		try {
-			// retiring fills a blank epitaph; reviving clears it (per the design)
+			// retiring/reviving flips the standing and the status pill together,
+			// the same pairing the standing toggle inside the editor makes
 			const doc = h.active
-				? { ...h, active: false, epitaph: h.epitaph || '† resting' }
-				: { ...h, active: true, epitaph: '' };
+				? { ...h, active: false, disposition: 'laid to rest' }
+				: { ...h, active: true, disposition: 'still on watch' };
 			replaceHobby(await api.hobbies.update(h.id, doc));
 			showToast(h.active ? '† laid to rest. gently.' : '↺ back from the graveyard');
 			refreshActivity();
@@ -1182,7 +1237,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchLight, loadRevision, saveEdit, cancelEdit,
 		peek, openPeek, closePeek,
-		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, arrangeProjects, strikeProject, burnNote,
+		toggleProjectStatus, toggleNoteStatus, toggleFeatured, toggleFlagship, moveProject, arrangeProjects, strikeProject, burnNote,
+		toggleNoteTie,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
