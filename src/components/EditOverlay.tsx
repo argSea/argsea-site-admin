@@ -2,9 +2,11 @@
 // the gallery picker, and the earlier-printings (revisions) section.
 // "File it" on a restored draft goes through the restore endpoint; that's
 // the server copy-forward that makes status travel with the printing.
+import { useState } from 'react';
+import type { ChangeEvent } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { EditState, HobbyDraft, NoteDraft, ProjectDraft } from '../state/harbor';
-import type { Category, LightColor, LightKind } from '../lib/api';
+import type { Category, Fact, LightColor, LightKind, Marker, Note, Project } from '../lib/api';
 import { codeFor, LETTERS, randomLight, RHYTHM_KINDS, wordsFor } from '../lib/lightChar';
 import { printBackground } from '../lib/prints';
 import { relativeTime } from '../lib/time';
@@ -166,67 +168,272 @@ function LightEditor({ draft }: { draft: ProjectDraft }) {
 	);
 }
 
-const GALLERY_MAX = 12;
+const IMAGES_MAX = 6;
+const FACTS_MAX = 6;
 
-function GalleryPicker({ images }: { images: string[] }) {
+// The single picker: darkroom prints only, search field, capped at six, the
+// first row is the entry photo. Replaces the old cap-12 gallery's own
+// per-row reorder; a picture's rank is just where it landed in the archive.
+function PicturesBox({ images }: { images: string[] }) {
 	const h = useHarbor();
-	const available = h.prints.filter((print) => !images.includes(print.filename));
+	const [q, setQ] = useState('');
+	const query = q.trim().toLowerCase();
+	const canAdd = images.length < IMAGES_MAX;
+	const available = h.prints.filter((print) => !images.includes(print.filename)
+		&& (!query || print.filename.toLowerCase().includes(query)));
 
 	const add = (filename: string) => {
-		if (images.length >= GALLERY_MAX) {
-			h.showToast(`the gallery only holds ${GALLERY_MAX} prints`);
+		if (!canAdd) {
+			h.showToast(`the archive only holds ${IMAGES_MAX} pictures`);
 			return;
 		}
 		h.patchDraft({ images: [...images, filename] });
 	};
 	const remove = (index: number) => h.patchDraft({ images: images.filter((_, i) => i !== index) });
-	const move = (index: number, dir: -1 | 1) => {
-		const at = index + dir;
-		if (at < 0 || at >= images.length) {
-			return;
-		}
-		const next = [...images];
-		[next[index], next[at]] = [next[at], next[index]];
-		h.patchDraft({ images: next });
-	};
 
 	return (
 		<div className="fieldset-dashed">
-			<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>
-				the gallery · shown with the entry
-			</span>
+			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>
+					the pictures · station archive, up to six
+				</span>
+				<input type="text" className="input" style={{ width: 'auto', flex: '0 1 180px', borderRadius: 999, padding: '7px 13px', fontSize: 11.5 }}
+					placeholder="search prints..." value={q} onChange={(e) => setQ(e.target.value)} />
+			</div>
 			{images.length > 0 && (
 				<div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
 					{images.map((name, index) => (
 						<div key={`${name}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 							<div style={{ width: 44, height: 32, borderRadius: 2, flexShrink: 0, background: printBackground(h.prints, name) }} />
 							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--text-soft)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-								{name}{index === 0 && <span style={{ color: 'var(--gold)' }}> · lead print</span>}
+								{name}
 							</span>
-							<span className="pill pill--arrow" onClick={() => move(index, -1)}>↑</span>
-							<span className="pill pill--arrow" onClick={() => move(index, 1)}>↓</span>
+							{index === 0 && (
+								<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '.14em', color: 'var(--gold)', textTransform: 'uppercase' }}>
+									⚑ entry photo
+								</span>
+							)}
 							<span className="print-del" onClick={() => remove(index)}>✕</span>
 						</div>
 					))}
 				</div>
 			)}
-			<div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-				{available.map((print) => (
-					<div key={print.filename} onClick={() => add(print.filename)} style={{
-						display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', cursor: 'pointer',
-						background: 'var(--paper)', borderRadius: 4, padding: '6px 6px 5px', transform: 'rotate(-1.2deg)',
-						transition: 'transform .2s',
-					}}>
-						<div style={{ width: 64, height: 48, borderRadius: 2, background: printBackground(h.prints, print.filename) }} />
-						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--paper-name)', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-							{print.filename}
+			{canAdd && (
+				<div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+					{available.map((print) => (
+						<div key={print.filename} onClick={() => add(print.filename)} style={{
+							display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', cursor: 'pointer',
+							background: 'var(--paper)', borderRadius: 4, padding: '6px 6px 5px', transform: 'rotate(-1.2deg)',
+							transition: 'transform .2s',
+						}}>
+							<div style={{ width: 64, height: 48, borderRadius: 2, background: printBackground(h.prints, print.filename) }} />
+							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--paper-name)', maxWidth: 64, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+								{print.filename}
+							</span>
+						</div>
+					))}
+					{available.length === 0 && (
+						<span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-dim)' }}>
+							{query ? 'nothing hanging to dry matches that.' : 'every print is already in the archive'}
 						</span>
-					</div>
-				))}
-				{available.length === 0 && (
-					<span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-dim)' }}>every print is already in the gallery</span>
-				)}
+					)}
+				</div>
+			)}
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
+				// prints come from the darkroom: develop there, pick here. the first picture is the entry photo, up to six ride along.
+			</span>
+		</div>
+	);
+}
+
+// Facts editor: heading → fact rows, capped at six, headings are the
+// keeper's own per light (ownership, scale, audience, fate, whatever).
+function FactsBox({ facts }: { facts: Fact[] }) {
+	const h = useHarbor();
+	const canAdd = facts.length < FACTS_MAX;
+
+	const setFact = (i: number, key: keyof Fact, value: string) =>
+		h.patchDraft({ facts: facts.map((f, fi) => (fi === i ? { ...f, [key]: value } : f)) });
+	const removeFact = (i: number) => h.patchDraft({ facts: facts.filter((_, fi) => fi !== i) });
+	const addFact = () => h.patchDraft({ facts: [...facts, { heading: '', fact: '' }] });
+
+	return (
+		<div className="fieldset-dashed">
+			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>
+					the facts · heading → fact, up to six
+				</span>
+				{canAdd && <span className="chip-dashed" onClick={addFact}>+ add a fact</span>}
 			</div>
+			{facts.map((f, i) => (
+				<div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(100px, 170px) 1fr 34px', gap: 10, alignItems: 'center' }}>
+					<input type="text" className="input" style={{ padding: '9px 11px', fontSize: 12, color: 'var(--periwinkle)', textTransform: 'lowercase' }}
+						placeholder="ownership" value={f.heading} onChange={(e) => setFact(i, 'heading', e.target.value)} />
+					<input type="text" className="input input--serif" style={{ padding: '9px 11px', fontSize: 14.5 }}
+						placeholder="design to operations, solo" value={f.fact} onChange={(e) => setFact(i, 'fact', e.target.value)} />
+					<span className="print-del" style={{ textAlign: 'center' }} title="strike it from the record" onClick={() => removeFact(i)}>✕</span>
+				</div>
+			))}
+			{facts.length === 0 && (
+				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
+					// no facts filed. the entry simply renders without the grid.
+				</span>
+			)}
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
+				// headings are yours, per light: ownership, scale, audience, fate, whatever this one needs answered first.
+			</span>
+		</div>
+	);
+}
+
+const CASE_STUDY_PLACEHOLDER =
+	'## The starting point\n\nplain paragraphs · > log asides · - lists · [? facts to fill in ?]\n\n:::facts\ntimeline: 6 months\n:::\n\n```mermaid\nflowchart TB\n  a --> b\n```';
+
+// The full log: markdown in the keeper's dialect, hoistable from a file, plus
+// the slug field (operator ruling, beyond the mock: a project with a case
+// study needs a stable public route, argsea.com/projects/<slug>).
+function CaseStudyBox({ draft }: { draft: ProjectDraft }) {
+	const h = useHarbor();
+	const [fileNote, setFileNote] = useState<string | null>(null);
+
+	const onFile = (e: ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		e.target.value = '';
+		if (!file) {
+			return;
+		}
+		const reader = new FileReader();
+		reader.onload = () => {
+			h.patchDraft({ caseStudy: String(reader.result ?? '') });
+			setFileNote(`⚑ ${file.name} hoisted aboard`);
+		};
+		reader.readAsText(file);
+	};
+
+	return (
+		<div className="fieldset-dashed fieldset-dashed--gold">
+			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--gold)' }}>
+					the full log · case study, markdown
+				</span>
+				<label className="pill" style={{ cursor: 'pointer' }}>
+					⇪ hoist a .md file
+					<input type="file" accept=".md,.markdown,.txt" style={{ display: 'none' }} onChange={onFile} />
+				</label>
+			</div>
+			<label className="field">
+				<span className="field-label">slug · argsea.com/projects/&lt;slug&gt;</span>
+				<input type="text" className="input" style={{ maxWidth: 280 }} value={draft.slug}
+					onChange={(e) => h.patchDraft({ slug: e.target.value })} />
+			</label>
+			<textarea className="input" rows={10} placeholder={CASE_STUDY_PLACEHOLDER}
+				style={{ fontSize: 13, lineHeight: 1.6, padding: '13px 14px' }}
+				value={draft.caseStudy} onChange={(e) => h.patchDraft({ caseStudy: e.target.value })} />
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
+				// any light can carry a full log. dialect: ## sections · &gt; from-the-log asides · - lists · [? fact needed ?] · :::facts and :::outcomes blocks · ```mermaid charts. leave empty and the light simply gets no "full log" link.
+			</span>
+			{fileNote && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--gold)' }}>{fileNote}</span>}
+		</div>
+	);
+}
+
+// The tie both directions write: this box is the project's half (search the
+// book, tap to tie); the note editor's "kept in" box is the other half.
+// Ties key by stable note ids (ruling 6), never titles.
+function NoteTiesBox({ draft }: { draft: ProjectDraft }) {
+	const h = useHarbor();
+	const [q, setQ] = useState('');
+	const query = q.trim().toLowerCase();
+
+	const tied = draft.noteIds
+		.map((id) => h.notes.find((n) => n.id === id))
+		.filter((n): n is Note => !!n);
+	const pool = h.notes.filter((n) => !draft.noteIds.includes(n.id));
+	const found = query ? pool.filter((n) => n.title.toLowerCase().includes(query)) : null;
+	const hint = query
+		? 'tap a match to tuck it in.'
+		: pool.length
+			? `${pool.length} entr${pool.length === 1 ? 'y' : 'ies'} in the book · search to tuck one in.`
+			: 'the whole book is in this light already.';
+	const nudge = !draft.noteIds.length && !draft.caseStudy.trim();
+
+	const toggle = (id: string) => h.patchDraft({
+		noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
+	});
+
+	return (
+		<div className="fieldset-dashed">
+			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>notes found here</span>
+				<input type="text" className="input" style={{ width: 'auto', flex: '0 1 200px', borderRadius: 999, padding: '7px 13px', fontSize: 11.5 }}
+					placeholder="search the book..." value={q} onChange={(e) => setQ(e.target.value)} />
+			</div>
+			{tied.length > 0 && (
+				<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+					{tied.map((n) => (
+						<span key={n.id} onClick={() => toggle(n.id)} title="untie it" className="sway-chip sway-chip--gold" style={{ animation: 'none', cursor: 'pointer' }}>
+							✓ {n.title} · ✕
+						</span>
+					))}
+				</div>
+			)}
+			{found && found.length > 0 && (
+				<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 112, overflowY: 'auto', paddingRight: 4 }}>
+					{found.map((n) => (
+						<span key={n.id} onClick={() => toggle(n.id)} className="chip-dashed" style={{ color: 'var(--periwinkle)', borderColor: 'rgba(147,160,232,.4)', borderStyle: 'dashed' }}>
+							+ {n.title}
+						</span>
+					))}
+				</div>
+			)}
+			{query && found && found.length === 0 && (
+				<span style={{ fontSize: 11.5, fontFamily: 'var(--font-mono)', color: 'var(--periwinkle-deep)', fontStyle: 'italic' }}>
+					nothing in the book matches. the entry may not be written yet.
+				</span>
+			)}
+			{nudge && (
+				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--amber-nudge)', fontStyle: 'italic' }}>
+					⚑ no note, no full log. even a short page keeps the record honest.
+				</span>
+			)}
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
+				// encouraged, never required. {hint}
+			</span>
+		</div>
+	);
+}
+
+// The writing desk's half of the tie: tapping a light toggles this note's id
+// in that project's noteIds. A note with no id yet (unsaved) has nothing to
+// tie; the office says so instead of silently doing nothing.
+function KeptInBox({ noteId }: { noteId: string | null }) {
+	const h = useHarbor();
+
+	return (
+		<div className="fieldset-dashed">
+			<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>kept in</span>
+			<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+				{h.projects.map((p: Project) => {
+					const on = !!noteId && (p.noteIds ?? []).includes(noteId);
+					return (
+						<button key={p.id} type="button" aria-pressed={on}
+							className={`pill ${on ? 'pill--on' : 'pill--quiet'}`}
+							style={{ cursor: noteId ? 'pointer' : 'not-allowed', opacity: noteId ? 1 : .5 }}
+							onClick={() => {
+								if (!noteId) {
+									h.showToast('⚑ file the entry first; a tie needs an id.');
+									return;
+								}
+								void h.toggleNoteTie(p, noteId);
+							}}>
+							{on ? '✓ ' : '○ '}{p.title}
+						</button>
+					);
+				})}
+			</div>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
+				// tap a light. visitors find the note in its entry.
+			</span>
 		</div>
 	);
 }
@@ -316,49 +523,113 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 				<input type="text" className="input input--serif-italic" value={draft.moral}
 					onChange={(e) => h.patchDraft({ moral: e.target.value })} />
 			</label>
+			<NoteTiesBox draft={draft} />
+			<FactsBox facts={draft.facts} />
+			<CaseStudyBox draft={draft} />
 			<LightEditor draft={draft} />
-			<GalleryPicker images={draft.images} />
+			<PicturesBox images={draft.images} />
 		</div>
 	);
 }
 
+const MARKERS: Marker[] = ['stone', 'sticks', 'driftwood', 'cairn', 'buoy'];
+
 function HobbyFields({ draft }: { draft: HobbyDraft }) {
 	const h = useHarbor();
+	const toggleAlive = () => h.patchDraft({ active: !draft.active, disposition: draft.active ? 'laid to rest' : 'still on watch' });
+	const wearPct = `${Math.round((draft.wear || 0) * 100)}%`;
 
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 				<label className="field">
-					<span className="field-label">hobby</span>
+					<span className="field-label">keeper (hobby)</span>
 					<input type="text" className="input input--display" value={draft.name}
 						onChange={(e) => h.patchDraft({ name: e.target.value })} />
 				</label>
 				<label className="field">
-					<span className="field-label">dates</span>
-					<input type="text" className="input input--soft" style={{ padding: '11px 13px', fontSize: 13 }} value={draft.dates}
-						onChange={(e) => h.patchDraft({ dates: e.target.value })} />
+					<span className="field-label">service · "one summer" reads as ancient</span>
+					<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="2023 - 2024" value={draft.service}
+						onChange={(e) => h.patchDraft({ service: e.target.value })} />
+				</label>
+			</div>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'end' }}>
+				<label className="field">
+					<span className="field-label">light kept · characteristic</span>
+					<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="Fl W 3s" value={draft.char}
+						onChange={(e) => h.patchDraft({ char: e.target.value })} />
+				</label>
+				<div className="field">
+					<span className="field-label">standing</span>
+					<button type="button" aria-pressed={draft.active} style={{ alignSelf: 'flex-start' }}
+						className={draft.active ? 'chip-dashed' : 'pill pill--quiet'} onClick={toggleAlive}>
+						{draft.active ? '● still learning' : '❦ at rest'}
+					</button>
+				</div>
+			</div>
+			<label className="field">
+				<span className="field-label">disposition · the status pill</span>
+				<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="occasionally haunting" value={draft.disposition}
+					onChange={(e) => h.patchDraft({ disposition: e.target.value })} />
+			</label>
+			<div className="fieldset-dashed">
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the marker · how the plot is kept</span>
+				{draft.active ? (
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+						// the living don't get markers: their lamp stays lit on the plot
+					</span>
+				) : (
+					<>
+						<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+							{MARKERS.map((m) => (
+								<DesignerChip key={m} selected={(draft.marker || 'stone') === m} label={m}
+									onClick={() => h.patchDraft({ marker: m })} />
+							))}
+						</div>
+						<label className="field">
+							<span className="field-label">weathering · {wearPct}</span>
+							<input type="range" min={0} max={1} step={0.05} value={draft.wear}
+								onChange={(e) => h.patchDraft({ wear: parseFloat(e.target.value) })}
+								style={{ width: '100%', accentColor: 'var(--gold)' }} />
+							<span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--periwinkle-deep)' }}>
+								// heavy wear cracks the stone. service dates without a year max this out on their own.
+							</span>
+						</label>
+					</>
+				)}
+			</div>
+			<label className="field">
+				<span className="field-label">from the log · the register line</span>
+				<input type="text" className="input input--serif-italic" placeholder="Kettle warm. Shoes by the door. Sea calm."
+					value={draft.log} onChange={(e) => h.patchDraft({ log: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">final entry · quoted on the record</span>
+				<textarea className="input input--serif" rows={2} value={draft.lastLog}
+					onChange={(e) => h.patchDraft({ lastLog: e.target.value })} />
+			</label>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+				<label className="field">
+					<span className="field-label">what was found</span>
+					<input type="text" className="input input--serif" value={draft.found}
+						onChange={(e) => h.patchDraft({ found: e.target.value })} />
+				</label>
+				<label className="field">
+					<span className="field-label">cause of vanishing</span>
+					<input type="text" className="input input--serif" value={draft.cause}
+						onChange={(e) => h.patchDraft({ cause: e.target.value })} />
 				</label>
 			</div>
 			<label className="field">
-				<span className="field-label">epitaph · shows on the headstone</span>
-				<input type="text" className="input input--soft" style={{ padding: '11px 13px', fontSize: 13 }} placeholder="† it was a phase"
-					value={draft.epitaph} onChange={(e) => h.patchDraft({ epitaph: e.target.value })} />
-			</label>
-			<label className="field">
-				<span className="field-label">eulogy</span>
-				<textarea className="input input--serif" rows={3} value={draft.eulogy}
-					onChange={(e) => h.patchDraft({ eulogy: e.target.value })} />
-			</label>
-			<label className="field">
-				<span className="field-label">tags · comma separated</span>
-				<input type="text" className="input" style={{ color: 'var(--periwinkle)' }} value={draft.tagsText}
-					onChange={(e) => h.patchDraft({ tagsText: e.target.value })} />
+				<span className="field-label">re-appointment odds</span>
+				<input type="text" className="input input--serif" placeholder="spring makes promises it won't keep"
+					value={draft.return} onChange={(e) => h.patchDraft({ return: e.target.value })} />
 			</label>
 		</div>
 	);
 }
 
-function NoteFields({ draft }: { draft: NoteDraft }) {
+function NoteFields({ draft, id }: { draft: NoteDraft; id: string | null }) {
 	const h = useHarbor();
 
 	return (
@@ -398,6 +669,7 @@ function NoteFields({ draft }: { draft: NoteDraft }) {
 				<input type="text" className="input input--soft" style={{ padding: '11px 13px', fontSize: 13 }}
 					value={draft.doodleCaption} onChange={(e) => h.patchDraft({ doodleCaption: e.target.value })} />
 			</label>
+			<KeptInBox noteId={id} />
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 				– signs itself "{h.keeper.signoff || '– j'}" on the way out
 			</span>
@@ -427,7 +699,7 @@ export default function EditOverlay() {
 
 				{edit.type === 'project' && <ProjectFields draft={edit.draft} />}
 				{edit.type === 'hobby' && <HobbyFields draft={edit.draft} />}
-				{edit.type === 'note' && <NoteFields draft={edit.draft} />}
+				{edit.type === 'note' && <NoteFields draft={edit.draft} id={edit.id} />}
 
 				{edit.revisions.length > 0 && (
 					<div style={{ borderTop: '1px solid var(--border-card-alt)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
