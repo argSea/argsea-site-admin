@@ -27,6 +27,21 @@ test('a new light is filed as a draft, defaulting to fixed white and no gallery'
 	expect('image' in create.body).toBe(false);
 });
 
+test('a new light\'s slug rides the create POST (mock-api honors a client-sent slug)', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	await page.getByRole('button', { name: '+ kindle a light' }).click();
+
+	const overlay = page.locator('.overlay-card');
+	await overlay.getByLabel('title').fill('Test Light');
+	await overlay.getByLabel('slug · argsea.com/projects/<slug>').fill('test-light');
+	await overlay.getByRole('button', { name: 'file it' }).click();
+
+	await expect(toast(page)).toHaveText('🕯 a light was kindled, into the rack');
+	const [create] = mock.find('POST', /^\/1\/project\/$/);
+	expect(create.body.slug).toBe('test-light');
+});
+
 test('editing a light preserves the dormant postcard-era fields (full-replace pass-through)', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the light list').click();
@@ -220,6 +235,26 @@ test('the pictures box marks the first picture as the entry photo and caps the a
 	]);
 });
 
+test('removing a picture via ✕ leaves it out of the saved payload', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	const box = overlay.locator('.fieldset-dashed', { hasText: 'the pictures' });
+	// unmonolith-diagram.png is the only picked print (seeded), so one del button
+	await expect(box.locator('.print-del')).toHaveCount(1);
+	await box.locator('.print-del').click();
+	await expect(box.locator('.print-del')).toHaveCount(0);
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('🕯 the light was filed');
+
+	const [put] = mock.find('PUT', /^\/1\/project\/p1$/);
+	expect(put.body.images).toEqual([]);
+});
+
 test('the pictures box search filters the archive client-side', async ({ page }) => {
 	await signIn(page);
 	await nav(page, 'the light list').click();
@@ -300,6 +335,21 @@ test('the publish pill goes through the lifecycle endpoint, not PUT', async ({ p
 	await expect(row.getByText('● published')).toBeVisible();
 	expect(mock.find('POST', /^\/1\/project\/p3\/publish$/)).toHaveLength(1);
 	expect(mock.find('PUT', /^\/1\/project\/p3$/)).toHaveLength(0);
+});
+
+test('the flagship toggle flips aria-pressed and rides a real PUT with the new value', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'The home lab' });
+	const flag = row.getByRole('button', { name: /flagship/ });
+	await expect(flag).toHaveAttribute('aria-pressed', 'false');
+
+	await flag.click();
+	await expect(toast(page)).toHaveText('⚑ flagship run up the mast');
+	await expect(flag).toHaveAttribute('aria-pressed', 'true');
+
+	const [put] = mock.find('PUT', /^\/1\/project\/p3$/);
+	expect(put.body.flagship).toBe(true);
 });
 
 test('the front window only fits three', async ({ page }) => {
