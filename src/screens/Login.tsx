@@ -67,7 +67,7 @@ export default function Login() {
 				</div>
 				<div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}>
 					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '.14em', color: 'var(--periwinkle)', textTransform: 'uppercase' }}>argsea · keepers only</span>
-					<span style={{ fontFamily: 'var(--font-display)', fontSize: 27, color: 'var(--text-strong)', lineHeight: 1.2 }}>The Harbormaster's Office</span>
+					<span style={{ fontFamily: 'var(--font-display)', fontSize: 27, color: 'var(--text-strong)', lineHeight: 1.2 }}>The Keeper's Office</span>
 					<span style={{ fontSize: 15, color: 'var(--text-dim)', fontStyle: 'italic' }}>State your name and business.</span>
 				</div>
 				<form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: 0 }}>

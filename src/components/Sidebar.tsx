@@ -1,12 +1,11 @@
-// Sidebar: brand, nav, the harbor cat, the lantern panel, and the way ashore.
-// Fixed rail on desktop; below the drawer breakpoint it hides until the shell's
+// Sidebar: brand, nav, the lantern panel, and the way ashore. The harbor cat
+// moved out to a perch per screen; this rail no longer carries one. Fixed
+// rail on desktop; below the drawer breakpoint it hides until the shell's
 // hamburger opens it as an overlay drawer (layout lives in App.css).
-import { useState, useRef } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { Screen } from '../state/harbor';
-import { CAT_QUOTES } from '../lib/whimsy';
 import { relativeTime } from '../lib/time';
-import { Boat, HarborCat, LighthouseMark } from './art';
+import { Boat, LighthouseMark } from './art';
 
 const NAV: { id: Screen; glyph: string; label: string }[] = [
 	{ id: 'dash', glyph: '✦', label: 'the watch room' },
@@ -15,7 +14,7 @@ const NAV: { id: Screen; glyph: string; label: string }[] = [
 	{ id: 'notes', glyph: '✎', label: 'writing desk' },
 	{ id: 'copy', glyph: '⚑', label: 'signal flags' },
 	{ id: 'eggs', glyph: '✧', label: "smuggler's cove" },
-	{ id: 'shop', glyph: '♆', label: 'the figurehead shop' },
+	{ id: 'shop', glyph: '♆', label: 'the carving shop' },
 	{ id: 'marginalia', glyph: '✒', label: 'marginalia' },
 	{ id: 'media', glyph: '❏', label: 'the darkroom' },
 	{ id: 'keeper', glyph: '☸', label: 'the keeper' },
@@ -83,15 +82,6 @@ interface Props {
 
 export default function Sidebar({ open, onNavigate }: Props) {
 	const h = useHarbor();
-	const [catSay, setCatSay] = useState<string | null>(null);
-	const catTimer = useRef<number>(undefined);
-
-	const pokeCat = () => {
-		window.clearTimeout(catTimer.current);
-		const others = CAT_QUOTES.filter((q) => q !== catSay);
-		setCatSay(others[Math.floor(Math.random() * others.length)]);
-		catTimer.current = window.setTimeout(() => setCatSay(null), 2600);
-	};
 
 	return (
 		<div id="office-sidebar" className={`office-sidebar${open ? ' office-sidebar--open' : ''}`}>
@@ -99,7 +89,7 @@ export default function Sidebar({ open, onNavigate }: Props) {
 				<LighthouseMark style={{ transform: 'rotate(-4deg)' }} />
 				<div style={{ display: 'flex', flexDirection: 'column' }}>
 					<span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--text-nav)' }}>argsea</span>
-					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', color: 'var(--periwinkle-deep)', textTransform: 'uppercase' }}>harbormaster</span>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', color: 'var(--periwinkle-deep)', textTransform: 'uppercase' }}>lighthouse keeper</span>
 				</div>
 			</div>
 
@@ -113,20 +103,6 @@ export default function Sidebar({ open, onNavigate }: Props) {
 			))}
 
 			<div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 20 }}>
-				<div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', padding: '0 12px', height: 32 }}>
-					{catSay && (
-						<div style={{
-							position: 'absolute', right: 46, bottom: 24, background: 'var(--overlay-card)',
-							border: '1px solid rgba(150,160,220,.35)', borderRadius: '10px 10px 2px 10px', padding: '6px 11px',
-							fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--text-soft)', whiteSpace: 'nowrap',
-							animation: 'bubblePop .2s ease both', zIndex: 5,
-						}}>{catSay}</div>
-					)}
-					<div className="cat-perch" onClick={pokeCat} title="the harbor cat">
-						<HarborCat />
-					</div>
-				</div>
-
 				<Lantern />
 
 				<div className="ghost-link" style={{ fontSize: 12, padding: '4px 6px' }} onClick={() => { onNavigate(); h.goAshore(); }}>

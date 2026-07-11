@@ -5,7 +5,7 @@ import { signIn, nav, toast } from './office';
 
 async function openShop(page: Page, mock: MockApi = new MockApi()): Promise<MockApi> {
 	await signIn(page, mock);
-	await nav(page, 'the figurehead shop').click();
+	await nav(page, 'the carving shop').click();
 	return mock;
 }
 
