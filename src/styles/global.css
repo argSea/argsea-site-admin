@@ -640,7 +640,7 @@ textarea::placeholder {
 	transform: rotate(0deg);
 }
 
-/* The hold's switches: a pill track whose knob slides by flex justification */
+/* The cove's switches: a pill track whose knob slides by flex justification */
 .egg-toggle {
 	flex-shrink: 0;
 	cursor: pointer;

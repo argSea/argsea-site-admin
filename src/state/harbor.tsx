@@ -62,7 +62,7 @@ export const CAT_CATALOG: CatPage[] = [
 			{ id: 'hello.header', label: 'The nav link', hint: 'lounging on the hello nav link' },
 			{ id: 'hello.hero', label: 'The hero', hint: 'peeking beside the hero headline' },
 			{ id: 'hello.postcard', label: 'An open light entry', hint: 'on a light entry when it opens' },
-			{ id: 'hello.manifest', label: 'The cargo manifest', hint: 'at the end of the manifest list' },
+			{ id: 'hello.manifest', label: "The keeper's stores", hint: 'at the end of the stores list' },
 			{ id: 'hello.graveyard', label: 'The hobby graveyard', hint: 'among the graveyard chips' },
 			{ id: 'hello.contact', label: 'The contact lighthouse', hint: 'by the contact-band lighthouse' },
 		],
@@ -281,7 +281,7 @@ interface HarborValue {
 	toggleFeatured:      (p: Project) => Promise<void>;
 	moveProject:         (p: Project, dir: -1 | 1) => Promise<void>;
 	arrangeProjects:     (placements: { id: string; x: number; y: number; rotation: number }[]) => Promise<void>;
-	scuttleProject:      (p: Project) => Promise<void>;
+	strikeProject:       (p: Project) => Promise<void>;
 	burnNote:            (n: Note) => Promise<void>;
 
 	moveHobby:      (h: Hobby, dir: -1 | 1) => Promise<void>;
@@ -708,11 +708,11 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
-	const scuttleProject = useCallback(async (p: Project) => {
+	const strikeProject = useCallback(async (p: Project) => {
 		try {
 			await api.projects.remove(p.id);
 			setProjects((cur) => cur.filter((x) => x.id !== p.id));
-			showToast('🌊 scuttled. the sea keeps its secrets.');
+			showToast('🌫 struck from the chart. the fog closes over it.');
 			refreshActivity();
 		} catch (error) {
 			oops(error);
@@ -1110,7 +1110,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			if (wasDeploying.current && lantern) {
 				setDeployPct(0);
 				if (lantern.state === 'succeeded') {
-					showToast('⚓ hoisted. the site sails with the new cargo.');
+					showToast('☀ hoisted. the site is live with the new copy.');
 					refreshActivity();
 				} else if (lantern.state === 'failed') {
 					showToast('⚠ the hoist failed, the old lights stay on');
@@ -1182,7 +1182,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchLight, loadRevision, saveEdit, cancelEdit,
 		peek, openPeek, closePeek,
-		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, arrangeProjects, scuttleProject, burnNote,
+		toggleProjectStatus, toggleNoteStatus, toggleFeatured, moveProject, arrangeProjects, strikeProject, burnNote,
 		moveHobby, retireRevive, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,

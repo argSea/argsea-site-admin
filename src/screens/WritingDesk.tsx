@@ -40,7 +40,7 @@ function Row({ note }: { note: Note }) {
 				<span className={`pill ${inked ? 'pill--on' : 'pill--off'}`} onClick={() => h.toggleNoteStatus(note)}>
 					{inked ? '● inked' : '○ pencilled'}
 				</span>
-				<span className="pill pill--quiet" title="preview as it would sail" onClick={() => h.openPeek('note', note.id)}>peek</span>
+				<span className="pill pill--quiet" title="preview as it will look live" onClick={() => h.openPeek('note', note.id)}>peek</span>
 				<span className="pill" onClick={() => h.openEdit('note', note.id)}>edit</span>
 				<span className={`pill ${confirmHot ? 'pill--danger' : 'pill--quiet'}`}
 					onClick={() => h.askConfirm(`note-${note.id}`, () => { void h.burnNote(note); })}>

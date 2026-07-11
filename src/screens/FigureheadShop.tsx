@@ -58,7 +58,7 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 						<span className="row-title" style={{ fontSize: 18 }}>{d.label}</span>
 					)}
 					{d.published && <span className="egg-status egg-status--loose">published</span>}
-					{d.seed && <span className="egg-status" title="seeded v1: immutable, so the shop can always sail back">seed</span>}
+					{d.seed && <span className="egg-status" title="seeded v1: immutable, so the shop can always fall back to it">seed</span>}
 				</div>
 				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 					{d.shapes.length} shape{d.shapes.length === 1 ? '' : 's'} · updated {relativeTime(d.updatedAt)}
@@ -155,7 +155,7 @@ export default function FigureheadShop() {
 				})}
 			</div>
 
-			<span className="footnote">// exactly one design per pose sails; publishing swaps it on the next lantern hoist.</span>
+			<span className="footnote">// exactly one design per pose is live; publishing swaps it on the next lantern hoist.</span>
 		</div>
 	);
 }

@@ -68,7 +68,7 @@ function Lantern() {
 					)}
 					<span className="ghost-link" style={{ fontSize: 11, color: h.confirmKey === 'rollback' ? 'var(--gold)' : undefined }}
 						onClick={() => h.askConfirm('rollback', h.rollbackLantern)}>
-						{h.confirmKey === 'rollback' ? '↩ sure? sail backwards.' : '↩ re-hoist the previous lantern'}
+						{h.confirmKey === 'rollback' ? '↩ sure? go back to the previous hoist.' : '↩ re-hoist the previous lantern'}
 					</span>
 				</>
 			)}

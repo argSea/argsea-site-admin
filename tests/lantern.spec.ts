@@ -21,7 +21,7 @@ test('hoist: 202, the boat goes out, polling brings it home', async ({ page }) =
 	await expect(page.getByText(/rebuilding · \d+%/)).toBeVisible();
 
 	// the mock succeeds after two status polls (~3s)
-	await expect(toast(page)).toHaveText('⚓ hoisted. the site sails with the new cargo.', { timeout: 10_000 });
+	await expect(toast(page)).toHaveText('☀ hoisted. the site is live with the new copy.', { timeout: 10_000 });
 	await expect(page.getByText('last hoisted: just now')).toBeVisible();
 	await expect(page.getByText('○ nothing new in the tower')).toBeVisible();
 });
@@ -40,7 +40,7 @@ test('rollback wants a second click, then re-points the lantern', async ({ page 
 
 	await page.getByText('↩ re-hoist the previous lantern').click();
 	expect(mock.find('POST', /^\/1\/lantern\/rollback$/)).toHaveLength(0);
-	await page.getByText('↩ sure? sail backwards.').click();
+	await page.getByText('↩ sure? go back to the previous hoist.').click();
 
 	await expect(toast(page)).toHaveText('↩ previous lantern re-hoisted. the old lights are back on.');
 	expect(mock.find('POST', /^\/1\/lantern\/rollback$/)).toHaveLength(1);
@@ -52,7 +52,7 @@ test('rollback with nothing to fall back to gets the 409 message', async ({ page
 	await signIn(page, mock);
 
 	await page.getByText('↩ re-hoist the previous lantern').click();
-	await page.getByText('↩ sure? sail backwards.').click();
+	await page.getByText('↩ sure? go back to the previous hoist.').click();
 	await expect(toast(page)).toHaveText('⚓ no previous lantern to re-hoist');
 });
 
