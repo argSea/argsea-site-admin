@@ -58,7 +58,7 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 						<span className="row-title" style={{ fontSize: 18 }}>{d.label}</span>
 					)}
 					{d.published && <span className="egg-status egg-status--loose">published</span>}
-					{d.seed && <span className="egg-status" title="seeded v1: immutable, so the shop can always sail back">seed</span>}
+					{d.seed && <span className="egg-status" title="seeded v1: immutable, so the shop can always fall back to it">seed</span>}
 				</div>
 				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 					{d.shapes.length} shape{d.shapes.length === 1 ? '' : 's'} · updated {relativeTime(d.updatedAt)}
@@ -82,7 +82,7 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 							: 'publish'}
 					</button>
 				)}
-				<button type="button" className="hold-x" disabled={Boolean(deleteBar)}
+				<button type="button" className="cove-x" disabled={Boolean(deleteBar)}
 					title={deleteBar ?? 'scrap this design'}
 					style={deleteBar ? { opacity: .4, cursor: 'default' } : undefined}
 					onClick={() => h.askConfirm(`scrap-${d.id}`, () => void h.deleteDesign(d))}>
@@ -147,7 +147,7 @@ export default function FigureheadShop() {
 								)}
 							</div>
 
-							<button type="button" className="hold-add" onClick={() => freshDraft(pose.pose, pose.viewBox)}>
+							<button type="button" className="cove-add" onClick={() => freshDraft(pose.pose, pose.viewBox)}>
 								+ carve a fresh blank
 							</button>
 						</div>
@@ -155,7 +155,7 @@ export default function FigureheadShop() {
 				})}
 			</div>
 
-			<span className="footnote">// exactly one design per pose sails; publishing swaps it on the next lantern hoist.</span>
+			<span className="footnote">// exactly one design per pose is live; publishing swaps it on the next lantern hoist.</span>
 		</div>
 	);
 }

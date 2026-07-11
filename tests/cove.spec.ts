@@ -15,7 +15,7 @@ const allSpotsOn = {
 
 test('stowing an egg autosaves the complete copy singleton', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
 
@@ -38,7 +38,7 @@ test('stowing an egg autosaves the complete copy singleton', async ({ page }) =>
 
 test('a page master dims and disables its nested spots', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	// counter reads the whole catalog loose on first load
 	const cat = page.locator('.card', { hasText: 'The harbor cat' });
@@ -64,7 +64,7 @@ test('a page master dims and disables its nested spots', async ({ page }) => {
 
 test('a spot toggle persists an explicit false through the PUT', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	const cat = page.locator('.card', { hasText: 'The harbor cat' });
 	const wreck = cat.locator('.cat-page', { hasText: '404' });
@@ -80,7 +80,7 @@ test('a spot toggle persists an explicit false through the PUT', async ({ page }
 
 test('the light list edits in place', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	// rename a light in place; its position stays put
 	await page.getByPlaceholder('the light').first().fill('La Jument');
@@ -100,7 +100,7 @@ test('the light list edits in place', async ({ page }) => {
 
 test('the proverb editor casts and tosses', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	const bottle = page.locator('.card', { hasText: 'Message in a bottle' });
 	await expect(bottle.getByText('2 in the bottle · one shows per poke')).toBeVisible();
@@ -117,8 +117,8 @@ test('the proverb editor casts and tosses', async ({ page }) => {
 		'The sea provides. Usually a merge conflict.',
 	]);
 
-	// toss the first one overboard
-	await bottle.getByTitle('toss this one overboard').first().click();
+	// let the tide take the first one
+	await bottle.getByTitle('let the tide take this one').first().click();
 	await expect(bottle.getByText('2 in the bottle · one shows per poke')).toBeVisible();
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(2);
 	const [tossPut] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
@@ -128,7 +128,7 @@ test('the proverb editor casts and tosses', async ({ page }) => {
 	]);
 });
 
-test('a copy doc from before the hold comes up with everything loose', async ({ page }) => {
+test('a copy doc from before the cove comes up with everything loose', async ({ page }) => {
 	const mock = new MockApi();
 	delete mock.copy.eggs;
 	delete mock.copy.catPages;
@@ -136,7 +136,7 @@ test('a copy doc from before the hold comes up with everything loose', async ({ 
 	delete mock.copy.bottleProverbs;
 	delete mock.copy.lighthouses;
 	await signIn(page, mock);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	// absent = on: the missing fields are seeded enabled
 	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
@@ -155,13 +155,13 @@ test('a copy doc from before the hold comes up with everything loose', async ({ 
 	expect(put.body.lighthouses).toEqual([]);
 });
 
-test('null hold fields from a legacy API are seeded, on load and on the PUT echo', async ({ page }) => {
-	// the real wire shape for a pre-hold doc is JSON null, not absent keys,
+test('null cove fields from a legacy API are seeded, on load and on the PUT echo', async ({ page }) => {
+	// the real wire shape for a pre-cove doc is JSON null, not absent keys,
 	// and the API echoes those nulls straight back on the PUT
 	const mock = new MockApi();
-	mock.copyPredatesHold = true;
+	mock.copyPredatesCove = true;
 	await signIn(page, mock);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
 
@@ -175,7 +175,7 @@ test('null hold fields from a legacy API are seeded, on load and on the PUT echo
 	expect(put.body.bottleProverbs).toEqual([]);
 	expect(put.body.lighthouses).toEqual([]);
 
-	// the echo nulled everything again; seedHold adopts it as a fresh legacy
+	// the echo nulled everything again; seedCove adopts it as a fresh legacy
 	// doc (the server kept nothing), everything reads loose, and the screen
 	// is still standing instead of crashing on eggs being null
 	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
@@ -197,7 +197,7 @@ test('keystrokes typed while a slow PUT is in flight survive the echo', async ({
 	const mock = new MockApi();
 	mock.copyPutLatency = 700;
 	await signIn(page, mock);
-	await nav(page, "smuggler's hold").click();
+	await nav(page, "smuggler's cove").click();
 
 	const bottle = page.locator('.card', { hasText: 'Message in a bottle' });
 	const field = bottle.locator('input').first();

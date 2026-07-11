@@ -8,8 +8,8 @@ the `argsea-site-api` Go backend. No router, no UI kit, no rich-text editor.
 
 | screen | what it does |
 | --- | --- |
-| login | "crew only", JWT via `POST /1/auth/login/` |
-| the bridge | greeting, stat tiles, ship's log, quick errands |
+| login | "keepers only", JWT via `POST /1/auth/login/` |
+| the watch room | greeting, stat tiles, keeper's log, quick errands |
 | postcards | project CRUD, rack order, the mantel (featured, max 3), stamp designer |
 | the graveyard | hobby CRUD, retire/revive, suggestion pool |
 | writing desk | note CRUD, plain textarea over `<p>`-wrapped storage |

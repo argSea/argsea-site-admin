@@ -8,6 +8,14 @@ client behavior; it does not own the API, its data model, or the public site.
 No router, no UI kit, no rich-text editor; one shell with screen state and
 bespoke CSS, translated value-for-value from the design.
 
+## Voice: we are a lighthouse
+
+Copy and names speak as keepers at the light, first person. Ships and
+boats exist only as scenery observed from the station. The admin speaks
+to the keeper alone, deep cuts welcome; the public site must stay legible
+to a stranger. Full contract and vocabulary: caravan-meta
+`docs/argsea-identity.md`.
+
 ## Instruction Priority
 Resolve instructions in this order:
 1. an external session path assigned by the caravan primary integrator
@@ -56,8 +64,8 @@ Read narrowly. Do not wander the repo.
   `useEscapeKey.ts`.
 - `src/state/harbor.tsx`: the harbor store: one provider owning all office
   state and every API-calling action. Screens read from it and stay thin.
-- `src/screens/`: one file per screen: `Login`, `Bridge`, `Postcards`,
-  `Graveyard`, `WritingDesk`, `SignalFlags`, `SmugglersHold`, `FigureheadShop`,
+- `src/screens/`: one file per screen: `Login`, `WatchRoom`, `Postcards`,
+  `Graveyard`, `WritingDesk`, `SignalFlags`, `SmugglersCove`, `FigureheadShop`,
   `Darkroom`, `Keeper`. The shop's editor lives in
   `src/components/ShapeEditor.tsx` over `src/lib/shapes.ts` (path anchor model,
   baked transforms, pencil smoothing); shapes are the frozen figurehead

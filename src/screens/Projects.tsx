@@ -1,5 +1,5 @@
 // The rack. Light CRUD, ↑/↓ reorder, the front window (featured, cap of
-// three), draft ⇄ publish pills, peek, and confirm-to-scuttle. A second tab,
+// three), draft ⇄ publish pills, peek, and confirm-to-strike. A second tab,
 // the coast, hands off to ProjectWall for the drag-to-place arrangement.
 import { useState } from 'react';
 import { useHarbor } from '../state/harbor';
@@ -18,8 +18,8 @@ function Row({ project, index }: { project: Project; index: number }) {
 	const charLine = project.firstLit ? `${codeFor(light)} · first lit ${project.firstLit}` : codeFor(light);
 
 	return (
-		<div className="content-row content-row--decked tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
-			<div className="content-row__deck">
+		<div className="content-row content-row--racked tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
+			<div className="content-row__shelf">
 				<Lamp light={light} size={10} haloScale={3.4} />
 				<div className={`photo-thumb${project.image ? ' photo-thumb--paper' : ' photo-thumb--empty'}`}>
 					<div className={`photo-thumb__img${project.image ? '' : ' photo-thumb__img--empty'}`}
@@ -50,11 +50,11 @@ function Row({ project, index }: { project: Project; index: number }) {
 				<span className={`pill ${project.status === 'published' ? 'pill--on' : 'pill--off'}`} onClick={() => h.toggleProjectStatus(project)}>
 					{project.status === 'published' ? '● published' : '○ draft'}
 				</span>
-				<span className="pill pill--quiet" title="preview as it would sail" onClick={() => h.openPeek('project', project.id)}>peek</span>
+				<span className="pill pill--quiet" title="preview as it will look live" onClick={() => h.openPeek('project', project.id)}>peek</span>
 				<span className="pill" onClick={() => h.openEdit('project', project.id)}>edit</span>
 				<span className={`pill ${confirmHot ? 'pill--danger' : 'pill--quiet'}`}
-					onClick={() => h.askConfirm(`proj-${project.id}`, () => { void h.scuttleProject(project); })}>
-					{confirmHot ? 'sure? scuttle.' : 'scuttle'}
+					onClick={() => h.askConfirm(`proj-${project.id}`, () => { void h.strikeProject(project); })}>
+					{confirmHot ? 'sure? strike.' : 'strike'}
 				</span>
 			</div>
 		</div>

@@ -242,15 +242,15 @@ test('moving a light down the rack swaps orders via two reorder calls', async ({
 	expect(reorders.find((c) => c.path.includes('p2'))?.body).toEqual({ order: 1 });
 });
 
-test('scuttling takes two clicks', async ({ page }) => {
+test('striking takes two clicks', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
 
-	await row.getByText('scuttle', { exact: true }).click();
+	await row.getByText('strike', { exact: true }).click();
 	expect(mock.find('DELETE', /^\/1\/project\/p2$/)).toHaveLength(0);
-	await row.getByText('sure? scuttle.').click();
-	await expect(toast(page)).toHaveText('🌊 scuttled. the sea keeps its secrets.');
+	await row.getByText('sure? strike.').click();
+	await expect(toast(page)).toHaveText('🌫 struck from the chart. the fog closes over it.');
 	await expect(row).toHaveCount(0);
 	expect(mock.find('DELETE', /^\/1\/project\/p2$/)).toHaveLength(1);
 });

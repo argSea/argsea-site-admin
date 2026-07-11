@@ -454,15 +454,15 @@ textarea::placeholder {
 	box-shadow: none;
 }
 
-/* two-deck rack row: content deck, divider, action tray. Scoped to the
+/* two-shelf rack row: content shelf, divider, action tray. Scoped to the
    modifier so WritingDesk/Graveyard/FigureheadShop keep the plain content-row. */
-.content-row--decked {
+.content-row--racked {
 	flex-direction: column;
 	align-items: stretch;
 	gap: 16px;
 }
 
-.content-row__deck {
+.content-row__shelf {
 	display: flex;
 	align-items: center;
 	gap: 18px;
@@ -640,7 +640,7 @@ textarea::placeholder {
 	transform: rotate(0deg);
 }
 
-/* The hold's switches: a pill track whose knob slides by flex justification */
+/* The cove's switches: a pill track whose knob slides by flex justification */
 .egg-toggle {
 	flex-shrink: 0;
 	cursor: pointer;
@@ -707,7 +707,7 @@ textarea::placeholder {
 	border-color: var(--gold-dash);
 }
 
-.hold-x {
+.cove-x {
 	cursor: pointer;
 	flex-shrink: 0;
 	width: 30px;
@@ -726,12 +726,12 @@ textarea::placeholder {
 	user-select: none;
 }
 
-.hold-x:hover {
+.cove-x:hover {
 	color: var(--gold);
 	border-color: var(--gold-dash-mid);
 }
 
-.hold-add {
+.cove-add {
 	align-self: flex-start;
 	cursor: pointer;
 	padding: 9px 16px;
@@ -745,7 +745,7 @@ textarea::placeholder {
 	user-select: none;
 }
 
-.hold-add:hover {
+.cove-add:hover {
 	color: var(--gold);
 	border-color: var(--gold-dash-hot);
 }

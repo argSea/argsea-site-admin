@@ -1,4 +1,4 @@
-// Ship's-log time display. Activity timestamps arrive as fixed-width RFC3339
+// Keeper's-log time display. Activity timestamps arrive as fixed-width RFC3339
 // strings; the log reads better in harbor time than ISO time.
 
 const MINUTE = 60_000;

@@ -147,7 +147,7 @@ export default function PeekOverlay() {
 				)}
 
 				<div style={{ padding: '0 clamp(20px, 4vw, 30px) 18px', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
-					// rendered as the site would show it. drafts sail only when published + hoisted.
+					// rendered as the site would show it. drafts go live only when published + hoisted.
 				</div>
 			</div>
 		</div>

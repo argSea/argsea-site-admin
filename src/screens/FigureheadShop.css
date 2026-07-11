@@ -1,5 +1,5 @@
 /*
- * The figurehead shop's layout: shelf rows on dashed dividers (hold
+ * The figurehead shop's layout: shelf rows on dashed dividers (cove
  * vocabulary), and the editor's rail / canvas / panels grid. Everything
  * collapses to one column at phone width: the rail turns horizontal and the
  * panels stack under the canvas. Tokens come from global.css.

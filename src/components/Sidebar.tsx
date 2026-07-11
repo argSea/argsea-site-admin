@@ -9,12 +9,12 @@ import { relativeTime } from '../lib/time';
 import { Boat, HarborCat, LighthouseMark } from './art';
 
 const NAV: { id: Screen; glyph: string; label: string }[] = [
-	{ id: 'dash', glyph: '✦', label: 'the bridge' },
+	{ id: 'dash', glyph: '✦', label: 'the watch room' },
 	{ id: 'projects', glyph: '✺', label: 'the light list' },
 	{ id: 'hobbies', glyph: '†', label: 'the graveyard' },
 	{ id: 'notes', glyph: '✎', label: 'writing desk' },
 	{ id: 'copy', glyph: '⚑', label: 'signal flags' },
-	{ id: 'eggs', glyph: '✧', label: "smuggler's hold" },
+	{ id: 'eggs', glyph: '✧', label: "smuggler's cove" },
 	{ id: 'shop', glyph: '♆', label: 'the figurehead shop' },
 	{ id: 'marginalia', glyph: '✒', label: 'marginalia' },
 	{ id: 'media', glyph: '❏', label: 'the darkroom' },
@@ -59,16 +59,16 @@ function Lantern() {
 					</span>
 					{h.dirtyCount > 0 ? (
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--gold)' }}>
-							◍ {h.dirtyCount} change{h.dirtyCount === 1 ? '' : 's'} aboard since last hoist
+							◍ {h.dirtyCount} change{h.dirtyCount === 1 ? '' : 's'} in the tower since last hoist
 						</span>
 					) : (
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: 'var(--periwinkle-deep)' }}>
-							○ nothing new aboard
+							○ nothing new in the tower
 						</span>
 					)}
 					<span className="ghost-link" style={{ fontSize: 11, color: h.confirmKey === 'rollback' ? 'var(--gold)' : undefined }}
 						onClick={() => h.askConfirm('rollback', h.rollbackLantern)}>
-						{h.confirmKey === 'rollback' ? '↩ sure? sail backwards.' : '↩ re-hoist the previous lantern'}
+						{h.confirmKey === 'rollback' ? '↩ sure? go back to the previous hoist.' : '↩ re-hoist the previous lantern'}
 					</span>
 				</>
 			)}

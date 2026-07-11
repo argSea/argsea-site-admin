@@ -113,9 +113,9 @@ export interface Suggestion {
 	order: number;
 }
 
-// The smuggler's hold rides the copy singleton. These field names are the
+// The smuggler's cove rides the copy singleton. These field names are the
 // frozen cross-repo contract (the site and the API build against them, do
-// not rename). A copy doc from before the hold omits them on the wire; the
+// not rename). A copy doc from before the cove omits them on the wire; the
 // harbor seeds absent fields enabled on load (absent = on, agreed ruling) so
 // the first autosave persists them explicitly.
 export interface EggFlags {
@@ -152,7 +152,7 @@ export interface SiteCopy {
 	updatedAt:      string;
 }
 
-// The copy keys the flag locker edits as plain text; the hold's egg fields
+// The copy keys the flag locker edits as plain text; the cove's egg fields
 // and the wall ghost have actions of their own.
 export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses' | 'wallGhost'>;
 
@@ -453,7 +453,7 @@ export function putCopy(doc: SiteCopy): Promise<SiteCopy> {
 	return request<SiteCopy>('PUT', '/1/copy', doc);
 }
 
-// ---- ship's log ----
+// ---- keeper's log ----
 
 /** The API defaults to a small recent window; pass a limit and mean it. */
 export function listActivity(limit: number): Promise<ActivityEntry[]> {

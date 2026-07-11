@@ -1,4 +1,4 @@
-// The bridge. Greeting and stats are live; the harbor-traffic panel renders
+// The watch room. Greeting and stats are live; the harbor-traffic panel renders
 // the design's hardcoded theater values (analytics parked per operator ruling,
 // 2026-07-05), as do the "ships sighted"/"uptime" tiles and harbor conditions.
 import { useMemo } from 'react';
@@ -9,7 +9,7 @@ import { Boat, Fish } from '../components/art';
 
 const STAT_TILTS = ['-.6deg', '.4deg', '-.3deg', '.5deg'];
 
-// Each log family wears its screen's glyph so the ship's log reads at a
+// Each log family wears its screen's glyph so the keeper's log reads at a
 // glance; the figurehead lines arrive from the API and get a face here.
 const LOG_GLYPHS: Record<string, string> = {
 	project: '✉', note: '✎', hobby: '†', sitecopy: '⚑', media: '❏',
@@ -21,7 +21,7 @@ const TRAFFIC = [
 	{ d: 'fri', v: 164 }, { d: 'sat', v: 98 }, { d: 'sun', v: 187 },
 ];
 
-export default function Bridge() {
+export default function WatchRoom() {
 	const h = useHarbor();
 	const weather = useMemo(pickWeatherLine, []);
 
@@ -45,7 +45,7 @@ export default function Bridge() {
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 10, animation: 'fadeUp .7s ease .05s both' }}>
-				<span className="kicker">the bridge · {dateLine()}</span>
+				<span className="kicker">the watch room · {dateLine()}</span>
 				<span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(30px, 4.5vw, 42px)', color: 'var(--text-strong)', lineHeight: 1.15 }}>
 					{greeting()}, {h.keeperName}.
 				</span>
@@ -79,7 +79,7 @@ export default function Bridge() {
 
 			<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 22, alignItems: 'start', animation: 'fadeUp .7s ease .25s both' }}>
 				<div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-					<span className="card-kicker">the ship's log</span>
+					<span className="card-kicker">the keeper's log</span>
 					<div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
 						{h.activity.slice(0, 6).map((entry) => (
 							<div key={entry.id} style={{ display: 'flex', gap: 12, alignItems: 'baseline', borderTop: '1px solid var(--border-hair)', paddingTop: 11 }}>

@@ -1,4 +1,4 @@
-// Below decks. The three easter eggs riding the copy singleton: flip them
+// Down at the cove. The three easter eggs riding the copy singleton: flip them
 // loose or stowed, tune the cat's rounds, edit the proverbs and the light
 // list. Saved as you type, the same debounced PUT as the signal flags.
 import type { ReactNode } from 'react';
@@ -55,7 +55,7 @@ function CardMeta({ kicker, aside }: { kicker: string; aside: string }) {
 
 const rowNum = (idx: number): string => String(idx + 1).padStart(2, '0');
 
-export default function SmugglersHold() {
+export default function SmugglersCove() {
 	const h = useHarbor();
 	const { eggs, catPages, catSpots, bottleProverbs, lighthouses } = h.copy;
 	const [bottleDef, catDef, lightsDef] = EGG_DEFS;
@@ -69,8 +69,8 @@ export default function SmugglersHold() {
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 			<div className="screen-head__text" style={{ animation: 'fadeUp .7s ease .05s both' }}>
-				<span className="kicker">below decks</span>
-				<span className="page-title">Smuggler's hold</span>
+				<span className="kicker">down at the cove</span>
+				<span className="page-title">Smuggler's cove</span>
 				<span className="page-sub">The hidden delights stowed around the site. Flip them on, flip them off, no one's watching. (The office gremlins stay on regardless.)</span>
 			</div>
 
@@ -88,10 +88,10 @@ export default function SmugglersHold() {
 							<input type="text" className="input input--serif-italic" style={{ padding: '10px 12px' }}
 								value={proverb}
 								onChange={(e) => h.setProverb(idx, e.target.value)} />
-							<button type="button" className="hold-x" title="toss this one overboard" onClick={() => h.removeProverb(idx)}>✕</button>
+							<button type="button" className="cove-x" title="let the tide take this one" onClick={() => h.removeProverb(idx)}>✕</button>
 						</div>
 					))}
-					<button type="button" className="hold-add" onClick={h.addProverb}>+ cast a new one out</button>
+					<button type="button" className="cove-add" onClick={h.addProverb}>+ cast a new one out</button>
 				</EggCard>
 
 				<EggCard egg={catDef}>
@@ -153,10 +153,10 @@ export default function SmugglersHold() {
 									value={light.line}
 									onChange={(e) => h.setLight(idx, { line: e.target.value })} />
 							</div>
-							<button type="button" className="hold-x" title="strike it from the chart" style={{ marginTop: 6 }} onClick={() => h.removeLight(idx)}>✕</button>
+							<button type="button" className="cove-x" title="strike it from the chart" style={{ marginTop: 6 }} onClick={() => h.removeLight(idx)}>✕</button>
 						</div>
 					))}
-					<button type="button" className="hold-add" onClick={h.addLight}>+ chart another light</button>
+					<button type="button" className="cove-add" onClick={h.addLight}>+ chart another light</button>
 				</EggCard>
 			</div>
 

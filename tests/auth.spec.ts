@@ -25,7 +25,7 @@ test('a wrong passphrase is turned away', async ({ page }) => {
 	await expect(page.getByText('the harbor does not know that name and passphrase.')).toBeVisible();
 });
 
-test('login lands on the bridge; every read carries the bearer token; drafts stay visible', async ({ page }) => {
+test('login lands on the watch room; every read carries the bearer token; drafts stay visible', async ({ page }) => {
 	const mock = await signIn(page);
 	await expect(toast(page)).toHaveText('⚓ welcome back, keeper. token stowed.');
 
