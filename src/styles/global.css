@@ -833,6 +833,16 @@ textarea::placeholder {
 	50%      { transform: rotate(-8deg); }
 }
 
+@keyframes tailDrape {
+	0%, 100% { transform: rotate(0deg); }
+	50%      { transform: rotate(7deg); }
+}
+
+@keyframes blink {
+	0%, 90%, 100% { transform: scaleY(1); }
+	95%           { transform: scaleY(.12); }
+}
+
 /* ---- reduced-motion kill-switch, keep last ---- */
 
 @media (prefers-reduced-motion: reduce) {

@@ -49,7 +49,7 @@ export default function Keeper() {
 				<div className="card tilt" style={{ '--tilt': '-.3deg', display: 'flex', flexDirection: 'column', gap: 14 } as React.CSSProperties}>
 					<span className="card-kicker">identity papers</span>
 					<div style={{ position: 'relative' }}>
-						<CatPerch quips={CAT_QUIPS} style={{ top: 2, right: 8 }} />
+						<CatPerch quips={CAT_QUIPS} pose="lying" style={{ top: 2, right: 8 }} />
 						<KeeperField field="name" label="name · what the harbor calls you" className="input--display" style={{ fontSize: 17 }} />
 					</div>
 					<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

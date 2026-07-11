@@ -75,7 +75,7 @@ export default function Darkroom() {
 					<span className="page-sub">{countLine} Handle by the edges.</span>
 				</div>
 				<span style={{ position: 'relative', flex: '0 1 240px', display: 'inline-flex' }}>
-					<CatPerch quips={CAT_QUIPS} style={{ top: -36, right: 14 }} />
+					<CatPerch quips={CAT_QUIPS} pose="lying" style={{ top: -36, right: 14 }} />
 					<input type="text" className="input" style={{ borderRadius: 999, padding: '10px 16px', fontSize: 12.5 }}
 						placeholder="search the prints..." value={q} onChange={(e) => setQ(e.target.value)} />
 				</span>

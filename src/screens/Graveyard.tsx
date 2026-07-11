@@ -60,7 +60,7 @@ export default function Graveyard() {
 
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', paddingBottom: 44 }}>
-			<CatPerch quips={CAT_QUIPS} style={{ bottom: -6, right: 18 }} />
+			<CatPerch quips={CAT_QUIPS} pose="lying" style={{ bottom: -6, right: 18 }} />
 			<div className="screen-head">
 				<div className="screen-head__text">
 					<span className="kicker">groundskeeping</span>

@@ -7,13 +7,14 @@ import { HarborCat } from './art';
 
 interface Props {
 	quips:      string[];
-	bubbleSide?: 'left' | 'right';  // which side the speech bubble opens toward
-	style?:      CSSProperties;     // positions the perch within its relative parent
+	bubbleSide?: 'left' | 'right';        // which side the speech bubble opens toward
+	pose?:       'standing' | 'lying';    // draped along an edge instead of perched upright
+	style?:      CSSProperties;           // positions the perch within its relative parent
 }
 
 const BUBBLE_WINDOW = 2600;
 
-export default function CatPerch({ quips, bubbleSide = 'left', style }: Props) {
+export default function CatPerch({ quips, bubbleSide = 'left', pose = 'standing', style }: Props) {
 	const [say, setSay] = useState<string | null>(null);
 	const timer = useRef<number>(undefined);
 
@@ -37,7 +38,7 @@ export default function CatPerch({ quips, bubbleSide = 'left', style }: Props) {
 				}}>{say}</div>
 			)}
 			<div className="cat-perch" onClick={poke} title="the harbor cat">
-				<HarborCat />
+				<HarborCat pose={pose} />
 			</div>
 		</div>
 	);

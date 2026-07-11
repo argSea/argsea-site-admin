@@ -50,7 +50,35 @@ export function Fish({ width = 20, height = 14, flip = false }: FishProps) {
 	);
 }
 
-export function HarborCat() {
+interface HarborCatProps {
+	pose?: 'standing' | 'lying';  // 'lying' is the mock's draped-along-an-edge variant
+}
+
+export function HarborCat({ pose = 'standing' }: HarborCatProps) {
+	if (pose === 'lying') {
+		return (
+			<svg width="55" height="26" viewBox="0 0 100 48" fill="none" style={{ overflow: 'visible' }}>
+				<path d="M72 38 C85 33 91 41 86 46.5 C84 49 80.2 48.4 80.8 45.2 C83 41.4 78.6 39.6 72.6 42.4 Z"
+					fill="#232a4d" stroke="#93a0e8" strokeWidth="1.4" strokeLinejoin="round"
+					style={{ transformOrigin: '73px 40px', animation: 'tailDrape 5s ease-in-out infinite' }} />
+				<ellipse cx="10.5" cy="42.6" rx="4.6" ry="2.7" fill="#232a4d" stroke="#93a0e8" strokeWidth="1.3" />
+				<ellipse cx="18.5" cy="42.9" rx="4.4" ry="2.6" fill="#232a4d" stroke="#93a0e8" strokeWidth="1.3" />
+				<path d="M13.5 44 C8.5 39 9 30 13 25 L12.8 22 L12.4 10 L18.6 17 L24.5 17 L30 10 L30.5 22 C35.5 25 38.5 27 44.5 28.5 C56 25.5 69 26.5 77.5 32.5 C83.5 36.8 83 42 76 44 Z"
+					fill="#232a4d" stroke="#93a0e8" strokeWidth="1.6" strokeLinejoin="round" />
+				<ellipse cx="68" cy="43.2" rx="5" ry="2.4" fill="#232a4d" stroke="#93a0e8" strokeWidth="1.2" />
+				<path d="M13.7 16 L13.5 11.5 L17 15 Z" fill="#f0d9a8" opacity=".5" />
+				<path d="M29 16 L29.4 11.5 L26 15 Z" fill="#f0d9a8" opacity=".5" />
+				<g style={{ transformOrigin: '22px 27px', animation: 'blink 6s ease-in-out infinite' }}>
+					<circle cx="17.8" cy="26.8" r="1.9" fill="#f0d9a8" />
+					<circle cx="26" cy="26.8" r="1.9" fill="#f0d9a8" />
+				</g>
+				<path d="M20.6 30.4 L23.4 30.4 L22 32 Z" fill="#f0d9a8" />
+				<path d="M22 32 v1.3 M22 33.3 q-2 1.4 -3.6 .4 M22 33.3 q2 1.4 3.6 .4" stroke="#5f6ec4" strokeWidth="1" fill="none" strokeLinecap="round" />
+				<path d="M12.6 29 l-7 -1.3 M12.6 31.2 l-7 .9 M30.5 29 l7 -1.3 M30.5 31.2 l7 .9" stroke="#5f6ec4" strokeWidth="0.9" strokeLinecap="round" opacity=".7" />
+				<path d="M15.8 36 q3 1.6 6.4 .6" stroke="#5f6ec4" strokeWidth="0.9" strokeLinecap="round" fill="none" opacity=".45" />
+			</svg>
+		);
+	}
 	return (
 		<svg width="36" height="30" viewBox="0 0 34 30" fill="none">
 			<path d="M26 28 C31.5 27 32.5 22 29.5 19.5" stroke="#93a0e8" strokeWidth="1.4" fill="none" strokeLinecap="round"
