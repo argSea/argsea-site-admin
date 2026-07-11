@@ -103,7 +103,7 @@ export default function Projects() {
 						'--tilt': '.3deg', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12,
 						animation: 'fadeUp .7s ease .1s both', position: 'relative',
 					} as React.CSSProperties}>
-						<CatPerch quips={CAT_QUIPS} bubbleSide="right" style={{ top: -14, left: 40 }} />
+						<CatPerch quips={CAT_QUIPS} bubbleSide="right" style={{ top: -26, left: 40 }} />
 						<div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
 							<span className="card-kicker card-kicker--gold">in the front window · featured on the home page</span>
 							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{featured.length} of 3 spots filled</span>

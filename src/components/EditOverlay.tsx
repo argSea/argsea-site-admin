@@ -1,5 +1,5 @@
 // The edit overlay: project, headstone, and note forms, the light designer,
-// the gallery picker, and the earlier-printings (revisions) section.
+// the pictures box, and the earlier-printings (revisions) section.
 // "File it" on a restored draft goes through the restore endpoint; that's
 // the server copy-forward that makes status travel with the printing.
 import { useState } from 'react';
@@ -210,7 +210,7 @@ function PicturesBox({ images }: { images: string[] }) {
 							</span>
 							{index === 0 && (
 								<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, letterSpacing: '.14em', color: 'var(--gold)', textTransform: 'uppercase' }}>
-									⚑ entry photo
+									⚑ entry photo · shows with the light
 								</span>
 							)}
 							<span className="print-del" onClick={() => remove(index)}>✕</span>
@@ -240,7 +240,7 @@ function PicturesBox({ images }: { images: string[] }) {
 				</div>
 			)}
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
-				// prints come from the darkroom: develop there, pick here. the first picture is the entry photo, up to six ride along.
+				// prints come from the darkroom: develop there, pick here. the first picture is the entry photo (polaroid and overlay), and any of them can be called in the full log as ![caption](name).
 			</span>
 		</div>
 	);
