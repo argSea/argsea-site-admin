@@ -2,6 +2,9 @@
 // quips, the hero, and the dictionary entry. Saved as you type (debounced PUT).
 import { useHarbor } from '../state/harbor';
 import type { CopyTextField } from '../lib/api';
+import CatPerch from '../components/CatPerch';
+
+const CAT_QUIPS = ['the hero, obviously.', 'kicker: cat. headline: cat.', 'write me in. i already fit the space.'];
 
 const QUIP_FIELDS: { key: CopyTextField; label: string }[] = [
 	{ key: 'quipHello', label: 'hello' },
@@ -36,7 +39,8 @@ export default function SignalFlags() {
 				</div>
 
 				<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-					<div className="card tilt" style={{ '--tilt': '.3deg', display: 'flex', flexDirection: 'column', gap: 14 } as React.CSSProperties}>
+					<div className="card tilt" style={{ '--tilt': '.3deg', display: 'flex', flexDirection: 'column', gap: 14, position: 'relative' } as React.CSSProperties}>
+						<CatPerch quips={CAT_QUIPS} bubbleSide="right" style={{ top: -42, left: 96 }} />
 						<span className="card-kicker">the hero</span>
 						<label className="field">
 							<span className="field-label">kicker</span>

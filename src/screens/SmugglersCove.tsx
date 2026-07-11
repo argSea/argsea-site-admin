@@ -3,6 +3,9 @@
 // list. Saved as you type, the same debounced PUT as the signal flags.
 import type { ReactNode } from 'react';
 import { useHarbor, EGG_DEFS, CAT_CATALOG } from '../state/harbor';
+import CatPerch from '../components/CatPerch';
+
+const CAT_QUIPS = ['this switch stays on.', 'you may not stow me. i stow myself.', 'try it. see what happens to your drafts.'];
 
 function Toggle({ on, title, small, disabled, onFlip }: { on: boolean; title: string; small?: boolean; disabled?: boolean; onFlip: () => void }) {
 	return (
@@ -14,12 +17,13 @@ function Toggle({ on, title, small, disabled, onFlip }: { on: boolean; title: st
 	);
 }
 
-function EggCard({ egg, children }: { egg: (typeof EGG_DEFS)[number]; children: ReactNode }) {
+function EggCard({ egg, cat, children }: { egg: (typeof EGG_DEFS)[number]; cat?: ReactNode; children: ReactNode }) {
 	const h = useHarbor();
 	const on = h.copy.eggs[egg.key];
 
 	return (
-		<div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+		<div className="card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 16 }}>
+			{cat}
 			<div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
 				<div style={{ display: 'flex', flexDirection: 'column', gap: 7, flex: 1, minWidth: 220 }}>
 					<div style={{ display: 'flex', alignItems: 'center', gap: 11, flexWrap: 'wrap' }}>
@@ -35,7 +39,8 @@ function EggCard({ egg, children }: { egg: (typeof EGG_DEFS)[number]; children: 
 			</div>
 
 			<div style={{
-				display: 'flex', flexDirection: 'column', gap: 10, borderTop: '1px dashed rgba(150,160,220,.22)',
+				display: 'flex', flexDirection: 'column', gap: 10,
+				borderTop: '1px dashed rgba(150,160,220,.22)',
 				paddingTop: 16, opacity: on ? 1 : .5, transition: 'opacity .25s',
 			}}>
 				{children}
@@ -94,7 +99,7 @@ export default function SmugglersCove() {
 					<button type="button" className="cove-add" onClick={h.addProverb}>+ cast a new one out</button>
 				</EggCard>
 
-				<EggCard egg={catDef}>
+				<EggCard egg={catDef} cat={<CatPerch quips={CAT_QUIPS} style={{ top: -16, right: 78 }} />}>
 					<CardMeta kicker="where it roams" aside={`${looseSpots} spots loose across ${loosePages} pages`} />
 					{CAT_CATALOG.map((pg, pi) => {
 						const pageOn = catPages[pg.id];

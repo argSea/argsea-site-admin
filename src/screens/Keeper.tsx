@@ -3,6 +3,9 @@
 import { useHarbor } from '../state/harbor';
 import type { KeeperProfile } from '../lib/api';
 import { greeting } from '../lib/whimsy';
+import CatPerch from '../components/CatPerch';
+
+const CAT_QUIPS = ['the name field is warm.', 'justin, and also me.', 'sign it: the cat.'];
 
 interface FieldProps {
 	field:      keyof KeeperProfile;
@@ -45,7 +48,10 @@ export default function Keeper() {
 			<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 22, alignItems: 'start', animation: 'fadeUp .7s ease .15s both' }}>
 				<div className="card tilt" style={{ '--tilt': '-.3deg', display: 'flex', flexDirection: 'column', gap: 14 } as React.CSSProperties}>
 					<span className="card-kicker">identity papers</span>
-					<KeeperField field="name" label="name · what the harbor calls you" className="input--display" style={{ fontSize: 17 }} />
+					<div style={{ position: 'relative' }}>
+						<CatPerch quips={CAT_QUIPS} style={{ top: 2, right: 8 }} />
+						<KeeperField field="name" label="name · what the harbor calls you" className="input--display" style={{ fontSize: 17 }} />
+					</div>
 					<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 						<KeeperField field="pronouns" label="pronouns" placeholder="he/him" />
 						<KeeperField field="location" label="home port" />

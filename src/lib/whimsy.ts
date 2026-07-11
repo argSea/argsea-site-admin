@@ -1,16 +1,6 @@
 // Client-side whimsy, verbatim from the design. None of this touches the API;
 // all of it sits behind the reduced-motion kill-switch where it moves.
 
-export const CAT_QUOTES = [
-	'mrrp.',
-	'the sea provides.',
-	'deploy it, coward.',
-	'i knocked the token off the desk.',
-	'feed me, keeper.',
-	'the fish are unionizing.',
-	'i have read your drafts. no comment.',
-];
-
 export const PROVERBS = [
 	'The harbormaster is also the intern.',
 	'A tidy harbor is a suspicious harbor.',
