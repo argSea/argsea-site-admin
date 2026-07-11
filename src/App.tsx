@@ -7,12 +7,12 @@ import type { Screen } from './state/harbor';
 import { useEscapeKey } from './lib/useEscapeKey';
 import { PROVERBS } from './lib/whimsy';
 import Login from './screens/Login';
-import Bridge from './screens/Bridge';
+import WatchRoom from './screens/WatchRoom';
 import Projects from './screens/Projects';
 import Graveyard from './screens/Graveyard';
 import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
-import SmugglersHold from './screens/SmugglersHold';
+import SmugglersCove from './screens/SmugglersCove';
 import FigureheadShop from './screens/FigureheadShop';
 import Marginalia from './screens/Marginalia';
 import Darkroom from './screens/Darkroom';
@@ -28,12 +28,12 @@ import './App.css';
 const DRAWER_MAX = 600;
 
 const SCREENS: Record<Screen, () => React.JSX.Element> = {
-	dash:       Bridge,
+	dash:       WatchRoom,
 	projects:   Projects,
 	hobbies:    Graveyard,
 	notes:      WritingDesk,
 	copy:       SignalFlags,
-	eggs:       SmugglersHold,
+	eggs:       SmugglersCove,
 	shop:       FigureheadShop,
 	marginalia: Marginalia,
 	media:      Darkroom,

@@ -81,7 +81,7 @@ test('publish arms a confirm naming the swap, then swaps the pill', async ({ pag
 	await expect(draftRow.getByTitle('lower it before scrapping it, publish another first')).toBeDisabled();
 });
 
-test("figurehead lines wear their glyph in the ship's log", async ({ page }) => {
+test("figurehead lines wear their glyph in the keeper's log", async ({ page }) => {
 	const mock = new MockApi();
 	mock.activity.unshift({
 		id: 'a0', timestamp: '2026-07-05T10:00:00Z',

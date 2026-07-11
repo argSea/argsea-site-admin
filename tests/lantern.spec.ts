@@ -6,7 +6,7 @@ test('the dirty counter beats the default activity window, lantern entries exclu
 	const mock = await signIn(page);
 	// seeded: EIGHT content entries newer than lastHoistedAt (more than the
 	// API's default recent window of 6), plus one lantern entry to exclude
-	await expect(page.getByText('◍ 8 changes aboard since last hoist')).toBeVisible();
+	await expect(page.getByText('◍ 8 changes in the tower since last hoist')).toBeVisible();
 	// only possible because the client asked for more than the default window
 	const activityReads = mock.find('GET', /^\/1\/activity\/$/);
 	expect(activityReads.length).toBeGreaterThan(0);
@@ -23,7 +23,7 @@ test('hoist: 202, the boat goes out, polling brings it home', async ({ page }) =
 	// the mock succeeds after two status polls (~3s)
 	await expect(toast(page)).toHaveText('⚓ hoisted. the site sails with the new cargo.', { timeout: 10_000 });
 	await expect(page.getByText('last hoisted: just now')).toBeVisible();
-	await expect(page.getByText('○ nothing new aboard')).toBeVisible();
+	await expect(page.getByText('○ nothing new in the tower')).toBeVisible();
 });
 
 test('a 409 on hoist adopts the in-flight status instead of erroring', async ({ page }) => {

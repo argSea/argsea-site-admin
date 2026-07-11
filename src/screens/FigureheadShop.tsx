@@ -82,7 +82,7 @@ function ShelfRow({ d, onOpen, onCopy }: { d: FigureheadDesign; onOpen: () => vo
 							: 'publish'}
 					</button>
 				)}
-				<button type="button" className="hold-x" disabled={Boolean(deleteBar)}
+				<button type="button" className="cove-x" disabled={Boolean(deleteBar)}
 					title={deleteBar ?? 'scrap this design'}
 					style={deleteBar ? { opacity: .4, cursor: 'default' } : undefined}
 					onClick={() => h.askConfirm(`scrap-${d.id}`, () => void h.deleteDesign(d))}>
@@ -147,7 +147,7 @@ export default function FigureheadShop() {
 								)}
 							</div>
 
-							<button type="button" className="hold-add" onClick={() => freshDraft(pose.pose, pose.viewBox)}>
+							<button type="button" className="cove-add" onClick={() => freshDraft(pose.pose, pose.viewBox)}>
 								+ carve a fresh blank
 							</button>
 						</div>

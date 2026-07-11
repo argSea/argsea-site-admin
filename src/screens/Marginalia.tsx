@@ -51,7 +51,7 @@ function DoodleCard({ d, onOpen }: { d: Doodle; onOpen: () => void }) {
 
 			<div className="doodle-card__actions" onClick={(e) => e.stopPropagation()}>
 				<button type="button" className="pill pill--quiet" onClick={() => setRenaming(true)}>rename</button>
-				<button type="button" className="hold-x"
+				<button type="button" className="cove-x"
 					style={{ marginLeft: 'auto' }}
 					title="scrap this doodle"
 					onClick={() => h.askConfirm(scrapKey, () => void h.deleteDoodle(d))}>
@@ -101,7 +101,7 @@ export default function Marginalia() {
 					<span className="row-sub" style={{ fontStyle: 'italic' }}>a bare desk, sketch something.</span>
 				)}
 
-				<button type="button" className="hold-add" onClick={freshDoodle}>
+				<button type="button" className="cove-add" onClick={freshDoodle}>
 					+ a fresh page
 				</button>
 			</div>

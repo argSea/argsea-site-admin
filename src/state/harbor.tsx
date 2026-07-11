@@ -31,7 +31,7 @@ export interface DoodleFields {
 	shapes:  Shape[];
 }
 
-// The three live eggs and the cat's rounds: display copy shared by the hold
+// The three live eggs and the cat's rounds: display copy shared by the cove
 // screen and the toggle toasts. The keys are the frozen cross-repo contract.
 export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where: string }[] = [
 	{
@@ -52,7 +52,7 @@ export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where
 // catalog (each spot carries its pose + anchor there); the copy doc only stores
 // on/off, so this repo hardcodes its own copy. The page + spot ids are the
 // FROZEN cross-repo contract, matched to the site slice, do not rename. A new
-// perch is a code change in both repos that then shows up in the hold on its own.
+// perch is a code change in both repos that then shows up in the cove on its own.
 export interface CatSpot { id: string; label: string; hint: string }
 export interface CatPage { id: string; label: string; spots: CatSpot[] }
 
@@ -167,10 +167,10 @@ const EMPTY_COPY: SiteCopy = {
 	bottleProverbs: [], lighthouses: [], wallGhost: null, updatedAt: '',
 };
 
-// Absent = on (agreed ruling): a copy doc from before the hold lacks the egg
+// Absent = on (agreed ruling): a copy doc from before the cove lacks the egg
 // fields on the wire; seed them enabled so the first autosave persists them
 // explicitly. Nested spreads guard a partially-filled object too.
-function seedHold(doc: SiteCopy): SiteCopy {
+function seedCove(doc: SiteCopy): SiteCopy {
 	return {
 		...EMPTY_COPY,
 		...doc,
@@ -407,7 +407,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const refreshActivity = useCallback(() => {
 		// fetch generously: the dirty counter reads this list, and the API's
-		// default window is only the last few entries; the bridge log slices
+		// default window is only the last few entries; the watch room log slices
 		// its own display down
 		api.listActivity(100).then(setActivity).catch(() => { /* the log is decoration; stay quiet */ });
 	}, []);
@@ -430,7 +430,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.media.list().then(setPrints).catch(oops);
 		api.figurehead.list().then(setDesigns).catch(oops);
 		api.doodle.list().then(setDoodles).catch(oops);
-		api.getCopy().then((doc) => setCopy(seedHold(doc))).catch(() => setCopy(EMPTY_COPY));
+		api.getCopy().then((doc) => setCopy(seedCove(doc))).catch(() => setCopy(EMPTY_COPY));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
 		refreshActivity();
 		refreshLantern();
@@ -796,11 +796,11 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops]);
 
-	// ---- signal flags, the hold & the keeper, saved as you type (debounced) ----
+	// ---- signal flags, the cove & the keeper, saved as you type (debounced) ----
 
 	// every copy mutation rides the same debounced full-replace PUT: one save
-	// path for the flag locker and the smuggler's hold alike. The echo goes
-	// through seedHold like the GET does: an API from before the hold echoes
+	// path for the flag locker and the smuggler's cove alike. The echo goes
+	// through seedCove like the GET does: an API from before the cove echoes
 	// null/absent egg fields, and adopting those raw would sink the screen.
 	const queueCopySave = useCallback(() => {
 		copyEditSeq.current += 1;
@@ -814,7 +814,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			const dispatchedAt = copyEditSeq.current;
 			api.putCopy(copyRef.current).then((doc) => {
 				if (copyEditSeq.current === dispatchedAt) {
-					setCopy(seedHold(doc));
+					setCopy(seedCove(doc));
 				}
 				refreshActivity();
 			}).catch(oops);
@@ -1163,7 +1163,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
-	// changes aboard since the last hoist: activity newer than lastHoistedAt,
+	// changes in the tower since the last hoist: activity newer than lastHoistedAt,
 	// lantern's own entries excluded
 	const dirtyCount = useMemo(() => {
 		const since = lantern?.lastHoistedAt ?? '';

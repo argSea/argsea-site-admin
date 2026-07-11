@@ -52,7 +52,7 @@ export default function Login() {
 				animation: 'postmarkSway 9s ease-in-out infinite',
 			}}>
 				<div style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.14em', color: 'var(--periwinkle)', lineHeight: 1.7 }}>
-					CREW<br />ONLY ·<br />ARGSEA.COM
+					KEEPERS<br />ONLY ·<br />ARGSEA.COM
 				</div>
 			</div>
 
@@ -66,7 +66,7 @@ export default function Login() {
 					<LighthouseMark width={34} height={40} />
 				</div>
 				<div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 8 }}>
-					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '.14em', color: 'var(--periwinkle)', textTransform: 'uppercase' }}>argsea · crew only</span>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, letterSpacing: '.14em', color: 'var(--periwinkle)', textTransform: 'uppercase' }}>argsea · keepers only</span>
 					<span style={{ fontFamily: 'var(--font-display)', fontSize: 27, color: 'var(--text-strong)', lineHeight: 1.2 }}>The Harbormaster's Office</span>
 					<span style={{ fontSize: 15, color: 'var(--text-dim)', fontStyle: 'italic' }}>State your name and business.</span>
 				</div>

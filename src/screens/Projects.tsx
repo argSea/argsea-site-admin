@@ -18,8 +18,8 @@ function Row({ project, index }: { project: Project; index: number }) {
 	const charLine = project.firstLit ? `${codeFor(light)} · first lit ${project.firstLit}` : codeFor(light);
 
 	return (
-		<div className="content-row content-row--decked tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
-			<div className="content-row__deck">
+		<div className="content-row content-row--racked tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
+			<div className="content-row__shelf">
 				<Lamp light={light} size={10} haloScale={3.4} />
 				<div className={`photo-thumb${project.image ? ' photo-thumb--paper' : ' photo-thumb--empty'}`}>
 					<div className={`photo-thumb__img${project.image ? '' : ' photo-thumb__img--empty'}`}
