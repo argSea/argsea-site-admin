@@ -550,3 +550,82 @@ export function cleanShape(s: Shape): Shape {
 	}
 	return out;
 }
+
+// ---- carving round-trip: shape model ⇄ raw svg with a metadata island ----
+//
+// The carving wire stays raw SVG on the existing CRUD; an editor-born carving
+// serializes its shape model to real svg elements AND embeds the model as a
+// <metadata> island so reopening restores full editability. Reading the island
+// is not svg parsing: it lifts back the JSON we wrote. A carving without the
+// island (a seed, hand-pasted markup) is canvas-locked, never parsed.
+
+export const CARVING_MODEL_ID = 'argsea-carving-model';
+
+const xmlText = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const unXmlText = (s: string): string => s.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+
+function attr(name: string, value: string | number | undefined): string {
+	return value === undefined ? '' : ` ${name}="${value}"`;
+}
+
+/** One shape as an svg element string; mirrors ShapeNode, only present fields written. */
+export function shapeMarkup(s: Shape): string {
+	const common =
+		attr('fill', s.fill) + attr('stroke', s.stroke) + attr('stroke-width', s.strokeWidth) +
+		attr('opacity', s.opacity) + attr('stroke-linecap', s.linecap) + attr('stroke-linejoin', s.linejoin);
+	switch (s.type) {
+		case 'path':    return `<path d="${s.d ?? ''}"${common}/>`;
+		case 'ellipse': return `<ellipse cx="${s.cx ?? 0}" cy="${s.cy ?? 0}" rx="${s.rx ?? 0}" ry="${s.ry ?? 0}"${common}/>`;
+		case 'rect':    return `<rect x="${s.x ?? 0}" y="${s.y ?? 0}" width="${s.w ?? 0}" height="${s.h ?? 0}"${common}/>`;
+		case 'line':    return `<line x1="${s.x1 ?? 0}" y1="${s.y1 ?? 0}" x2="${s.x2 ?? 0}" y2="${s.y2 ?? 0}"${common}/>`;
+	}
+}
+
+/** The shape model as a full raw svg string, its model embedded as a metadata island. */
+export function carvingSvg(viewBox: string, shapes: Shape[]): string {
+	const box = parseViewBox(viewBox);
+	const body = shapes.map(shapeMarkup).join('');
+	const model = xmlText(JSON.stringify({ viewBox, shapes: shapes.map(cleanShape) }));
+	return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${round2(box.w)}" height="${round2(box.h)}" fill="none">${body}<metadata id="${CARVING_MODEL_ID}">${model}</metadata></svg>`;
+}
+
+export interface CarvingModel {
+	viewBox: string;
+	shapes:  Shape[];
+}
+
+/** Lift the embedded model back out of a raw carving svg; null when it has no island. */
+export function readCarvingModel(svg: string): CarvingModel | null {
+	const island = svg.match(new RegExp(`<metadata id="${CARVING_MODEL_ID}">([\\s\\S]*?)</metadata>`, 'i'));
+	if (!island) {
+		return null;
+	}
+	try {
+		const parsed = JSON.parse(unXmlText(island[1]));
+		if (!parsed || !Array.isArray(parsed.shapes)) {
+			return null;
+		}
+		return { viewBox: String(parsed.viewBox ?? '0 0 40 40'), shapes: parsed.shapes as Shape[] };
+	} catch {
+		return null;
+	}
+}
+
+/** The viewBox of a raw svg, falling back to its width/height, then 40x40. */
+export function svgViewBox(raw: string): string {
+	const vb = raw.match(/viewBox\s*=\s*"([^"]*)"/i);
+	if (vb) {
+		return vb[1].trim();
+	}
+	const w = raw.match(/\bwidth\s*=\s*"([\d.]+)"/i);
+	const h = raw.match(/\bheight\s*=\s*"([\d.]+)"/i);
+	return `0 0 ${w?.[1] ?? '40'} ${h?.[1] ?? '40'}`;
+}
+
+/** The inner markup of a raw svg, with any of our own model island stripped. */
+export function svgInner(raw: string): string {
+	return raw
+		.replace(/^[\s\S]*?<svg[^>]*>/i, '')
+		.replace(/<\/svg>\s*$/i, '')
+		.replace(new RegExp(`<metadata id="${CARVING_MODEL_ID}">[\\s\\S]*?</metadata>`, 'i'), '');
+}
