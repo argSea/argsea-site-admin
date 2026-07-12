@@ -74,8 +74,66 @@ test('bolting swaps a spot from its previous holder to the newly bolted carving'
 	expect(bolt.body.spot).toBe('lighthouse-logo');
 
 	// the lighthouse-logo row now opens the boat's carving, not the seed cat
-	await page.locator('.carving-row', { hasText: 'The lighthouse' }).click();
+	// (the displaced seed's bench-group row also says "The lighthouse", so
+	// pin the spot row by its where line)
+	await page.locator('.carving-row', { hasText: 'The lighthouse' }).filter({ hasText: 'nav, top left' }).click();
 	await expect(page.getByText('on the bench · The little boat')).toBeVisible();
+});
+
+test('a saved fresh block survives navigation: it waits under the bench group and can be bolted', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the carving shop').click();
+
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+
+	await nav(page, 'the watch room').click();
+	await nav(page, 'the carving shop').click();
+
+	await expect(page.locator('.carving-group', { hasText: 'the bench' })).toBeVisible();
+	const benchRow = page.locator('.carving-row', { hasText: 'fresh carving no. 1' });
+	await expect(benchRow.locator('.carving-row__where')).toHaveText('fresh off the bench, unassigned');
+
+	await benchRow.click();
+	await expect(page.getByText('on the bench · fresh carving no. 1')).toBeVisible();
+
+	await page.getByLabel('bolt it to').selectOption('paw');
+	await page.getByRole('button', { name: '⚒ bolt it into place' }).click();
+	await expect(toast(page)).toHaveText('⚒ "fresh carving no. 1" bolted to paw print. ships with the next hoist.');
+
+	// the block leaves the bench group for its spot; the displaced paw seed
+	// takes its place there
+	await expect(page.locator('.carving-row', { hasText: 'fresh carving no. 1' }).filter({ hasText: 'fresh off the bench' })).toHaveCount(0);
+	await expect(page.locator('.carving-row', { hasText: 'Paw print' }).filter({ hasText: 'fresh off the bench' })).toBeVisible();
+	const [bolt] = mock.find('POST', /^\/1\/carving\/carvings\/cv100\/bolt$/);
+	expect(bolt.body.spot).toBe('paw');
+});
+
+test('a displaced seed waits under the bench group; re-bolting it restores its spot', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the carving shop').click();
+
+	// a fresh block takes the lighthouse spot, displacing the v1 seed
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+	await page.getByRole('button', { name: '⚒ bolt it into place' }).click();
+	await expect(toast(page)).toHaveText('⚒ "fresh carving no. 1" bolted to the lighthouse. ships with the next hoist.');
+
+	// the seed is not orphaned: it waits under the bench group, still locked
+	const seedRow = page.locator('.carving-row', { hasText: 'The lighthouse' }).filter({ hasText: 'fresh off the bench' });
+	await expect(seedRow).toBeVisible();
+	await seedRow.click();
+	await expect(page.getByText('on the bench · The lighthouse', { exact: true })).toBeVisible();
+	await expect(page.getByLabel('carving source, locked')).toBeVisible();
+
+	// re-bolting the seed is the unbolt path: the spot goes back to v1
+	await page.getByRole('button', { name: '⚒ bolt it into place' }).click();
+	await expect(toast(page)).toHaveText('⚒ "The lighthouse" bolted to the lighthouse. ships with the next hoist.');
+	const [bolt] = mock.find('POST', /^\/1\/carving\/carvings\/cv-lighthouse\/bolt$/);
+	expect(bolt.body.spot).toBe('lighthouse-logo');
+
+	// the fresh block is displaced in turn, back onto the bench group
+	await expect(page.locator('.carving-row', { hasText: 'fresh carving no. 1' }).filter({ hasText: 'fresh off the bench' })).toBeVisible();
 });
 
 test('a catalog-only row shows its note and offers no bench', async ({ page }) => {
@@ -100,6 +158,52 @@ test('an empty block cannot bolt', async ({ page }) => {
 
 	await page.getByRole('button', { name: '⚒ bolt it into place' }).click();
 	await expect(toast(page)).toHaveText('⚠ an empty block has nothing to bolt');
+});
+
+test('blanking a bolted carving is caught on the bench, before the wire', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the carving shop').click();
+
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+	await page.getByRole('button', { name: '⚒ bolt it into place' }).click();
+	await expect(toast(page)).toHaveText('⚒ "fresh carving no. 1" bolted to the lighthouse. ships with the next hoist.');
+
+	// the server would 409 this PUT; the bench pre-checks it and never sends
+	await page.getByLabel('carving source').fill('');
+	await page.getByRole('button', { name: 'save the block' }).click();
+	await expect(toast(page)).toHaveText('⚠ a bolted carving cannot go blank, unbolt the spot first');
+	expect(mock.find('PUT', /^\/1\/carving\/carvings\/cv100$/)).toHaveLength(0);
+});
+
+test('an unsaved draft cannot bolt: the bolt waits for the saved block', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the carving shop').click();
+
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+	const bolt = page.getByRole('button', { name: '⚒ bolt it into place' });
+	await expect(bolt).toBeEnabled();
+
+	// bolting ships the saved doc, so a dirty draft would bolt stale markup
+	await page.getByLabel('carving source').fill('<svg viewBox="0 0 10 10"><rect width="10" height="10"></rect></svg>');
+	await expect(page.getByText('◍ unsaved')).toBeVisible();
+	await expect(bolt).toBeDisabled();
+
+	await page.getByRole('button', { name: 'save the block' }).click();
+	await expect(page.getByText('○ saved')).toBeVisible();
+	await expect(bolt).toBeEnabled();
+});
+
+test('bolting a carving onto the spot it already holds says so instead of going quiet', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the carving shop').click();
+
+	// the seed lighthouse already holds the default pick, lighthouse-logo
+	await expect(page.getByText('on the bench · The lighthouse')).toBeVisible();
+	await page.getByRole('button', { name: '⚒ bolt it into place' }).click();
+	await expect(toast(page)).toHaveText('⚒ "The lighthouse" already holds the lighthouse. the bolt is tight.');
+	expect(mock.find('POST', /\/bolt$/)).toHaveLength(0);
 });
 
 test("the figurehead entity keeps its frozen glyph in the keeper's log; the carving shop no longer edits it", async ({ page }) => {
