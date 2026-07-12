@@ -561,6 +561,13 @@ export function cleanShape(s: Shape): Shape {
 
 export const CARVING_MODEL_ID = 'argsea-carving-model';
 
+const MODEL_ISLAND = new RegExp(`<metadata id="${CARVING_MODEL_ID}">[\\s\\S]*?</metadata>`, 'i');
+
+/** Drop our own model island from a raw carving svg, leaving the rest of the markup intact. */
+export function stripCarvingModel(svg: string): string {
+	return svg.replace(MODEL_ISLAND, '');
+}
+
 const xmlText = (s: string): string => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const unXmlText = (s: string): string => s.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
 
@@ -624,8 +631,7 @@ export function svgViewBox(raw: string): string {
 
 /** The inner markup of a raw svg, with any of our own model island stripped. */
 export function svgInner(raw: string): string {
-	return raw
+	return stripCarvingModel(raw
 		.replace(/^[\s\S]*?<svg[^>]*>/i, '')
-		.replace(/<\/svg>\s*$/i, '')
-		.replace(new RegExp(`<metadata id="${CARVING_MODEL_ID}">[\\s\\S]*?</metadata>`, 'i'), '');
+		.replace(/<\/svg>\s*$/i, ''));
 }

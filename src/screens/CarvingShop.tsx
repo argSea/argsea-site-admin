@@ -14,7 +14,7 @@ import type { Pt, SubPath } from '../lib/shapes';
 import {
 	carvingSvg, fitPencil, nearestT, parsePath, parseViewBox, readCarvingModel,
 	round2, rotateShape, scaleShape, segmentCtrl, serializePath, shapeBox, splitSegment,
-	svgInner, svgViewBox, translateShape,
+	stripCarvingModel, svgInner, svgViewBox, translateShape,
 } from '../lib/shapes';
 import { ShapeNode } from '../components/ShapeEditor';
 import CatPerch from '../components/CatPerch';
@@ -745,12 +745,25 @@ function Bench(props: BenchProps) {
 	};
 
 	// hand-editing the markup drops the model island and steps the tools back:
-	// what the keeper typed is the carving now, raw and unparsed
+	// what the keeper typed is the carving now, raw and unparsed. the machine-
+	// written island goes with the switch, or a stale model would resurrect the
+	// pre-edit shapes on reopen and silently revert the live hand edit.
 	const editMarkup = (value: string) => {
 		if (mode === 'model') {
 			setMode('raw');
 		}
-		setRawSvg(value);
+		setRawSvg(stripCarvingModel(value));
+	};
+
+	// leaving the bench with unsaved edits: a two-click confirm, same vocabulary
+	// as the doodle desk, so a stray catalog pick or fresh block cannot toss the
+	// draft without a second, deliberate click.
+	const guardedLeave = (go: () => void) => {
+		if (dirty) {
+			h.askConfirm('bench-leave', go);
+			return;
+		}
+		go();
 	};
 
 	const bolt = async () => {
@@ -833,7 +846,9 @@ function Bench(props: BenchProps) {
 							<div className="carving-catalog" role="menu">
 								<div className="carving-catalog__head">
 									<span className="carving-catalog__kicker">the catalog</span>
-									<span className="carving-catalog__count">{CARVING_CATALOG.length} on the books · {customCount} fresh</span>
+									{h.confirmKey === 'bench-leave'
+										? <span className="carving-catalog__confirm">unsaved carving. pick again to toss it.</span>
+										: <span className="carving-catalog__count">{CARVING_CATALOG.length} on the books · {customCount} fresh</span>}
 								</div>
 								{CATALOG_GROUPS.map((group) => (
 									<div key={group.page} className="carving-catalog__group">
@@ -847,7 +862,7 @@ function Bench(props: BenchProps) {
 												return (
 													<button key={entry.id} type="button" title={entry.where}
 														className={`carving-tile${isSel ? ' carving-tile--sel' : ''}`}
-														onClick={() => (entry.spot ? pickSpot(entry) : props.onSelect({ kind: 'note', entry }))}>
+														onClick={() => guardedLeave(() => (entry.spot ? pickSpot(entry) : props.onSelect({ kind: 'note', entry })))}>
 														<span className="carving-tile__thumb"><Thumb svg={entry.spot ? (carving?.svg ?? null) : null} /></span>
 														<span className="carving-tile__name">{entry.name}</span>
 													</button>
@@ -861,9 +876,9 @@ function Bench(props: BenchProps) {
 										<span className="carving-catalog__page">the bench</span>
 										<div className="carving-tiles">
 											{onTheBench.map((carving) => (
-												<button key={carving.id} type="button" title="fresh off the bench, unassigned"
+												<button key={carving.id} type="button" title="unassigned"
 													className={`carving-tile${savedId === carving.id ? ' carving-tile--sel' : ''}`}
-													onClick={() => props.onSelect({ kind: 'carving', carving })}>
+													onClick={() => guardedLeave(() => props.onSelect({ kind: 'carving', carving }))}>
 													<span className="carving-tile__thumb"><Thumb svg={carving.svg || null} /></span>
 													<span className="carving-tile__name">{carving.name}</span>
 												</button>
@@ -874,7 +889,9 @@ function Bench(props: BenchProps) {
 							</div>
 						)}
 					</div>
-					<button type="button" className="carving-fresh" onClick={props.onFresh}>+ a fresh block</button>
+					<button type="button" className="carving-fresh" onClick={() => guardedLeave(props.onFresh)}>
+						{h.confirmKey === 'bench-leave' ? 'toss the unsaved carving?' : '+ a fresh block'}
+					</button>
 				</div>
 
 				{/* floating tool palette: drag by the grip, collapse by the chevron */}

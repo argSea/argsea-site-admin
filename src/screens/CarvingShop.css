@@ -177,6 +177,12 @@
 	color: var(--periwinkle-deep);
 }
 
+.carving-catalog__confirm {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	color: var(--gold);
+}
+
 .carving-catalog__group {
 	display: flex;
 	flex-direction: column;

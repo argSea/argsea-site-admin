@@ -127,6 +127,56 @@ test('hand-editing the markup drops the island and steps the tools back', async 
 	await expect(page.locator('.carving-canvas--locked')).toBeVisible();
 });
 
+test('a hand edit that keeps the island still saves a clean wire, no stale model', async ({ page }) => {
+	const mock = await openShop(page);
+
+	// a saved fresh block: its drawer still carries the machine-written island
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await tool(page, 'pencil').click();
+	await drawOnBench(page, [.25, .5], [.75, .5]);
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+
+	const source = page.getByLabel('carving source', { exact: true });
+	const withIsland = await source.inputValue();
+	expect(withIsland).toContain('<metadata id="argsea-carving-model">');
+
+	// hand-edit the visible markup but leave the island block sitting in the text
+	await source.fill(withIsland.replace('</svg>', '<rect x="1" y="1" width="4" height="4"></rect></svg>'));
+	await expect(tool(page, 'select')).toBeDisabled();
+
+	// the raw save must drop our island, or reopening resurrects the pre-edit
+	// shapes and the next save silently reverts this hand edit
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ carving saved to the bench');
+	const [put] = mock.find('PUT', /^\/1\/carving\/carvings\/cv100$/);
+	expect(put.body.svg).not.toContain('<metadata id="argsea-carving-model">');
+	expect(put.body.svg).toContain('<rect');
+});
+
+test('leaving a dirty bench asks before it tosses the carving', async ({ page }) => {
+	await openShop(page);
+
+	// a fresh block with a drawn stroke: dirty, and never saved to the catalog
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await tool(page, 'pencil').click();
+	await drawOnBench(page, [.25, .5], [.75, .5]);
+	await expect(page.getByText('◍ unsaved')).toBeVisible();
+
+	// picking another carving arms the confirm and holds the bench where it is
+	await page.locator('.carving-picker').click();
+	await page.locator('.carving-tile[title*="sails the hero"]').click();
+	await expect(page.locator('.carving-catalog__confirm')).toBeVisible();
+	await expect(page.locator('.carving-picker__name')).toHaveText('fresh carving no. 1');
+
+	// a second click confirms: it switches, and the discarded draft never landed
+	await page.locator('.carving-tile[title*="sails the hero"]').click();
+	await expect(page.locator('.carving-picker__name')).toHaveText('The little boat');
+
+	await page.locator('.carving-picker').click();
+	await expect(page.locator('.carving-tile', { hasText: 'fresh carving no. 1' })).toHaveCount(0);
+});
+
 test('the ghost renders behind the block and never intercepts the pointer', async ({ page }) => {
 	await openShop(page);
 
