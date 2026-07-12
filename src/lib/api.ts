@@ -467,6 +467,39 @@ export const doodle = {
 	remove: (id: string)           => request<void>('DELETE', `/1/doodle/${id}`),
 };
 
+// ---- carvings (the carving shop's catalog + bench, pinned 2026-07-11) ----
+
+// The seven spots a carving can bolt onto: a frozen enum, code-side on both
+// this admin and the site. The catalog carries three more display-only rows
+// (stamp/wreck/harbor-cat) that are not spots and never back a carving.
+export type CarvingSpot = 'lighthouse-logo' | 'boat' | 'bottle' | 'tower-stub' | 'paw' | 'wave-line' | 'boat-wake';
+
+// Raw SVG markup, unlike figurehead/doodle's structured Shape[] (a deliberate
+// contract choice, not an oversight: bolting a carving is a straight SVG
+// swap on the site, no animation model to preserve). Builtin (v1 seed)
+// carvings keep name/svg frozen server-side; boltedTo stays mutable on them
+// so a spot can always be re-bolted back to its seed.
+export interface Carving {
+	id:        string;
+	name:      string;
+	svg:       string;
+	builtin:   boolean;
+	boltedTo:  string[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+// Standard content CRUD, admin-gated mutations, public GET like projects.
+// Bolting is its own action, mirroring the figurehead publish pattern: PUT
+// edits name/svg only and preserves boltedTo untouched, while POST .../bolt
+// performs the swap (auto-strips the spot from its previous holder).
+export const carvings = {
+	list:   ()                       => request<Carving[]>('GET', '/1/carving/carvings'),
+	create: (doc: Partial<Carving>)  => request<Carving>('POST', '/1/carving/carvings', doc),
+	update: (id: string, doc: Carving) => request<Carving>('PUT', `/1/carving/carvings/${id}`, doc),
+	bolt:   (id: string, spot: string) => request<Carving>('POST', `/1/carving/carvings/${id}/bolt`, { spot }),
+};
+
 // ---- site copy singleton ----
 
 export function getCopy(): Promise<SiteCopy> {
