@@ -13,7 +13,7 @@ import Graveyard from './screens/Graveyard';
 import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
 import SmugglersCove from './screens/SmugglersCove';
-import FigureheadShop from './screens/FigureheadShop';
+import CarvingShop from './screens/CarvingShop';
 import Marginalia from './screens/Marginalia';
 import Darkroom from './screens/Darkroom';
 import Keeper from './screens/Keeper';
@@ -34,7 +34,7 @@ const SCREENS: Record<Screen, () => React.JSX.Element> = {
 	notes:      WritingDesk,
 	copy:       SignalFlags,
 	eggs:       SmugglersCove,
-	shop:       FigureheadShop,
+	shop:       CarvingShop,
 	marginalia: Marginalia,
 	media:      Darkroom,
 	keeper:     Keeper,

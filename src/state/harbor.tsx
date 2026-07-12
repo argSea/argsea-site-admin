@@ -6,7 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Category, CopyTextField, Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose, Hobby,
+	ActivityEntry, Carving, Category, CopyTextField, Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose, Hobby,
 	KeeperProfile, LanternStatus, Light, Lighthouse, Marker, MediaItem, Note, Project, Revision, Shape,
 	SiteCopy, Suggestion,
 } from '../lib/api';
@@ -100,6 +100,42 @@ const CAT_PAGES_ON: Record<string, boolean> = Object.fromEntries(CAT_CATALOG.map
 const CAT_SPOTS_ON: Record<string, boolean> = Object.fromEntries(
 	CAT_CATALOG.flatMap((pg) => pg.spots.map((sp) => [sp.id, true])),
 );
+
+// The carving shop's catalog: every hand-carved SVG on the site and where it
+// hangs, admin-side display data verbatim from the design mock's svgCatalog.
+// The seven `spot: true` rows are the frozen bolt targets (a carving's own
+// boltedTo names them); the last three are catalog-only, no carving behind
+// them, so the bench never opens for those.
+export interface CarvingCatalogEntry {
+	id:    string;
+	name:  string;
+	page:  string;
+	where: string;
+	spot:  boolean;
+	note?: string;
+}
+
+export const CARVING_CATALOG: CarvingCatalogEntry[] = [
+	{ id: 'lighthouse-logo', name: 'The lighthouse', page: 'every page', where: 'nav, top left · also the contact band', spot: true },
+	{ id: 'boat', name: 'The little boat', page: 'hello · projects', where: 'sails the hero wave and drops the mail · also passes the coast offshore', spot: true },
+	{ id: 'bottle', name: 'Message in a bottle', page: 'hello', where: 'bobs on the wave after the boat drops it', spot: true },
+	{ id: 'tower-stub', name: 'Tower on the horizon', page: 'projects', where: 'every beacon on the coast · the entry overlay lamp', spot: true },
+	{ id: 'paw', name: 'Paw print', page: 'hello · notes', where: 'walks across journal rows the cat has read', spot: true },
+	{ id: 'wave-line', name: 'The wave line', page: 'hello', where: 'the shoreline strip under the hero (repeating pattern)', spot: true },
+	{ id: 'boat-wake', name: 'The boat wake', page: 'hello', where: 'ripples trailing the boat (repeating pattern)', spot: true },
+	{
+		id: 'stamp', name: 'Postage lighthouse', page: 'contact', where: 'the stamp corner of the postcard, postmark rings over it', spot: false,
+		note: 'carved into the postcard itself. bring the whole card to the bench (Contact.dc.html) to re-cut it.',
+	},
+	{
+		id: 'wreck', name: 'The wreck', page: '404', where: 'run aground on the shoals, cat heckling from the placard', spot: false,
+		note: 'salvage rights unresolved. edit it where it lies (404.dc.html).',
+	},
+	{
+		id: 'harbor-cat', name: 'The harbor cat', page: 'everywhere', where: 'postcards, notes, the wreck placard, this shop', spot: false,
+		note: 'the cat sits for no editor. adjustments by appointment (HarborCat.dc.html), approval unlikely.',
+	},
+];
 
 export interface Session {
 	token:    string;
@@ -281,6 +317,7 @@ interface HarborValue {
 	activity:    ActivityEntry[];
 	designs:     FigureheadDesign[];
 	doodles:     Doodle[];
+	carvings:    Carving[];
 
 	keeperName: string;
 	dirtyCount: number;
@@ -340,6 +377,9 @@ interface HarborValue {
 	renameDoodle: (d: Doodle, name: string) => Promise<void>;
 	deleteDoodle: (d: Doodle) => Promise<void>;
 
+	saveCarving: (id: string | null, fields: { name: string; svg: string }) => Promise<Carving | null>;
+	boltCarving: (c: Carving, spot: string) => Promise<void>;
+
 	printUsage:    (filename: string) => number;
 	developPrints: (files: Iterable<File>) => Promise<void>;
 	tearOffPrint:  (m: MediaItem) => Promise<void>;
@@ -377,6 +417,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [activity, setActivity] = useState<ActivityEntry[]>([]);
 	const [designs, setDesigns] = useState<FigureheadDesign[]>([]);
 	const [doodles, setDoodles] = useState<Doodle[]>([]);
+	const [carvings, setCarvings] = useState<Carving[]>([]);
 
 	const [toast, setToast] = useState<string | null>(null);
 	const [confirmKey, setConfirmKey] = useState<string | null>(null);
@@ -458,6 +499,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.media.list().then(setPrints).catch(oops);
 		api.figurehead.list().then(setDesigns).catch(oops);
 		api.doodle.list().then(setDoodles).catch(oops);
+		api.carvings.list().then(setCarvings).catch(oops);
 		api.getCopy().then((doc) => setCopy(seedCove(doc))).catch(() => setCopy(EMPTY_COPY));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
 		refreshActivity();
@@ -1097,6 +1139,73 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
+	// ---- the carving shop ----
+
+	const replaceCarving = useCallback((saved: Carving) => {
+		setCarvings((cur) => {
+			const at = cur.findIndex((c) => c.id === saved.id);
+			return at === -1 ? [...cur, saved] : cur.map((c) => (c.id === saved.id ? saved : c));
+		});
+	}, []);
+
+	// Explicit save, like the shop's designs and marginalia's doodles: carvings
+	// are documents, they never ride the copy autosave. A null id POSTs a
+	// fresh block; otherwise a full-replace PUT (a builtin's name/svg are
+	// frozen server-side regardless of what rides along).
+	const saveCarving = useCallback(async (id: string | null, fields: { name: string; svg: string }): Promise<Carving | null> => {
+		try {
+			let saved: Carving;
+			if (id) {
+				const current = carvings.find((c) => c.id === id);
+				if (!current) {
+					return null;
+				}
+				// the API's 409 guard, honored before the wire: a bolted carving
+				// is live markup on the site, blanking it would ship a hole
+				if (current.boltedTo.length && !fields.svg.trim()) {
+					showToast('⚠ a bolted carving cannot go blank, unbolt the spot first');
+					return null;
+				}
+				saved = await api.carvings.update(id, { ...current, ...fields });
+				showToast('⚒ carving saved to the bench');
+			} else {
+				saved = await api.carvings.create(fields);
+				showToast('⚒ a fresh block joins the catalog');
+			}
+			replaceCarving(saved);
+			refreshActivity();
+			return saved;
+		} catch (error) {
+			oops(error);
+			return null;
+		}
+	}, [carvings, replaceCarving, showToast, oops, refreshActivity]);
+
+	// Bolting is its own action, mirroring the figurehead publish pattern: the
+	// API auto-swaps (strips the spot from its previous holder) in the same
+	// write, so mirror that locally rather than waiting on a second round trip.
+	const boltCarving = useCallback(async (c: Carving, spot: string) => {
+		if (!c.svg.trim()) {
+			showToast('⚠ an empty block has nothing to bolt');
+			return;
+		}
+		if (c.boltedTo.includes(spot)) {
+			const label = CARVING_CATALOG.find((entry) => entry.id === spot)?.name ?? spot;
+			showToast(`⚒ "${c.name}" already holds ${label.toLowerCase()}. the bolt is tight.`);
+			return;
+		}
+		try {
+			const saved = await api.carvings.bolt(c.id, spot);
+			setCarvings((cur) => cur.map((x) =>
+				x.id === saved.id ? saved : { ...x, boltedTo: x.boltedTo.filter((s) => s !== spot) }));
+			const label = CARVING_CATALOG.find((entry) => entry.id === spot)?.name ?? spot;
+			showToast(`⚒ "${saved.name}" bolted to ${label.toLowerCase()}. ships with the next hoist.`);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
 	// ---- the darkroom ----
 
 	// notes carry a doodle now, not a photo print; only projects still count.
@@ -1232,7 +1341,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const value: HarborValue = {
 		session, booting, screen, goTo, signIn, goAshore,
-		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs, doodles,
+		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs, doodles, carvings,
 		keeperName, dirtyCount,
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchLight, loadRevision, saveEdit, cancelEdit,
@@ -1244,6 +1353,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		saveDesign, renameDesign, deleteDesign, publishDesign,
 		saveDoodle, renameDoodle, deleteDoodle,
+		saveCarving, boltCarving,
 		printUsage, developPrints, tearOffPrint,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 	};

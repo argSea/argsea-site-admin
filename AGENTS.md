@@ -64,12 +64,16 @@ Read narrowly. Do not wander the repo.
   `useEscapeKey.ts`.
 - `src/state/harbor.tsx`: the harbor store: one provider owning all office
   state and every API-calling action. Screens read from it and stay thin.
-- `src/screens/`: one file per screen: `Login`, `WatchRoom`, `Postcards`,
-  `Graveyard`, `WritingDesk`, `SignalFlags`, `SmugglersCove`, `FigureheadShop`,
-  `Darkroom`, `Keeper`. The shop's editor lives in
-  `src/components/ShapeEditor.tsx` over `src/lib/shapes.ts` (path anchor model,
-  baked transforms, pencil smoothing); shapes are the frozen figurehead
-  contract's JSON, never markup.
+- `src/screens/`: one file per screen: `Login`, `WatchRoom`, `Projects`,
+  `Graveyard`, `WritingDesk`, `SignalFlags`, `SmugglersCove`, `CarvingShop`,
+  `Marginalia`, `Darkroom`, `Keeper`. `CarvingShop` edits raw SVG carvings
+  bolted onto site spots (frozen contract: `Carving{id,name,svg,builtin,
+  boltedTo}`); it retired the old pose-carver UI, whose editor lived in
+  `src/components/ShapeEditor.tsx` over `src/lib/shapes.ts` (path anchor
+  model, baked transforms, pencil smoothing). That editor's default export is
+  unused now, but `ShapeNode` from the same file still renders figurehead and
+  doodle shapes elsewhere (Marginalia, EditOverlay, PeekOverlay, WritingDesk);
+  shapes stay the frozen figurehead/doodle contract's JSON, never markup.
 - `src/components/`: shared chrome: `Sidebar` (nav + the lantern + the cat),
   `EditOverlay`, `PeekOverlay`, `art.tsx`.
 - `src/styles/global.css`: night-harbor tokens, shared vocabulary classes,

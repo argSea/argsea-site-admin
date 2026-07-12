@@ -15,10 +15,11 @@ const CAT_QUIPS = [
 ];
 
 // Each log family wears its screen's glyph so the keeper's log reads at a
-// glance; the figurehead lines arrive from the API and get a face here.
+// glance; the figurehead and carving lines arrive from the API and get a
+// face here.
 const LOG_GLYPHS: Record<string, string> = {
 	project: '✉', note: '✎', hobby: '†', sitecopy: '⚑', media: '❏',
-	user: '☸', lantern: '☀', figurehead: '♆',
+	user: '☸', lantern: '☀', figurehead: '♆', carving: '⚒',
 };
 
 const TRAFFIC = [

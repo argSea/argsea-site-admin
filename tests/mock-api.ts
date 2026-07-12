@@ -257,6 +257,47 @@ export class MockApi {
 		},
 	];
 
+	// The seven builtin (v1 seed) carvings, one per spot, svg verbatim from the
+	// design mock's svgCatalog; each starts bolted to its own spot, the
+	// current look being the bolted default.
+	carvings: Doc[] = [
+		{
+			id: 'cv-lighthouse', name: 'The lighthouse', builtin: true, boltedTo: ['lighthouse-logo'],
+			svg: '<svg width="24" height="28" viewBox="0 0 26 30" fill="none"><path d="M13 2 L17 9 L9 9 Z" fill="#f0d9a8"></path><rect x="10" y="9" width="6" height="14" fill="none" stroke="#93a0e8" stroke-width="1.4"></rect><path d="M10 13 h6 M10 17 h6" stroke="#93a0e8" stroke-width="1.4"></path><path d="M6 27 q7 -4 14 0" stroke="#5f6ec4" stroke-width="1.4" fill="none"></path></svg>',
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+		{
+			id: 'cv-boat', name: 'The little boat', builtin: true, boltedTo: ['boat'],
+			svg: '<svg width="30" height="24" viewBox="0 0 30 24" fill="none"><path d="M4 15 L26 15 L21 22 L9 22 Z" fill="#93a0e8"></path><path d="M15 15 V3" stroke="#5f6ec4" stroke-width="1.5"></path><path d="M15 3 L24 13 L15 13 Z" fill="#f0d9a8"></path></svg>',
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+		{
+			id: 'cv-bottle', name: 'Message in a bottle', builtin: true, boltedTo: ['bottle'],
+			svg: '<svg width="32" height="20" viewBox="0 0 40 24" fill="none"><rect x="6" y="7" width="28" height="11" rx="5.5" fill="rgba(147,160,232,.22)" stroke="#93a0e8" stroke-width="1.3"></rect><rect x="33" y="9.5" width="5" height="6" rx="1.2" fill="#f0d9a8"></rect><path d="M12 10 h14 M12 12.5 h11 M12 15 h13" stroke="#f0d9a8" stroke-width="1" stroke-linecap="round" opacity=".85"></path></svg>',
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+		{
+			id: 'cv-tower', name: 'Tower on the horizon', builtin: true, boltedTo: ['tower-stub'],
+			svg: '<svg width="26" height="34" viewBox="0 0 26 34" fill="none"><path d="M13 3 L17 10 L9 10 Z" fill="rgba(150,160,220,.4)"></path><rect x="10" y="10" width="6" height="15" fill="none" stroke="rgba(150,160,220,.45)" stroke-width="1.3"></rect><path d="M10 14 h6 M10 19 h6" stroke="rgba(150,160,220,.34)" stroke-width="1.1"></path><path d="M5 30 q8 -4 16 0" stroke="rgba(150,160,220,.36)" stroke-width="1.3" fill="none"></path></svg>',
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+		{
+			id: 'cv-paw', name: 'Paw print', builtin: true, boltedTo: ['paw'],
+			svg: '<svg width="13" height="12" viewBox="0 0 15 14" fill="#93a0e8"><ellipse cx="7.5" cy="9.5" rx="3.4" ry="2.9"></ellipse><ellipse cx="2.6" cy="5.4" rx="1.5" ry="1.9"></ellipse><ellipse cx="6.2" cy="3.4" rx="1.5" ry="1.9"></ellipse><ellipse cx="9.8" cy="3.6" rx="1.5" ry="1.9"></ellipse><ellipse cx="12.6" cy="6" rx="1.4" ry="1.8"></ellipse></svg>',
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+		{
+			id: 'cv-wave', name: 'The wave line', builtin: true, boltedTo: ['wave-line'],
+			svg: '<svg xmlns="http://www.w3.org/2000/svg" width="53" height="18"><path d="M0 9 Q 13.25 0, 26.5 9 T 53 9" stroke="rgba(147,160,232,0.5)" stroke-width="1.5" fill="none"/></svg>',
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+		{
+			id: 'cv-wake', name: 'The boat wake', builtin: true, boltedTo: ['boat-wake'],
+			svg: '<svg xmlns="http://www.w3.org/2000/svg" width="53" height="18"><path d="M0 9 Q 13.25 0, 26.5 9 T 53 9" stroke="rgba(240,217,168,0.5)" stroke-width="1.5" fill="none"/></svg>',
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+	];
+
 	activity: Doc[] = [
 		{ id: 'a1', timestamp: '2026-07-05T09:30:00Z', message: 'note "The queue is the product" published', entityType: 'note', entityId: 'n1' },
 		{ id: 'a2', timestamp: '2026-07-05T09:00:00Z', message: 'postcard "This website" edited 11 times. it counts.', entityType: 'project', entityId: 'p4' },
@@ -607,6 +648,85 @@ export class MockApi {
 			}
 			if (method === 'DELETE') {
 				this.doodles = this.doodles.filter((d) => d.id !== doc.id);
+				return json(200, { status: 'ok', code: 200 });
+			}
+		}
+
+		// ---- carvings (public GET like projects, admin-gated writes) ----
+		if (/^\/1\/carving\/carvings\/?$/.test(path)) {
+			if (method === 'GET') {
+				return json(200, this.carvings);
+			}
+			if (method === 'POST') {
+				if (!authed) {
+					return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+				}
+				const doc = {
+					id: `cv${this.nextId++}`, name: body.name ?? '', svg: body.svg ?? '',
+					builtin: false, boltedTo: [], createdAt: now(), updatedAt: now(),
+				};
+				this.carvings.push(doc);
+				return json(200, doc);
+			}
+		}
+		if ((match = /^\/1\/carving\/carvings\/([^/]+)\/bolt$/.exec(path)) && method === 'POST') {
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
+			const doc = this.carvings.find((c) => c.id === match![1]);
+			if (!doc) {
+				return json(400, { status: 'error', code: 400, message: 'no such carving' });
+			}
+			const spot = body?.spot;
+			if (!spot) {
+				return json(400, { status: 'error', code: 400, message: 'no spot named' });
+			}
+			if (!String(doc.svg ?? '').trim()) {
+				return json(400, { status: 'error', code: 400, message: 'an empty block cannot bolt' });
+			}
+			// auto-swap: the spot leaves whichever carving held it, in this write
+			for (const other of this.carvings) {
+				if (other.id !== doc.id) {
+					other.boltedTo = other.boltedTo.filter((s: string) => s !== spot);
+				}
+			}
+			if (!doc.boltedTo.includes(spot)) {
+				doc.boltedTo = [...doc.boltedTo, spot];
+			}
+			doc.updatedAt = now();
+			return json(200, doc);
+		}
+		if ((match = /^\/1\/carving\/carvings\/([^/]+)$/.exec(path))) {
+			if (method === 'GET') {
+				const doc = this.carvings.find((c) => c.id === match![1]);
+				return doc ? json(200, doc) : json(404, { status: 'error', code: 404, message: 'not found' });
+			}
+			if (!authed) {
+				return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+			}
+			const doc = this.carvings.find((c) => c.id === match![1]);
+			if (!doc) {
+				return json(404, { status: 'error', code: 404, message: 'not found' });
+			}
+			if (method === 'PUT') {
+				// name/svg only; boltedTo is preserved untouched, bolting is its own route
+				if (doc.builtin && (body.name !== doc.name || body.svg !== doc.svg)) {
+					return json(409, { status: 'error', code: 409, message: 'a builtin carving keeps its name and svg' });
+				}
+				// a bolted carving is live markup on the site; it cannot go blank
+				if (doc.boltedTo.length && !String(body.svg ?? '').trim()) {
+					return json(409, { status: 'error', code: 409, message: 'a bolted carving cannot go blank, unbolt the spot first' });
+				}
+				doc.name = doc.builtin ? doc.name : body.name;
+				doc.svg = doc.builtin ? doc.svg : body.svg;
+				doc.updatedAt = now();
+				return json(200, doc);
+			}
+			if (method === 'DELETE') {
+				if (doc.boltedTo.length) {
+					return json(409, { status: 'error', code: 409, message: 'unbolt it before scrapping it' });
+				}
+				this.carvings = this.carvings.filter((c) => c.id !== doc.id);
 				return json(200, { status: 'ok', code: 200 });
 			}
 		}

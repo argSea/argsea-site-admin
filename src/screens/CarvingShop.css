@@ -1,0 +1,207 @@
+/*
+ * The carving shop: catalog rail + bench layout, transcribed from the design
+ * mock's carving-shop section. Tokens come from global.css; a few bespoke
+ * values (the bench's plank gradient, the rail background) are the mock's
+ * own hex, kept literal.
+ */
+
+.carving-layout {
+	display: flex;
+	gap: 20px;
+	align-items: flex-start;
+	flex-wrap: wrap;
+}
+
+.carving-catalog {
+	flex: 0 1 300px;
+	min-width: 250px;
+	background: var(--overlay-card);
+	border: 1px solid rgba(150, 160, 220, .22);
+	border-radius: 14px;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	max-height: 600px;
+	overflow-y: auto;
+	box-sizing: border-box;
+}
+
+.carving-group {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: .16em;
+	color: var(--periwinkle-deep);
+	text-transform: uppercase;
+	padding-top: 9px;
+}
+
+.carving-row {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	padding: 7px 8px;
+	border-radius: 9px;
+	cursor: pointer;
+	background: transparent;
+	border: 1px solid transparent;
+	transition: background .2s;
+	width: 100%;
+	box-sizing: border-box;
+	text-align: left;
+	color: inherit;
+	font: inherit;
+}
+
+.carving-row:hover {
+	background: rgba(147, 160, 232, .08);
+}
+
+.carving-row--sel {
+	background: rgba(240, 217, 168, .08);
+	border-color: rgba(240, 217, 168, .4);
+}
+
+.carving-thumb {
+	width: 44px;
+	height: 34px;
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--well);
+	border: 1px solid rgba(150, 160, 220, .18);
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.carving-row__text {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.carving-row__name {
+	font-family: var(--font-display);
+	font-size: 14px;
+	color: var(--text-nav);
+	line-height: 1.2;
+}
+
+.carving-row__where {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--periwinkle-deep);
+	line-height: 1.5;
+}
+
+.carving-bench-col {
+	flex: 1 1 440px;
+	min-width: 320px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.carving-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.carving-chisels {
+	display: flex;
+	gap: 4px;
+	background: var(--card-alt);
+	border: 1px solid var(--border-chip);
+	border-radius: 999px;
+	padding: 5px 8px;
+}
+
+.carving-chisel {
+	padding: 4px 9px;
+	background: none;
+	border: none;
+	color: var(--periwinkle);
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	transition: color .2s;
+}
+
+.carving-chisel:hover {
+	color: var(--gold);
+}
+
+.carving-chisel[aria-pressed="true"] {
+	color: var(--gold);
+}
+
+.carving-chisel:focus-visible {
+	outline: 2px solid var(--gold);
+	outline-offset: 2px;
+}
+
+.carving-canvas {
+	position: relative;
+	background:
+		repeating-linear-gradient(90deg, #221d33 0 46px, #251f38 46px 92px),
+		linear-gradient(180deg, #241e36, #1d1830);
+	border: 1px solid rgba(150, 160, 220, .22);
+	border-radius: 14px;
+	min-height: 400px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 44px;
+	box-sizing: border-box;
+}
+
+.carving-canvas__label {
+	position: absolute;
+	top: 12px;
+	left: 16px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: .14em;
+	color: var(--periwinkle-deep);
+	text-transform: uppercase;
+}
+
+.carving-canvas__art {
+	transform: scale(3);
+	display: inline-flex;
+}
+
+.carving-canvas__note {
+	position: absolute;
+	bottom: 12px;
+	left: 16px;
+	right: 16px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--text-quip);
+	font-style: italic;
+	text-align: center;
+}
+
+.carving-bolt-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+	.carving-catalog {
+		flex-basis: 100%;
+		max-height: 320px;
+	}
+
+	.carving-canvas {
+		min-height: 260px;
+		padding: 28px;
+	}
+}
