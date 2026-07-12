@@ -563,7 +563,7 @@ export function cleanShape(s: Shape): Shape {
 
 export const CARVING_MODEL_ID = 'argsea-carving-model';
 
-const MODEL_ISLAND = new RegExp(`<metadata id="${CARVING_MODEL_ID}">[\\s\\S]*?</metadata>`, 'i');
+const MODEL_ISLAND = new RegExp(`<metadata id="${CARVING_MODEL_ID}">[\\s\\S]*?</metadata>`, 'gi');
 
 /** Drop our own model island from a raw carving svg, leaving the rest of the markup intact. */
 export function stripCarvingModel(svg: string): string {
