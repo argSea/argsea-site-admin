@@ -68,6 +68,22 @@ function Thumb({ svg }: { svg: string | null }) {
 	return <span style={{ display: 'inline-flex' }} dangerouslySetInnerHTML={{ __html: safeSvg(svg) }} />;
 }
 
+// One row shape shared by the fixed catalog and the bench group below it, so
+// an unbolted carving is selectable the same way a spot or a note is.
+function CatalogRow({ svg, name, where, selected, onClick }: {
+	svg: string | null; name: string; where: string; selected: boolean; onClick: () => void;
+}) {
+	return (
+		<button type="button" className={`carving-row${selected ? ' carving-row--sel' : ''}`} onClick={onClick}>
+			<span className="carving-thumb"><Thumb svg={svg} /></span>
+			<span className="carving-row__text">
+				<span className="carving-row__name">{name}</span>
+				<span className="carving-row__where">{where}</span>
+			</span>
+		</button>
+	);
+}
+
 type Selection = { kind: 'carving'; id: string } | { kind: 'note'; id: string };
 
 export default function CarvingShop() {
@@ -107,6 +123,11 @@ export default function CarvingShop() {
 		setDraft(null);
 	};
 
+	const selectBench = (carving: Carving) => {
+		setSel({ kind: 'carving', id: carving.id });
+		setDraft(null);
+	};
+
 	const selectedCarving = sel?.kind === 'carving' ? h.carvings.find((c) => c.id === sel.id) ?? null : null;
 	const selectedNote = sel?.kind === 'note' ? CARVING_CATALOG.find((e) => e.id === sel.id) ?? null : null;
 
@@ -115,6 +136,12 @@ export default function CarvingShop() {
 	const editable = Boolean(selectedCarving && !selectedCarving.builtin);
 
 	const customCount = h.carvings.filter((c) => !c.builtin).length;
+
+	// The mock's own model: the catalog is [...svgCatalog, ...custom], and a
+	// block that holds no spot lives under "the bench". Without this group a
+	// saved fresh block would vanish on navigation, and a seed displaced by the
+	// bolt auto-swap would be unreachable for re-bolting.
+	const onTheBench = h.carvings.filter((c) => !c.boltedTo.length);
 
 	const freshBlock = async () => {
 		const saved = await h.saveCarving(null, { name: `fresh carving no. ${customCount + 1}`, svg: STARTER_SVG });
@@ -171,19 +198,24 @@ export default function CarvingShop() {
 									? Boolean(carving && selectedCarving?.id === carving.id)
 									: selectedNote?.id === entry.id;
 								return (
-									<button key={entry.id} type="button"
-										className={`carving-row${isSel ? ' carving-row--sel' : ''}`}
-										onClick={() => (entry.spot ? selectSpot(entry) : selectNote(entry))}>
-										<span className="carving-thumb"><Thumb svg={entry.spot ? (carving?.svg ?? null) : null} /></span>
-										<span className="carving-row__text">
-											<span className="carving-row__name">{entry.name}</span>
-											<span className="carving-row__where">{entry.where}</span>
-										</span>
-									</button>
+									<CatalogRow key={entry.id} svg={entry.spot ? (carving?.svg ?? null) : null}
+										name={entry.name} where={entry.where} selected={isSel}
+										onClick={() => (entry.spot ? selectSpot(entry) : selectNote(entry))} />
 								);
 							})}
 						</div>
 					))}
+					{onTheBench.length > 0 && (
+						<div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+							<span className="carving-group">the bench</span>
+							{onTheBench.map((carving) => (
+								<CatalogRow key={carving.id} svg={carving.svg || null}
+									name={carving.name} where="fresh off the bench, unassigned"
+									selected={selectedCarving?.id === carving.id}
+									onClick={() => selectBench(carving)} />
+							))}
+						</div>
+					)}
 				</div>
 
 				<div className="carving-bench-col">
@@ -255,7 +287,11 @@ export default function CarvingShop() {
 										<option key={entry.id} value={entry.id}>{entry.name} · {entry.page}</option>
 									))}
 								</select>
-								<button type="button" className="btn btn--gold" onClick={() => void h.boltCarving(selectedCarving, assignSpot)}>
+								{/* bolting ships the SAVED doc, so an unsaved draft would bolt
+								    stale markup; the bolt waits until the block is saved */}
+								<button type="button" className="btn btn--gold" disabled={dirty}
+									style={dirty ? { opacity: .5, cursor: 'default' } : undefined}
+									onClick={() => void h.boltCarving(selectedCarving, assignSpot)}>
 									⚒ bolt it into place
 								</button>
 							</div>
