@@ -1,6 +1,6 @@
 # argsea-site-admin
 
-The Harbormaster's Office: the back office for [argsea.com](https://argsea.com).
+The Keeper's Office: the back office for [argsea.com](https://argsea.com).
 A Vite + React 19 + TypeScript single-page app, night-harbor themed, talking to
 the `argsea-site-api` Go backend. No router, no UI kit, no rich-text editor.
 
@@ -14,7 +14,7 @@ the `argsea-site-api` Go backend. No router, no UI kit, no rich-text editor.
 | the graveyard | hobby CRUD, retire/revive, suggestion pool |
 | writing desk | note CRUD, plain textarea over `<p>`-wrapped storage |
 | signal flags | the SiteCopy singleton, saved as you type |
-| the figurehead shop | SVG shape editor for the harbor cat: drafts, versions, one published per pose |
+| the carving shop | SVG shape editor for the harbor cat: drafts, versions, one published per pose |
 | the darkroom | media upload/delete with usage badges and detach-on-delete |
 | the keeper | profile fields on the user doc, saved as you type |
 | the lantern | deploy: hoist, poll, rollback; lives in the sidebar |

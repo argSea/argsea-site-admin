@@ -5,7 +5,10 @@
 import { useHarbor } from '../state/harbor';
 import type { Note } from '../lib/api';
 import { ShapeNode } from '../components/ShapeEditor';
+import CatPerch from '../components/CatPerch';
 import './WritingDesk.css';
+
+const CAT_QUIPS = ['i am a doodle.', 'caption: cat, from life.', 'press me into an entry. i dare you.'];
 
 function Row({ note }: { note: Note }) {
 	const h = useHarbor();
@@ -59,7 +62,8 @@ export default function WritingDesk() {
 		: `${published} published. the bar for "blog" is five. ${5 - published} to go, no rush.`;
 
 	return (
-		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+		<div style={{ display: 'flex', flexDirection: 'column', gap: 22, position: 'relative' }}>
+			<CatPerch quips={CAT_QUIPS} style={{ top: -34, right: 202 }} />
 			<div className="screen-head">
 				<div className="screen-head__text">
 					<span className="kicker">the writing desk</span>

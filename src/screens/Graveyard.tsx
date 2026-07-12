@@ -4,8 +4,13 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { Hobby } from '../lib/api';
+import CatPerch from '../components/CatPerch';
 
 const ROW_TILTS = ['-.4deg', '.35deg', '-.25deg', '.45deg', '-.5deg', '.3deg'];
+
+const CAT_QUIPS = [
+	'napping among the stones. respectfully.', 'every keeper buried here fed me once.', 'plot 03 is the warmest. do not tell running.',
+];
 
 function Row({ hobby, index }: { hobby: Hobby; index: number }) {
 	const h = useHarbor();
@@ -17,11 +22,11 @@ function Row({ hobby, index }: { hobby: Hobby; index: number }) {
 				<div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
 					<span className="row-title" style={hobby.active ? { color: 'var(--text-strong)' } : undefined}>{hobby.name}</span>
 					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: hobby.active ? 'var(--periwinkle)' : 'var(--periwinkle-deep)' }}>
-						{hobby.active ? hobby.dates : `${hobby.epitaph} · ${hobby.dates}`}
+						{hobby.active ? `${hobby.service} · ${hobby.char}` : `${hobby.disposition} · ${hobby.service} · ${hobby.marker}`}
 					</span>
 				</div>
 				<span style={{ fontSize: 14.5, color: hobby.active ? 'var(--text-body)' : 'var(--text-dim)', fontStyle: 'italic', lineHeight: 1.5 }}>
-					{hobby.eulogy}
+					{hobby.log}
 				</span>
 			</div>
 			<div className="row-actions">
@@ -54,7 +59,8 @@ export default function Graveyard() {
 	};
 
 	return (
-		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+		<div style={{ display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', paddingBottom: 44 }}>
+			<CatPerch quips={CAT_QUIPS} pose="lying" style={{ bottom: -6, right: 18 }} />
 			<div className="screen-head">
 				<div className="screen-head__text">
 					<span className="kicker">groundskeeping</span>

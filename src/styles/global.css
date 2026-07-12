@@ -32,6 +32,7 @@
 	--periwinkle:       #93a0e8;
 	--periwinkle-deep:  #5f6ec4;
 	--gold:             #f0d9a8;
+	--amber-nudge:      #e9b96e;
 	--btn-text-dark:    #151830;
 	--btn-text-gold:    #1b2033;
 	--danger:           #e08a72;
@@ -328,6 +329,11 @@ textarea::placeholder {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+}
+
+/* the case study's box: gold-tinted, it carries the light's full log */
+.fieldset-dashed--gold {
+	border-color: var(--gold-dash);
 }
 
 .overlay-backdrop {
@@ -825,6 +831,16 @@ textarea::placeholder {
 @keyframes tailSwish {
 	0%, 100% { transform: rotate(0deg); }
 	50%      { transform: rotate(-8deg); }
+}
+
+@keyframes tailDrape {
+	0%, 100% { transform: rotate(0deg); }
+	50%      { transform: rotate(7deg); }
+}
+
+@keyframes blink {
+	0%, 90%, 100% { transform: scaleY(1); }
+	95%           { transform: scaleY(.12); }
 }
 
 /* ---- reduced-motion kill-switch, keep last ---- */

@@ -27,6 +27,21 @@ test('a new light is filed as a draft, defaulting to fixed white and no gallery'
 	expect('image' in create.body).toBe(false);
 });
 
+test('a new light\'s slug rides the create POST (mock-api honors a client-sent slug)', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	await page.getByRole('button', { name: '+ kindle a light' }).click();
+
+	const overlay = page.locator('.overlay-card');
+	await overlay.getByLabel('title').fill('Test Light');
+	await overlay.getByLabel('slug · argsea.com/projects/<slug>').fill('test-light');
+	await overlay.getByRole('button', { name: 'file it' }).click();
+
+	await expect(toast(page)).toHaveText('🕯 a light was kindled, into the rack');
+	const [create] = mock.find('POST', /^\/1\/project\/$/);
+	expect(create.body.slug).toBe('test-light');
+});
+
 test('editing a light preserves the dormant postcard-era fields (full-replace pass-through)', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the light list').click();
@@ -175,14 +190,14 @@ test('extinguishing a light adds a dark chip on the row, orthogonal to publish s
 	await expect(row.getByText('dark · 2025')).toBeVisible();
 });
 
-test('the gallery adds, reorders, and removes prints, and sends images alongside the untouched legacy image', async ({ page }) => {
+test('the pictures box adds prints and sends images alongside the untouched legacy image', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the light list').click();
 	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
 	await row.getByText('edit', { exact: true }).click();
 
 	const overlay = page.locator('.overlay-card');
-	// unmonolith-diagram.png already leads the gallery (seeded); add the second print
+	// unmonolith-diagram.png already leads the archive (seeded); add a second print
 	await expect(overlay.getByText('unmonolith-diagram.png')).toBeVisible();
 	await overlay.getByText('homelab-rack.jpg', { exact: true }).click();
 
@@ -191,8 +206,124 @@ test('the gallery adds, reorders, and removes prints, and sends images alongside
 
 	const [put] = mock.find('PUT', /^\/1\/project\/p1$/);
 	expect(put.body.images).toEqual(['unmonolith-diagram.png', 'homelab-rack.jpg']);
-	// the legacy single print is untouched pass-through, not re-derived from the gallery
+	// the legacy single print is untouched pass-through, not re-derived from the archive
 	expect(put.body.image).toBe('unmonolith-diagram.png');
+});
+
+test('the pictures box marks the first picture as the entry photo and caps the archive at six', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	// Meo Wave Race starts with no pictures; there are 7 seeded prints, one over the cap
+	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	const box = overlay.locator('.fieldset-dashed', { hasText: 'the pictures' });
+	for (const name of ['meo-wave-title.png', 'meo-wave-track1.png', 'meo-wave-track2.png', 'meo-wave-track3.png', 'meo-wave-track4.png', 'unmonolith-diagram.png']) {
+		await box.getByText(name, { exact: true }).click();
+	}
+	// six aboard, the entry photo marker sits on the first one added
+	await expect(box.getByText('⚑ entry photo')).toBeVisible();
+	// capped: the seventh, untouched print never gets an "add" thumbnail once full
+	await expect(box.getByText('homelab-rack.jpg', { exact: true })).toHaveCount(0);
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	const [put] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect(put.body.images).toEqual([
+		'meo-wave-title.png', 'meo-wave-track1.png', 'meo-wave-track2.png',
+		'meo-wave-track3.png', 'meo-wave-track4.png', 'unmonolith-diagram.png',
+	]);
+});
+
+test('removing a picture via ✕ leaves it out of the saved payload', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'The Great Un-monolithing' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	const box = overlay.locator('.fieldset-dashed', { hasText: 'the pictures' });
+	// unmonolith-diagram.png is the only picked print (seeded), so one del button
+	await expect(box.locator('.print-del')).toHaveCount(1);
+	await box.locator('.print-del').click();
+	await expect(box.locator('.print-del')).toHaveCount(0);
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('🕯 the light was filed');
+
+	const [put] = mock.find('PUT', /^\/1\/project\/p1$/);
+	expect(put.body.images).toEqual([]);
+});
+
+test('the pictures box search filters the archive client-side', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	const box = overlay.locator('.fieldset-dashed', { hasText: 'the pictures' });
+	await box.getByPlaceholder('search prints...').fill('meo-wave');
+	await expect(box.getByText('meo-wave-title.png')).toBeVisible();
+	await expect(box.getByText('homelab-rack.jpg', { exact: true })).toHaveCount(0);
+});
+
+test('the facts editor adds heading/fact rows and caps at six', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	const box = overlay.locator('.fieldset-dashed', { hasText: 'the facts' });
+	for (let i = 0; i < 6; i++) {
+		await box.getByText('+ add a fact').click();
+	}
+	// six filed, the add chip is gone
+	await expect(box.getByText('+ add a fact')).toHaveCount(0);
+	await expect(box.locator('input[placeholder="ownership"]')).toHaveCount(6);
+
+	await box.locator('input[placeholder="ownership"]').first().fill('ownership');
+	await box.locator('input[placeholder="design to operations, solo"]').first().fill('design to operations, solo');
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	const [put] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect(put.body.facts).toHaveLength(6);
+	expect(put.body.facts[0]).toEqual({ heading: 'ownership', fact: 'design to operations, solo' });
+});
+
+test('the notes-found-here tie picker writes noteIds both ways and the amber nudge clears once tied', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	// Meo Wave Race starts with no ties and no case study: the nudge should show
+	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	await expect(overlay.getByText('no note, no full log')).toBeVisible();
+
+	await overlay.locator('.fieldset-dashed', { hasText: 'notes found here' }).getByPlaceholder('search the book...').fill('queue');
+	await overlay.getByText('+ The queue is the product').click();
+	await expect(overlay.getByText('✓ The queue is the product · ✕')).toBeVisible();
+	await expect(overlay.getByText('no note, no full log')).toHaveCount(0);
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('🕯 the light was filed');
+
+	const [put] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect(put.body.noteIds).toEqual(['n1']);
+
+	// the other direction: the writing desk's "kept in" box reflects the tie,
+	// keyed by the note's stable id, and untying there writes the project back
+	await nav(page, 'writing desk').click();
+	await page.locator('.note-row', { hasText: 'The queue is the product' }).getByText('edit', { exact: true }).click();
+	const noteOverlay = page.locator('.overlay-card');
+	const keptIn = noteOverlay.getByRole('button', { name: 'Meo Wave Race' });
+	await expect(keptIn).toHaveAttribute('aria-pressed', 'true');
+	await keptIn.click();
+	await expect.poll(() => mock.find('PUT', /^\/1\/project\/p2$/).length).toBe(2);
+	const [, untie] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect(untie.body.noteIds).toEqual([]);
 });
 
 test('the publish pill goes through the lifecycle endpoint, not PUT', async ({ page }) => {
@@ -204,6 +335,21 @@ test('the publish pill goes through the lifecycle endpoint, not PUT', async ({ p
 	await expect(row.getByText('● published')).toBeVisible();
 	expect(mock.find('POST', /^\/1\/project\/p3\/publish$/)).toHaveLength(1);
 	expect(mock.find('PUT', /^\/1\/project\/p3$/)).toHaveLength(0);
+});
+
+test('the flagship toggle flips aria-pressed and rides a real PUT with the new value', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'The home lab' });
+	const flag = row.getByRole('button', { name: /flagship/ });
+	await expect(flag).toHaveAttribute('aria-pressed', 'false');
+
+	await flag.click();
+	await expect(toast(page)).toHaveText('⚑ flagship run up the mast');
+	await expect(flag).toHaveAttribute('aria-pressed', 'true');
+
+	const [put] = mock.find('PUT', /^\/1\/project\/p3$/);
+	expect(put.body.flagship).toBe(true);
 });
 
 test('the front window only fits three', async ({ page }) => {

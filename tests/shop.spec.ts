@@ -4,7 +4,7 @@ import { signIn, nav, toast } from './office';
 
 test('the shelf lists both poses, seeds published and marked', async ({ page }) => {
 	await signIn(page);
-	await nav(page, 'the figurehead shop').click();
+	await nav(page, 'the carving shop').click();
 
 	const perched = page.locator('.card', { hasText: 'Perched' });
 	const lying = page.locator('.card', { hasText: 'Lying' });
@@ -25,7 +25,7 @@ test('the shelf lists both poses, seeds published and marked', async ({ page }) 
 
 test('rename rides a full PUT that only changes the label', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'the figurehead shop').click();
+	await nav(page, 'the carving shop').click();
 
 	// the row's title becomes the input, so the row no longer matches by text;
 	// while renaming, the shelf holds exactly one design-label input
@@ -44,7 +44,7 @@ test('rename rides a full PUT that only changes the label', async ({ page }) => 
 
 test('delete honors the seed and published guards, scraps a draft', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'the figurehead shop').click();
+	await nav(page, 'the carving shop').click();
 
 	// a seed's delete is barred outright
 	const seedRow = page.locator('.card', { hasText: 'Perched' }).locator('.shelf-row', { hasText: 'v1' });
@@ -61,7 +61,7 @@ test('delete honors the seed and published guards, scraps a draft', async ({ pag
 
 test('publish arms a confirm naming the swap, then swaps the pill', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'the figurehead shop').click();
+	await nav(page, 'the carving shop').click();
 
 	const perched = page.locator('.card', { hasText: 'Perched' });
 	const draftRow = perched.locator('.shelf-row', { hasText: 'second fitting' });

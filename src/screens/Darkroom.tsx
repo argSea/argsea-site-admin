@@ -7,8 +7,10 @@ import type { DragEvent } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { MediaItem } from '../lib/api';
 import { mediaUrl } from '../lib/api';
+import CatPerch from '../components/CatPerch';
 
 const TILE_TILTS = ['-1.2deg', '.9deg', '-.6deg', '1.1deg', '-.9deg', '.7deg'];
+const CAT_QUIPS = ['search results: one (1) cat.', 'the query box is warm.', 'filters: fur, whiskers.'];
 
 function Tile({ print, index }: { print: MediaItem; index: number }) {
 	const h = useHarbor();
@@ -49,6 +51,7 @@ function Tile({ print, index }: { print: MediaItem; index: number }) {
 export default function Darkroom() {
 	const h = useHarbor();
 	const [dragging, setDragging] = useState(false);
+	const [q, setQ] = useState('');
 	const fileInput = useRef<HTMLInputElement>(null);
 
 	const drop = (event: DragEvent) => {
@@ -57,14 +60,25 @@ export default function Darkroom() {
 		void h.developPrints(event.dataTransfer?.files ?? []);
 	};
 
+	const query = q.trim().toLowerCase();
+	const tiles = query ? h.prints.filter((print) => print.filename.toLowerCase().includes(query)) : h.prints;
+	const countLine = query
+		? `${tiles.length} of ${h.prints.length} prints match.`
+		: `${h.prints.length} prints hanging to dry.`;
+
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
 			<div className="screen-head">
 				<div className="screen-head__text">
 					<span className="kicker">the darkroom</span>
 					<span className="page-title">Prints &amp; scans</span>
-					<span className="page-sub">{h.prints.length} prints hanging to dry. Handle by the edges.</span>
+					<span className="page-sub">{countLine} Handle by the edges.</span>
 				</div>
+				<span style={{ position: 'relative', flex: '0 1 240px', display: 'inline-flex' }}>
+					<CatPerch quips={CAT_QUIPS} pose="lying" style={{ top: -36, right: 14 }} />
+					<input type="text" className="input" style={{ borderRadius: 999, padding: '10px 16px', fontSize: 12.5 }}
+						placeholder="search the prints..." value={q} onChange={(e) => setQ(e.target.value)} />
+				</span>
 				<button className="btn" onClick={() => fileInput.current?.click()}>+ develop a print</button>
 				<input type="file" accept="image/*" multiple ref={fileInput} style={{ display: 'none' }}
 					onChange={(e) => { void h.developPrints(e.target.files ?? []); e.target.value = ''; }} />
@@ -87,10 +101,14 @@ export default function Darkroom() {
 					</span>
 				</div>
 
-				{h.prints.map((print, index) => (
+				{tiles.map((print, index) => (
 					<Tile key={print.id} print={print} index={index} />
 				))}
 			</div>
+
+			{query && tiles.length === 0 && (
+				<span className="footnote" style={{ fontStyle: 'italic' }}>nothing in the darkroom matches.</span>
+			)}
 
 			<span className="footnote">// originals live in the media store. these are the harbor copies.</span>
 		</div>

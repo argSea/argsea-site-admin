@@ -37,6 +37,12 @@ export interface Stamp {
 export type LightKind = 'fixed' | 'flash' | 'occult' | 'iso' | 'quick' | 'veryquick' | 'morse';
 export type LightColor = 'white' | 'red' | 'green';
 
+// A fact chip on a light's full entry: heading over fact, keeper's own words.
+export interface Fact {
+	heading: string;
+	fact:    string;
+}
+
 // A light's navigational characteristic: how it burns on the coast. Period is
 // the seconds one full cycle takes for the kinds whose rhythm the keeper
 // dials in; fixed has none, and quick/veryquick blink at rates set by
@@ -64,11 +70,15 @@ export interface Project {
 	postcardTo:   string;       // dormant postcard-era field, pass-through only
 	postcardFrom: string;       // dormant postcard-era field, pass-through only
 	postmarked:   string;       // dormant postcard-era field, pass-through only
-	slug:         string;
+	slug:         string;               // argsea.com/projects/<slug>, keeper-set, stable and unique
 	image:        string | null;       // dormant single-print field, pass-through only
 	stamp?:       Stamp | null;        // dormant postcard-era field, pass-through only
 	light:        Light | null;        // arrives null, not undefined; null burns as fixed white
-	images:       string[] | null;     // gallery media names, first print leads; null like tags
+	images:       string[] | null;     // gallery media names, first print leads, max 6; null like tags
+	facts:        Fact[] | null;       // up to 6 heading/fact pairs, shown on the full entry; null like tags
+	caseStudy:    string;              // the full log, markdown in the keeper's dialect
+	noteIds:      string[] | null;     // tied notes, by stable id; the tie also renders on the note; null like tags
+	flagship:     boolean;             // site-side convention: exactly one flagship: admin only hints, never enforces
 	firstLit:     string;
 	order:        number;
 	wallPos?:     { x: number; y: number; rotation: number } | null;
@@ -94,17 +104,31 @@ export interface Note {
 	updatedAt:     string;
 }
 
+// How a resting hobby's plot is kept; 'lamp' marks a still-lit one and never
+// shows in the marker picker (the living don't get markers).
+export type Marker = 'stone' | 'sticks' | 'driftwood' | 'cairn' | 'buoy' | 'lamp';
+
 export interface Hobby {
-	id:        string;
-	name:      string;
-	dates:     string;
-	active:    boolean;
-	epitaph:   string;
-	eulogy:    string;
-	tags:      string[];
-	order:     number;
-	createdAt: string;
-	updatedAt: string;
+	id:          string;
+	name:        string;
+	dates:       string;    // dormant, superseded by `service`
+	active:      boolean;   // the standing toggle: true = currently learning
+	epitaph:     string;    // dormant, superseded by `disposition`
+	eulogy:      string;    // dormant, superseded by `log`/`lastLog`
+	tags:        string[];  // dormant
+	service:     string;    // "2023 - 2024" · how long the keeper kept at it
+	char:        string;    // freeform light characteristic, e.g. "Fl W 3s"
+	marker:      Marker;    // how the plot is kept; only picked once resting
+	wear:        number;    // 0..1, weathering on the stone
+	disposition: string;    // the status pill, freeform
+	log:         string;    // from the log · the register line
+	lastLog:     string;    // final entry, quoted on the record
+	found:       string;    // what was found
+	cause:       string;    // cause of vanishing
+	return:      string;    // re-appointment odds
+	order:       number;
+	createdAt:   string;
+	updatedAt:   string;
 }
 
 export interface Suggestion {

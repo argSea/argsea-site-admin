@@ -6,8 +6,13 @@ import { useHarbor } from '../state/harbor';
 import { dateLine, greeting, pickWeatherLine } from '../lib/whimsy';
 import { relativeTime } from '../lib/time';
 import { Boat, Fish } from '../components/art';
+import CatPerch from '../components/CatPerch';
 
 const STAT_TILTS = ['-.6deg', '.4deg', '-.3deg', '.5deg'];
+
+const CAT_QUIPS = [
+	'almost had it.', 'the fish owes me money.', 'the traffic can wait. the fish cannot.', 'two jumped. zero landed. rigged.',
+];
 
 // Each log family wears its screen's glyph so the keeper's log reads at a
 // glance; the figurehead lines arrive from the API and get a face here.
@@ -100,7 +105,8 @@ export default function WatchRoom() {
 					</div>
 				</div>
 
-				<div className="card tilt" style={{ '--tilt': '.25deg', display: 'flex', flexDirection: 'column', gap: 13 } as React.CSSProperties}>
+				<div className="card tilt" style={{ '--tilt': '.25deg', display: 'flex', flexDirection: 'column', gap: 13, position: 'relative' } as React.CSSProperties}>
+					<CatPerch quips={CAT_QUIPS} style={{ top: -46, right: 26 }} />
 					<span className="card-kicker">harbor traffic · this week</span>
 					<div style={{ display: 'flex', alignItems: 'flex-end', gap: 7, height: 64 }}>
 						{TRAFFIC.map((bar) => (

@@ -12,6 +12,9 @@ import {
 	scaleShape, segmentCtrl, serializePath, shapeBox, splitSegment, translateShape,
 } from '../lib/shapes';
 import { ShapeNode } from './ShapeEditor';
+import CatPerch from './CatPerch';
+
+const CAT_QUIPS = ['the inks are guarded.', 'dip nothing. ask first.', 'i drank the periwinkle. it was fine.'];
 
 export interface DoodleEditorDoc {
 	id:      string | null;
@@ -838,7 +841,8 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 				</div>
 
 				<aside className="doodle-side">
-					<div className="card card--alt doodle-panel">
+					<div className="card card--alt doodle-panel" style={{ position: 'relative' }}>
+						<CatPerch quips={CAT_QUIPS} style={{ top: 4, right: 8 }} />
 						<span className="card-kicker" style={{ fontSize: 10.5 }}>the inkwells</span>
 
 						<span className="field-label">fill</span>

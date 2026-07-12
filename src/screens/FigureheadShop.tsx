@@ -7,7 +7,10 @@ import type { FigureheadDesign, FigureheadPose } from '../lib/api';
 import { relativeTime } from '../lib/time';
 import ShapeEditor, { ShapeNode } from '../components/ShapeEditor';
 import type { EditorDoc } from '../components/ShapeEditor';
+import CatPerch from '../components/CatPerch';
 import './FigureheadShop.css';
+
+const CAT_QUIPS = ['supervising.', 'carve nothing without me.', 'approval pending. indefinitely.'];
 
 const POSES: { pose: FigureheadPose; title: string; blurb: string; viewBox: string }[] = [
 	{ pose: 'perched', title: 'Perched', blurb: 'front paws on an edge, tail swaying over the side', viewBox: '0 0 64 74' },
@@ -116,10 +119,11 @@ export default function FigureheadShop() {
 	}
 
 	return (
-		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+		<div style={{ display: 'flex', flexDirection: 'column', gap: 22, position: 'relative' }}>
+			<CatPerch quips={CAT_QUIPS} style={{ top: -10, right: 22 }} />
 			<div className="screen-head__text" style={{ animation: 'fadeUp .7s ease .05s both' }}>
-				<span className="kicker">at the bow</span>
-				<span className="page-title">The Figurehead Shop</span>
+				<span className="kicker">the carvings</span>
+				<span className="page-title">The carving shop</span>
 				<span className="page-sub">Where the harbor cat gets carved. Draft freely; the site only takes the published design of each pose, and only on the next hoist.</span>
 			</div>
 

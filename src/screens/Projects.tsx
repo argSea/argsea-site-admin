@@ -7,9 +7,12 @@ import type { Project } from '../lib/api';
 import { printBackground } from '../lib/prints';
 import { codeFor, DEFAULT_LIGHT, GLOW_RGB } from '../lib/lightChar';
 import Lamp from '../components/Lamp';
+import CatPerch from '../components/CatPerch';
 import ProjectWall from './ProjectWall';
 
 const ROW_TILTS = ['-.4deg', '.35deg', '-.25deg', '.45deg', '-.5deg', '.3deg'];
+
+const CAT_QUIPS = ['front window seat. as featured.', 'do not rotate me out.', 'three spots, and i count as zero.'];
 
 function Row({ project, index }: { project: Project; index: number }) {
 	const h = useHarbor();
@@ -44,6 +47,11 @@ function Row({ project, index }: { project: Project; index: number }) {
 				<span className={`pill ${project.featured ? 'pill--on' : 'pill--feat-off'}`} onClick={() => h.toggleFeatured(project)}>
 					{project.featured ? '★ in the window' : '☆ feature'}
 				</span>
+				<button type="button" aria-pressed={project.flagship}
+					className={`pill ${project.flagship ? 'pill--on' : 'pill--feat-off'}`}
+					onClick={() => { void h.toggleFlagship(project); }}>
+					{project.flagship ? '⚑ flagship' : '⚐ flagship'}
+				</button>
 				{light.extinguished && (
 					<span className="pill pill--off" title="extinguished · content, not visibility">dark · {light.extinguished}</span>
 				)}
@@ -67,6 +75,7 @@ export default function Projects() {
 	const published = h.projects.filter((p) => p.status === 'published').length;
 	const drafts = h.projects.length - published;
 	const featured = h.projects.filter((p) => p.featured);
+	const flagshipCount = h.projects.filter((p) => p.flagship).length;
 
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -92,8 +101,9 @@ export default function Projects() {
 				<>
 					<div className="card card--gold tilt" style={{
 						'--tilt': '.3deg', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12,
-						animation: 'fadeUp .7s ease .1s both',
+						animation: 'fadeUp .7s ease .1s both', position: 'relative',
 					} as React.CSSProperties}>
+						<CatPerch quips={CAT_QUIPS} bubbleSide="right" style={{ top: -26, left: 40 }} />
 						<div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
 							<span className="card-kicker card-kicker--gold">in the front window · featured on the home page</span>
 							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>{featured.length} of 3 spots filled</span>
@@ -112,6 +122,14 @@ export default function Projects() {
 							)}
 						</div>
 					</div>
+
+					{flagshipCount !== 1 && (
+						<span className="footnote" style={{ color: 'var(--gold)' }}>
+							◐ {flagshipCount === 0
+								? 'no flagship picked yet · the coast wants exactly one to lead'
+								: `${flagshipCount} lights flagged as flagship · the coast only flies one`}
+						</span>
+					)}
 
 					<div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp .7s ease .15s both' }}>
 						{h.projects.map((project, index) => (

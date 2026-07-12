@@ -8,9 +8,11 @@ import { relativeTime } from '../lib/time';
 import { ShapeNode } from '../components/ShapeEditor';
 import DoodleEditor from '../components/DoodleEditor';
 import type { DoodleEditorDoc } from '../components/DoodleEditor';
+import CatPerch from '../components/CatPerch';
 import './Marginalia.css';
 
 const DOODLE_VIEWBOX = '0 0 100 100';
+const CAT_QUIPS = ['the inks are guarded.', 'draw around me.', 'i drank the periwinkle. it was fine.'];
 
 const byRecent = (a: Doodle, b: Doodle): number => b.updatedAt.localeCompare(a.updatedAt);
 
@@ -87,7 +89,8 @@ export default function Marginalia() {
 			</div>
 
 			<div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp .7s ease .15s both' }}>
-				<div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+				<div style={{ position: 'relative', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+					<CatPerch quips={CAT_QUIPS} style={{ top: -58, right: 26 }} />
 					<span style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--text-strong)' }}>the desk</span>
 					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 						{doodles.length} sketch{doodles.length === 1 ? '' : 'es'}

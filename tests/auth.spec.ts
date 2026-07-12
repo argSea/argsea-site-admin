@@ -2,6 +2,14 @@ import { test, expect } from '@playwright/test';
 import { MockApi } from './mock-api';
 import { signIn, nav, toast } from './office';
 
+test('the door reads The Keeper\'s Office, not the retired harbormaster name', async ({ page }) => {
+	const mock = new MockApi();
+	await mock.install(page);
+	await page.goto('/');
+	await expect(page.getByText("The Keeper's Office")).toBeVisible();
+	await expect(page.getByText("The Harbormaster's Office")).toHaveCount(0);
+});
+
 test('empty fields get the door microcopy', async ({ page }) => {
 	const mock = new MockApi();
 	await mock.install(page);
@@ -52,9 +60,9 @@ test('a stowed token is revalidated on boot', async ({ page }) => {
 test('go ashore drops the token and returns to the door', async ({ page }) => {
 	const mock = await signIn(page);
 	await page.getByText('← go ashore').click();
-	await expect(page.getByText("The Harbormaster's Office")).toBeVisible();
+	await expect(page.getByText("The Keeper's Office")).toBeVisible();
 	expect(mock.find('GET', /^\/1\/auth\/logout\/$/)).toHaveLength(1);
 	// the stowed session is gone; a reload stays at the door
 	await page.reload();
-	await expect(page.getByText("The Harbormaster's Office")).toBeVisible();
+	await expect(page.getByText("The Keeper's Office")).toBeVisible();
 });
