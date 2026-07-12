@@ -713,12 +713,19 @@ export class MockApi {
 				if (doc.builtin && (body.name !== doc.name || body.svg !== doc.svg)) {
 					return json(409, { status: 'error', code: 409, message: 'a builtin carving keeps its name and svg' });
 				}
+				// a bolted carving is live markup on the site; it cannot go blank
+				if (doc.boltedTo.length && !String(body.svg ?? '').trim()) {
+					return json(409, { status: 'error', code: 409, message: 'a bolted carving cannot go blank, unbolt the spot first' });
+				}
 				doc.name = doc.builtin ? doc.name : body.name;
 				doc.svg = doc.builtin ? doc.svg : body.svg;
 				doc.updatedAt = now();
 				return json(200, doc);
 			}
 			if (method === 'DELETE') {
+				if (doc.boltedTo.length) {
+					return json(409, { status: 'error', code: 409, message: 'unbolt it before scrapping it' });
+				}
 				this.carvings = this.carvings.filter((c) => c.id !== doc.id);
 				return json(200, { status: 'ok', code: 200 });
 			}

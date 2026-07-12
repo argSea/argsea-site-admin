@@ -1160,6 +1160,12 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				if (!current) {
 					return null;
 				}
+				// the API's 409 guard, honored before the wire: a bolted carving
+				// is live markup on the site, blanking it would ship a hole
+				if (current.boltedTo.length && !fields.svg.trim()) {
+					showToast('⚠ a bolted carving cannot go blank, unbolt the spot first');
+					return null;
+				}
 				saved = await api.carvings.update(id, { ...current, ...fields });
 				showToast('⚒ carving saved to the bench');
 			} else {
@@ -1184,6 +1190,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			return;
 		}
 		if (c.boltedTo.includes(spot)) {
+			const label = CARVING_CATALOG.find((entry) => entry.id === spot)?.name ?? spot;
+			showToast(`⚒ "${c.name}" already holds ${label.toLowerCase()}. the bolt is tight.`);
 			return;
 		}
 		try {
