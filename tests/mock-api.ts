@@ -47,6 +47,10 @@ export class MockApi {
 	copyPredatesCove = false;
 	// ms to hold the copy PUT response; lets a spec type over an in-flight save
 	copyPutLatency = 0;
+	// the sightings route is new: an API deployed before it 404s (deploy skew),
+	// and trafficBroken forces a 500 so specs can drive the error path
+	trafficMounted = true;
+	trafficBroken = false;
 
 	projects: Doc[] = [
 		{
@@ -343,6 +347,34 @@ export class MockApi {
 	};
 
 	lantern: Doc = { state: 'idle', startedAt: '', finishedAt: '', lastHoistedAt: LAST_HOISTED, output: '' };
+
+	// A week of sightings, zero-filled oldest-to-newest. Thursday (2026-07-09)
+	// is the busiest day by sails, so it leads the bars; uniques carries a comma
+	// so the tile exercises locale formatting; the tops name real seeded ids the
+	// admin resolves to titles.
+	traffic: Doc = {
+		uniques: 1204,
+		sails: 3218,
+		days: [
+			{ day: '2026-07-06', sails: 420, uniques: 300 },
+			{ day: '2026-07-07', sails: 512, uniques: 360 },
+			{ day: '2026-07-08', sails: 388, uniques: 270 },
+			{ day: '2026-07-09', sails: 640, uniques: 430 },
+			{ day: '2026-07-10', sails: 470, uniques: 320 },
+			{ day: '2026-07-11', sails: 300, uniques: 210 },
+			{ day: '2026-07-12', sails: 488, uniques: 330 },
+		],
+		busiest: 'thursday',
+		topPostcard: { subject: 'p2', flips: 214 },
+		topNote: { subject: 'n1', reads: 178 },
+		topHobby: { subject: 'h3', visits: 96 },
+		ports: [
+			{ port: 'search', share: 44 },
+			{ port: 'direct', share: 31 },
+			{ port: 'fediverse', share: 25 },
+		],
+		bottles: 428,
+	};
 
 	private nextId = 100;
 	private lanternPolls = 0;
@@ -735,6 +767,17 @@ export class MockApi {
 		if (/^\/1\/activity\/?$/.test(path) && method === 'GET') {
 			const limit = Number(url.searchParams.get('limit')) || 6;
 			return json(200, this.activity.slice(0, limit));
+		}
+
+		// ---- sightings (the watch room's first-party analytics) ----
+		if (/^\/1\/sighting\/traffic\/?$/.test(path) && method === 'GET') {
+			if (!this.trafficMounted) {
+				return json(404, { message: '404 page not found' });
+			}
+			if (this.trafficBroken) {
+				return json(500, { status: 'error', code: 500, message: 'the glass fogged over' });
+			}
+			return json(200, this.traffic);
 		}
 
 		// ---- media ----
