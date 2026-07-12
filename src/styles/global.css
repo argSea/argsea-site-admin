@@ -461,7 +461,7 @@ textarea::placeholder {
 }
 
 /* two-shelf rack row: content shelf, divider, action tray. Scoped to the
-   modifier so WritingDesk/Graveyard/FigureheadShop keep the plain content-row. */
+   modifier so WritingDesk/Graveyard keep the plain content-row. */
 .content-row--racked {
 	flex-direction: column;
 	align-items: stretch;
