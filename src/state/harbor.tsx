@@ -8,7 +8,7 @@ import * as api from '../lib/api';
 import type {
 	ActivityEntry, Carving, Category, CopyTextField, Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose, Hobby,
 	KeeperProfile, LanternStatus, Light, Lighthouse, Marker, MediaItem, Note, Project, Revision, Shape,
-	SiteCopy, Suggestion,
+	SiteCopy, Suggestion, TrafficReport,
 } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { DEFAULT_LIGHT } from '../lib/lightChar';
@@ -318,6 +318,7 @@ interface HarborValue {
 	designs:     FigureheadDesign[];
 	doodles:     Doodle[];
 	carvings:    Carving[];
+	traffic:     TrafficReport | null;
 
 	keeperName: string;
 	dirtyCount: number;
@@ -418,6 +419,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [designs, setDesigns] = useState<FigureheadDesign[]>([]);
 	const [doodles, setDoodles] = useState<Doodle[]>([]);
 	const [carvings, setCarvings] = useState<Carving[]>([]);
+	const [traffic, setTraffic] = useState<TrafficReport | null>(null);
 
 	const [toast, setToast] = useState<string | null>(null);
 	const [confirmKey, setConfirmKey] = useState<string | null>(null);
@@ -502,6 +504,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.carvings.list().then(setCarvings).catch(oops);
 		api.getCopy().then((doc) => setCopy(seedCove(doc))).catch(() => setCopy(EMPTY_COPY));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
+		// deploy skew or a quiet sea: a 404/error leaves the report null and the
+		// watch room fails soft, so swallow it like the log does
+		api.traffic().then(setTraffic).catch(() => { /* stay null; the glass reads quiet */ });
 		refreshActivity();
 		refreshLantern();
 	}, [oops, refreshActivity, refreshLantern]);
@@ -1341,7 +1346,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	const value: HarborValue = {
 		session, booting, screen, goTo, signIn, goAshore,
-		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs, doodles, carvings,
+		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs, doodles, carvings, traffic,
 		keeperName, dirtyCount,
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchLight, loadRevision, saveEdit, cancelEdit,

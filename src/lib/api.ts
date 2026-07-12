@@ -517,6 +517,47 @@ export function listActivity(limit: number): Promise<ActivityEntry[]> {
 	return request<ActivityEntry[]>('GET', `/1/activity/?limit=${limit}`);
 }
 
+// ---- the watch room's sightings aggregate ----
+
+export interface TrafficDay {
+	day:     string;   // YYYY-MM-DD, oldest-to-newest, zero-filled
+	sails:   number;
+	uniques: number;
+}
+
+export interface TopPostcard {
+	subject: string;   // a project id; the admin resolves the title from its store
+	flips:   number;
+}
+
+export interface TopNote {
+	subject: string;   // a note id; the admin resolves the title from its store
+	reads:   number;
+}
+
+export interface TrafficPort {
+	port:  string;
+	share: number;     // integer percentage
+}
+
+// The sightings API's first-party aggregate over the last `days`. `busiest` is
+// a lowercase weekday name, empty on an empty window; the tops are null when
+// nothing was flipped or read. Deploy skew is expected: an API that predates
+// this route 404s, so the watch room reads it fail-soft.
+export interface TrafficReport {
+	uniques:     number;
+	sails:       number;
+	days:        TrafficDay[];
+	busiest:     string;
+	topPostcard: TopPostcard | null;
+	topNote:     TopNote | null;
+	ports:       TrafficPort[];
+}
+
+export function traffic(days = 7): Promise<TrafficReport> {
+	return request<TrafficReport>('GET', `/1/sighting/traffic?days=${days}`);
+}
+
 // ---- media (the darkroom) ----
 
 export const media = {

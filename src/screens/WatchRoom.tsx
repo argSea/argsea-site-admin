@@ -1,6 +1,9 @@
-// The watch room. Greeting and stats are live; the harbor-traffic panel renders
-// the design's hardcoded theater values (analytics parked per operator ruling,
-// 2026-07-05), as do the "ships sighted"/"uptime" tiles and harbor conditions.
+// The watch room. The greeting, the tiles, and the harbor-traffic card all read
+// live now: ships-sighted and the traffic card ride the sightings API, while
+// notes/lights/graveyard come off the harbor store. Only the weather line stays
+// local whimsy, reporting on no real sea. Every read fails soft, so a report
+// that is still loading, errored, or served by an API too old to know the route
+// leaves quiet placeholders instead of a broken board.
 import { useMemo } from 'react';
 import { useHarbor } from '../state/harbor';
 import { dateLine, greeting, pickWeatherLine } from '../lib/whimsy';
@@ -22,21 +25,35 @@ const LOG_GLYPHS: Record<string, string> = {
 	user: '☸', lantern: '☀', figurehead: '♆', carving: '⚒',
 };
 
-const TRAFFIC = [
-	{ d: 'mon', v: 142 }, { d: 'tue', v: 180 }, { d: 'wed', v: 121 }, { d: 'thu', v: 238 },
-	{ d: 'fri', v: 164 }, { d: 'sat', v: 98 }, { d: 'sun', v: 187 },
-];
+// A stat with no number to show yet reads quiet, not blank.
+const QUIET_VALUE = '· · ·';
+
+// The day the API dates in the traffic window, worn as a weekday on the bar's
+// hover; parsed as a local date so the label never slides across a timezone.
+function weekdayOf(isoDay: string): string {
+	const [y, m, d] = isoDay.split('-').map(Number);
+	return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+}
 
 export default function WatchRoom() {
 	const h = useHarbor();
 	const weather = useMemo(pickWeatherLine, []);
 
 	const pubProjects = h.projects.filter((p) => p.status === 'published').length;
+	const pubNotes = h.notes.filter((n) => n.status === 'published').length;
 	const resting = h.hobbies.filter((x) => !x.active).length;
 
+	const t = h.traffic;
+	const maxSails = t ? Math.max(1, ...t.days.map((d) => d.sails)) : 1;
+	const lightTitle = (id: string): string => h.projects.find((p) => p.id === id)?.title ?? 'an unlisted light';
+	const noteTitle = (id: string): string => h.notes.find((n) => n.id === id)?.title ?? 'a stray note';
+
 	const stats = [
-		{ label: 'ships sighted', value: '1,204', sub: 'visitors this week. one was mom.' },
-		{ label: 'lighthouse uptime', value: '99.98%', sub: 'the .02 was planned. mostly.' },
+		{
+			label: 'ships sighted', value: t ? t.uniques.toLocaleString() : QUIET_VALUE,
+			sub: t ? 'visitors this week. one was mom.' : 'the sea is quiet. no count yet.',
+		},
+		{ label: 'notes posted', value: `${pubNotes} / ${h.notes.length}`, sub: 'posted / at the desk' },
 		{ label: 'lights burning', value: `${pubProjects} / ${h.projects.length}`, sub: 'lit / on the list' },
 		{ label: 'graveyard census', value: String(resting), sub: 'resting. none dead.' },
 	];
@@ -109,40 +126,43 @@ export default function WatchRoom() {
 				<div className="card tilt" style={{ '--tilt': '.25deg', display: 'flex', flexDirection: 'column', gap: 13, position: 'relative' } as React.CSSProperties}>
 					<CatPerch quips={CAT_QUIPS} style={{ top: -46, right: 26 }} />
 					<span className="card-kicker">harbor traffic · this week</span>
-					<div style={{ display: 'flex', alignItems: 'flex-end', gap: 7, height: 64 }}>
-						{TRAFFIC.map((bar) => (
-							<div key={bar.d} title={`${bar.d} · ${bar.v} ships`} style={{
-								flex: 1, height: `${Math.round((bar.v / 238) * 100)}%`, minHeight: 6,
-								borderRadius: '3px 3px 0 0',
-								background: bar.v === 238 ? 'linear-gradient(180deg,#f0d9a8,#8f7f4d)' : 'linear-gradient(180deg,#93a0e8,#3b4374)',
-							}} />
-						))}
-					</div>
-					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>1,204 ships sighted · busiest: thursday</span>
-					<div style={{ display: 'flex', flexDirection: 'column', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 12.5, lineHeight: 1.7, borderTop: '1px solid var(--border-hair)', paddingTop: 11 }}>
-						<span style={{ color: 'var(--text-body)' }}>top postcard · <span style={{ color: 'var(--gold)' }}>"Meo Wave Race", 214 flips</span></span>
-						<span style={{ color: 'var(--text-body)' }}>top note · <span style={{ color: 'var(--text-soft)' }}>"The queue is the product", 178 reads</span></span>
-						<span style={{ color: 'var(--text-body)' }}>ports of origin · <span style={{ color: 'var(--text-soft)' }}>search 44% · direct 31% · fediverse 25%</span></span>
-					</div>
+					{t ? (
+						<>
+							<div style={{ display: 'flex', alignItems: 'flex-end', gap: 7, height: 64 }}>
+								{t.days.map((d) => (
+									<div key={d.day} title={`${weekdayOf(d.day)} · ${d.sails} ships`} style={{
+										flex: 1, height: `${Math.round((d.sails / maxSails) * 100)}%`, minHeight: 6,
+										borderRadius: '3px 3px 0 0',
+										background: d.sails === maxSails ? 'linear-gradient(180deg,#f0d9a8,#8f7f4d)' : 'linear-gradient(180deg,#93a0e8,#3b4374)',
+									}} />
+								))}
+							</div>
+							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
+								{t.sails.toLocaleString()} ships sighted · busiest: {t.busiest || 'a quiet week'}
+							</span>
+							<div style={{ display: 'flex', flexDirection: 'column', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 12.5, lineHeight: 1.7, borderTop: '1px solid var(--border-hair)', paddingTop: 11 }}>
+								<span style={{ color: 'var(--text-body)' }}>top postcard · <span style={{ color: 'var(--gold)' }}>
+									{t.topPostcard ? `"${lightTitle(t.topPostcard.subject)}", ${t.topPostcard.flips} flips` : 'nothing flipped yet.'}
+								</span></span>
+								<span style={{ color: 'var(--text-body)' }}>top note · <span style={{ color: 'var(--text-soft)' }}>
+									{t.topNote ? `"${noteTitle(t.topNote.subject)}", ${t.topNote.reads} reads` : 'nothing opened yet.'}
+								</span></span>
+								<span style={{ color: 'var(--text-body)' }}>ports of origin · <span style={{ color: 'var(--text-soft)' }}>
+									{t.ports.length ? t.ports.map((p) => `${p.port} ${p.share}%`).join(' · ') : 'nowhere in particular.'}
+								</span></span>
+							</div>
+						</>
+					) : (
+						<span className="row-sub" style={{ fontStyle: 'italic' }}>the sea is quiet. no sightings on the glass yet.</span>
+					)}
 				</div>
 
-				<div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-					<div className="card card--gold tilt" style={{ '--tilt': '.3deg', display: 'flex', flexDirection: 'column', gap: 12 } as React.CSSProperties}>
-						<span className="card-kicker card-kicker--gold">quick errands</span>
-						<div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-							{errands.map((errand) => (
-								<div key={errand.label} className="errand" onClick={errand.run}>→ {errand.label}</div>
-							))}
-						</div>
-					</div>
-					<div className="card card--alt tilt" style={{ '--tilt': '-.3deg', display: 'flex', flexDirection: 'column', gap: 10 } as React.CSSProperties}>
-						<span className="card-kicker">harbor conditions</span>
-						<div style={{ display: 'flex', flexDirection: 'column', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 12.5, lineHeight: 1.7 }}>
-							<span style={{ color: 'var(--text-body)' }}>api · <span style={{ color: 'var(--gold)' }}>● steady</span></span>
-							<span style={{ color: 'var(--text-body)' }}>media store · <span style={{ color: 'var(--gold)' }}>● steady</span></span>
-							<span style={{ color: 'var(--text-body)' }}>newsletter cron · <span style={{ color: 'var(--gold)' }}>● ambitious</span></span>
-							<span style={{ color: 'var(--text-body)' }}>home lab · <span style={{ color: 'var(--periwinkle)' }}>● one tweak from perfect</span></span>
-						</div>
+				<div className="card card--gold tilt" style={{ '--tilt': '.3deg', display: 'flex', flexDirection: 'column', gap: 12 } as React.CSSProperties}>
+					<span className="card-kicker card-kicker--gold">quick errands</span>
+					<div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+						{errands.map((errand) => (
+							<div key={errand.label} className="errand" onClick={errand.run}>→ {errand.label}</div>
+						))}
 					</div>
 				</div>
 			</div>
