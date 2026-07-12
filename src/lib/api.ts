@@ -535,6 +535,11 @@ export interface TopNote {
 	reads:   number;
 }
 
+export interface TopHobby {
+	subject: string;   // a hobby id; the admin resolves the name from its store
+	visits:  number;
+}
+
 export interface TrafficPort {
 	port:  string;
 	share: number;     // integer percentage
@@ -542,8 +547,9 @@ export interface TrafficPort {
 
 // The sightings API's first-party aggregate over the last `days`. `busiest` is
 // a lowercase weekday name, empty on an empty window; the tops are null when
-// nothing was flipped or read. Deploy skew is expected: an API that predates
-// this route 404s, so the watch room reads it fail-soft.
+// nothing was flipped, read, or visited. `bottles` counts the proverbs the
+// crossing boat handed out in the window. Deploy skew is expected: an API that
+// predates this route 404s, so the watch room reads it fail-soft.
 export interface TrafficReport {
 	uniques:     number;
 	sails:       number;
@@ -551,7 +557,9 @@ export interface TrafficReport {
 	busiest:     string;
 	topPostcard: TopPostcard | null;
 	topNote:     TopNote | null;
+	topHobby:    TopHobby | null;
 	ports:       TrafficPort[];
+	bottles:     number;
 }
 
 export function traffic(days = 7): Promise<TrafficReport> {

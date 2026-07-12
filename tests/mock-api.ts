@@ -367,11 +367,13 @@ export class MockApi {
 		busiest: 'thursday',
 		topPostcard: { subject: 'p2', flips: 214 },
 		topNote: { subject: 'n1', reads: 178 },
+		topHobby: { subject: 'h3', visits: 96 },
 		ports: [
 			{ port: 'search', share: 44 },
 			{ port: 'direct', share: 31 },
 			{ port: 'fediverse', share: 25 },
 		],
+		bottles: 428,
 	};
 
 	private nextId = 100;

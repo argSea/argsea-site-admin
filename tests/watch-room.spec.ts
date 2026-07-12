@@ -21,7 +21,11 @@ test('the watch room reads real sightings: tiles, bars, caption, resolved tops, 
 	// the tops resolve their subject ids to titles from the store
 	await expect(page.getByText('"Meo Wave Race", 214 flips')).toBeVisible();
 	await expect(page.getByText('"The queue is the product", 178 reads')).toBeVisible();
+	await expect(page.getByText('"Piano", 96 visits')).toBeVisible();
 	await expect(page.getByText('search 44% · direct 31% · fediverse 25%')).toBeVisible();
+
+	// the boat's proverb count reads through, locale-formatted
+	await expect(page.getByText('428 proverbs off the passing boat')).toBeVisible();
 
 	// seven bars, heights normalized to the busiest day (thursday, 640 sails)
 	await expect(page.locator('div[title$="ships"]')).toHaveCount(7);
@@ -34,16 +38,30 @@ test('the watch room reads real sightings: tiles, bars, caption, resolved tops, 
 	expect(reads[0].search).toBe('?days=7');
 });
 
-test('null tops render a placeholder line, not a blank', async ({ page }) => {
+test('null tops and zero bottles render placeholder lines, not blanks', async ({ page }) => {
 	const mock = new MockApi();
-	mock.traffic = { ...mock.traffic, topPostcard: null, topNote: null };
+	mock.traffic = { ...mock.traffic, topPostcard: null, topNote: null, topHobby: null, bottles: 0 };
 	await signIn(page, mock);
 
 	await expect(page.getByText('nothing flipped yet.')).toBeVisible();
 	await expect(page.getByText('nothing opened yet.')).toBeVisible();
+	await expect(page.getByText('nobody stopped by yet.')).toBeVisible();
+	await expect(page.getByText('the boat kept its corks in.')).toBeVisible();
 	// the rest of the card still stands
 	await expect(page.getByText('3,218 ships sighted · busiest: thursday')).toBeVisible();
 	await expect(page.getByText('search 44% · direct 31% · fediverse 25%')).toBeVisible();
+});
+
+test('an older traffic shape (no top plot or bottles) degrades to the quiet lines', async ({ page }) => {
+	const mock = new MockApi();
+	delete mock.traffic.topHobby;
+	delete mock.traffic.bottles;
+	await signIn(page, mock);
+
+	await expect(page.getByText('nobody stopped by yet.')).toBeVisible();
+	await expect(page.getByText('the boat kept its corks in.')).toBeVisible();
+	// the fields the old shape does carry still read true
+	await expect(page.getByText('"Meo Wave Race", 214 flips')).toBeVisible();
 });
 
 test('a missing sightings route (deploy skew) fails soft to quiet placeholders', async ({ page }) => {

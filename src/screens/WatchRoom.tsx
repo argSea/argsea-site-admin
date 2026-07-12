@@ -47,6 +47,7 @@ export default function WatchRoom() {
 	const maxSails = t ? Math.max(1, ...t.days.map((d) => d.sails)) : 1;
 	const lightTitle = (id: string): string => h.projects.find((p) => p.id === id)?.title ?? 'an unlisted light';
 	const noteTitle = (id: string): string => h.notes.find((n) => n.id === id)?.title ?? 'a stray note';
+	const plotName = (id: string): string => h.hobbies.find((x) => x.id === id)?.name ?? 'an unmarked plot';
 
 	const stats = [
 		{
@@ -147,8 +148,14 @@ export default function WatchRoom() {
 								<span style={{ color: 'var(--text-body)' }}>top note · <span style={{ color: 'var(--text-soft)' }}>
 									{t.topNote ? `"${noteTitle(t.topNote.subject)}", ${t.topNote.reads} reads` : 'nothing opened yet.'}
 								</span></span>
+								<span style={{ color: 'var(--text-body)' }}>top plot · <span style={{ color: 'var(--text-soft)' }}>
+									{t.topHobby ? `"${plotName(t.topHobby.subject)}", ${t.topHobby.visits} visits` : 'nobody stopped by yet.'}
+								</span></span>
 								<span style={{ color: 'var(--text-body)' }}>ports of origin · <span style={{ color: 'var(--text-soft)' }}>
 									{t.ports.length ? t.ports.map((p) => `${p.port} ${p.share}%`).join(' · ') : 'nowhere in particular.'}
+								</span></span>
+								<span style={{ color: 'var(--text-body)' }}>bottles cast · <span style={{ color: 'var(--text-soft)' }}>
+									{t.bottles ? `${t.bottles.toLocaleString()} proverbs off the passing boat` : 'the boat kept its corks in.'}
 								</span></span>
 							</div>
 						</>
