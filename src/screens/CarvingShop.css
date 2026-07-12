@@ -1,191 +1,756 @@
 /*
- * The carving shop: catalog rail + bench layout, transcribed from the design
- * mock's carving-shop section. Tokens come from global.css; a few bespoke
- * values (the bench's plank gradient, the rail background) are the mock's
- * own hex, kept literal.
+ * The carving shop: one wide bench that is the editor. Transcribed from the
+ * design mock's carving-shop section, hex kept literal where the mock names its
+ * own (the bench tops, the floating chrome's translucent navy). The editor
+ * chrome the mock did not draw (undo/redo, save, the ink/layers/ghost
+ * fold-outs) wears the same floating-tray furniture so it reads as one tray.
  */
 
-.carving-layout {
-	display: flex;
-	gap: 20px;
-	align-items: flex-start;
-	flex-wrap: wrap;
-}
-
-.carving-catalog {
-	flex: 0 1 300px;
-	min-width: 250px;
-	background: var(--overlay-card);
-	border: 1px solid rgba(150, 160, 220, .22);
-	border-radius: 14px;
-	padding: 16px;
+.carving-screen {
 	display: flex;
 	flex-direction: column;
-	gap: 7px;
-	max-height: 600px;
-	overflow-y: auto;
-	box-sizing: border-box;
+	gap: 22px;
+	position: relative;
 }
 
-.carving-group {
-	font-family: var(--font-mono);
-	font-size: 10px;
-	letter-spacing: .16em;
-	color: var(--periwinkle-deep);
-	text-transform: uppercase;
-	padding-top: 9px;
-}
-
-.carving-row {
+.carving-body {
 	display: flex;
-	gap: 10px;
-	align-items: center;
-	padding: 7px 8px;
-	border-radius: 9px;
-	cursor: pointer;
-	background: transparent;
-	border: 1px solid transparent;
-	transition: background .2s;
-	width: 100%;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* ---- the bench ---- */
+
+.carving-bench {
+	position: relative;
+	border: 1px solid rgba(150, 160, 220, .22);
+	border-radius: 16px;
+	min-height: min(66vh, 680px);
 	box-sizing: border-box;
+	overflow: hidden;
+	transition: background .25s ease;
+}
+
+.carving-bench--navy {
+	background: #131628;
+}
+
+.carving-bench--white {
+	background: #f4f2ec;
+}
+
+/* the carving sits proud of the bench, drop-shadow keyed to the bench top */
+.carving-bench--navy .carving-canvas {
+	filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .4));
+}
+
+.carving-bench--white .carving-canvas {
+	filter: drop-shadow(0 10px 22px rgba(40, 40, 60, .25));
+}
+
+/* ---- top bar: catalog picker + fresh block ---- */
+
+.carving-topbar {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 14px;
+	z-index: 8;
+	pointer-events: none;
+}
+
+.carving-picker-wrap {
+	position: relative;
+	pointer-events: auto;
+}
+
+.carving-picker {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background: rgba(19, 23, 40, .92);
+	border: 1px solid rgba(150, 160, 220, .3);
+	border-radius: 10px;
+	padding: 8px 14px 8px 10px;
+	cursor: pointer;
+	user-select: none;
+	backdrop-filter: blur(6px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+	transition: border-color .2s;
 	text-align: left;
 	color: inherit;
 	font: inherit;
 }
 
-.carving-row:hover {
-	background: rgba(147, 160, 232, .08);
+.carving-picker:hover {
+	border-color: rgba(240, 217, 168, .55);
 }
 
-.carving-row--sel {
-	background: rgba(240, 217, 168, .08);
-	border-color: rgba(240, 217, 168, .4);
-}
-
-.carving-thumb {
-	width: 44px;
-	height: 34px;
+.carving-picker__thumb {
+	width: 32px;
+	height: 26px;
 	flex: none;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background: var(--well);
+	background: #131728;
 	border: 1px solid rgba(150, 160, 220, .18);
-	border-radius: 6px;
+	border-radius: 5px;
 	overflow: hidden;
 }
 
-.carving-row__text {
-	min-width: 0;
+.carving-thumb__art {
+	display: inline-flex;
+	max-width: 100%;
+	max-height: 100%;
+}
+
+.carving-thumb__art svg {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+.carving-picker__text {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	min-width: 0;
 }
 
-.carving-row__name {
+.carving-picker__name {
 	font-family: var(--font-display);
-	font-size: 14px;
-	color: var(--text-nav);
-	line-height: 1.2;
+	font-size: 14.5px;
+	color: #e8ebfa;
+	line-height: 1.15;
+	white-space: nowrap;
 }
 
-.carving-row__where {
+.carving-picker__where {
 	font-family: var(--font-mono);
 	font-size: 10px;
 	color: var(--periwinkle-deep);
-	line-height: 1.5;
+	white-space: nowrap;
+	max-width: 300px;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
-.carving-bench-col {
-	flex: 1 1 440px;
-	min-width: 320px;
+.carving-picker__chevron {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--periwinkle);
+	margin-left: 2px;
+}
+
+.carving-catalog {
+	position: absolute;
+	top: calc(100% + 8px);
+	left: 0;
+	width: min(560px, 76vw);
+	max-height: 400px;
+	overflow-y: auto;
+	background: rgba(19, 23, 40, .97);
+	border: 1px solid rgba(150, 160, 220, .3);
+	border-radius: 12px;
+	padding: 14px;
+	z-index: 9;
+	box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+	backdrop-filter: blur(8px);
 	display: flex;
 	flex-direction: column;
-	gap: 14px;
-}
-
-.carving-toolbar {
-	display: flex;
-	align-items: center;
 	gap: 10px;
-	flex-wrap: wrap;
 }
 
-.carving-chisels {
+.carving-catalog__head {
 	display: flex;
-	gap: 4px;
-	background: var(--card-alt);
-	border: 1px solid var(--border-chip);
-	border-radius: 999px;
-	padding: 5px 8px;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 10px;
 }
 
-.carving-chisel {
-	padding: 4px 9px;
-	background: none;
-	border: none;
-	color: var(--periwinkle);
-	cursor: pointer;
-	font-family: var(--font-mono);
-	font-size: 13px;
-	transition: color .2s;
-}
-
-.carving-chisel:hover {
-	color: var(--gold);
-}
-
-.carving-chisel[aria-pressed="true"] {
-	color: var(--gold);
-}
-
-.carving-chisel:focus-visible {
-	outline: 2px solid var(--gold);
-	outline-offset: 2px;
-}
-
-.carving-canvas {
-	position: relative;
-	background:
-		repeating-linear-gradient(90deg, #221d33 0 46px, #251f38 46px 92px),
-		linear-gradient(180deg, #241e36, #1d1830);
-	border: 1px solid rgba(150, 160, 220, .22);
-	border-radius: 14px;
-	min-height: 400px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 44px;
-	box-sizing: border-box;
-}
-
-.carving-canvas__label {
-	position: absolute;
-	top: 12px;
-	left: 16px;
+.carving-catalog__kicker {
 	font-family: var(--font-mono);
 	font-size: 11px;
 	letter-spacing: .14em;
-	color: var(--periwinkle-deep);
+	color: var(--periwinkle);
 	text-transform: uppercase;
 }
 
-.carving-canvas__art {
-	transform: scale(3);
-	display: inline-flex;
+.carving-catalog__count {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	color: var(--periwinkle-deep);
 }
 
-.carving-canvas__note {
+.carving-catalog__confirm {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	color: var(--gold);
+}
+
+.carving-catalog__group {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.carving-catalog__page {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	letter-spacing: .16em;
+	color: var(--periwinkle-deep);
+	text-transform: uppercase;
+	padding-top: 4px;
+}
+
+.carving-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+	gap: 8px;
+}
+
+.carving-tile {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	padding: 9px 8px 7px;
+	border-radius: 9px;
+	cursor: pointer;
+	box-sizing: border-box;
+	background: rgba(19, 23, 40, .5);
+	border: 1px solid rgba(150, 160, 220, .16);
+	transition: background .2s, border-color .2s;
+	color: inherit;
+	font: inherit;
+}
+
+.carving-tile:hover {
+	border-color: rgba(240, 217, 168, .55);
+	background: rgba(147, 160, 232, .08);
+}
+
+.carving-tile--sel {
+	background: rgba(240, 217, 168, .08);
+	border-color: rgba(240, 217, 168, .5);
+}
+
+.carving-tile__thumb {
+	height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.carving-tile__name {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: #a5aed4;
+	line-height: 1.35;
+	text-align: center;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.carving-fresh {
+	pointer-events: auto;
+	padding: 8px 16px;
+	border: 1.5px dashed rgba(240, 217, 168, .5);
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--gold);
+	cursor: pointer;
+	user-select: none;
+	background: rgba(19, 23, 40, .8);
+	backdrop-filter: blur(6px);
+	transition: transform .2s;
+	flex: none;
+}
+
+.carving-fresh:hover {
+	transform: scale(1.04);
+}
+
+/* ---- the floating tool palette ---- */
+
+.carving-pal {
 	position: absolute;
-	bottom: 12px;
+	z-index: 7;
+	display: flex;
+	flex-direction: column;
+	width: 168px;
+	background: rgba(19, 23, 40, .92);
+	border: 1px solid rgba(150, 160, 220, .3);
+	border-radius: 12px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+	backdrop-filter: blur(6px);
+	user-select: none;
+}
+
+.carving-pal__head {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 6px 8px;
+}
+
+.carving-pal__grip {
+	cursor: grab;
+	font-size: 13px;
+	color: var(--periwinkle-deep);
+	letter-spacing: 1px;
+	touch-action: none;
+	background: none;
+	border: none;
+	padding: 0 2px;
+}
+
+.carving-pal__toggle {
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--periwinkle);
+	padding: 2px 6px;
+	margin-left: auto;
+	background: none;
+	border: none;
+}
+
+.carving-pal__body {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 2px 8px 9px;
+}
+
+.carving-tools {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 4px;
+}
+
+.carving-tool {
+	font-family: var(--font-mono);
+	font-size: 15px;
+	text-align: center;
+	padding: 7px 0;
+	border-radius: 8px;
+	cursor: pointer;
+	color: var(--periwinkle);
+	background: transparent;
+	border: 1px solid transparent;
+	transition: color .2s, background .2s;
+}
+
+.carving-tool:hover:not(:disabled) {
+	color: var(--gold);
+}
+
+.carving-tool[aria-pressed="true"] {
+	color: var(--gold);
+	background: rgba(240, 217, 168, .1);
+	border-color: rgba(240, 217, 168, .4);
+}
+
+.carving-tool--verb {
+	border-style: dashed;
+	border-color: rgba(240, 217, 168, .4);
+	color: var(--gold);
+}
+
+.carving-tool:disabled {
+	opacity: .35;
+	cursor: default;
+}
+
+.carving-pal__row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.carving-mini {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	line-height: 1;
+	padding: 4px 7px;
+	border-radius: 7px;
+	color: var(--periwinkle);
+	background: rgba(147, 160, 232, .08);
+	border: 1px solid var(--border-chip);
+	cursor: pointer;
+	transition: color .2s, border-color .2s;
+}
+
+.carving-mini:hover:not(:disabled) {
+	color: var(--gold);
+	border-color: var(--gold-dash-mid);
+}
+
+.carving-mini:disabled {
+	opacity: .35;
+	cursor: default;
+}
+
+.carving-dirty {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	margin-left: auto;
+}
+
+.carving-save {
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	padding: 5px 12px;
+	border-radius: 999px;
+	background: var(--gold);
+	color: #1b2033;
+	border: 1px solid transparent;
+	cursor: pointer;
+}
+
+.carving-save:disabled {
+	opacity: .5;
+	cursor: default;
+}
+
+.carving-fold {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+	color: var(--periwinkle);
+	background: rgba(147, 160, 232, .06);
+	border: 1px solid var(--border-chip);
+	border-radius: 8px;
+	padding: 6px 9px;
+	cursor: pointer;
+}
+
+.carving-fold:disabled {
+	opacity: .35;
+	cursor: default;
+}
+
+.carving-inks,
+.carving-layers,
+.carving-ghostpick {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	padding: 2px 1px 4px;
+}
+
+.carving-wells {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	align-items: center;
+}
+
+.carving-well {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 1px solid var(--border-chip);
+	box-shadow: inset 0 2px 3px rgba(0, 0, 0, .35);
+	cursor: pointer;
+	padding: 0;
+	box-sizing: border-box;
+	flex-shrink: 0;
+}
+
+.carving-well[aria-pressed="true"] {
+	border: 2px dashed var(--gold-dash-hot);
+}
+
+.carving-well--dry {
+	background:
+		linear-gradient(to top right, transparent 44%, var(--danger) 46%, var(--danger) 54%, transparent 56%),
+		var(--well);
+}
+
+.carving-well--free {
+	border-style: dashed;
+	background: none;
+	box-shadow: none;
+}
+
+.carving-slider {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: 4px;
+}
+
+.carving-slider input {
+	width: 100%;
+	accent-color: var(--gold);
+}
+
+.carving-pills {
+	display: flex;
+	gap: 5px;
+	flex-wrap: wrap;
+}
+
+.carving-pill {
+	padding: 4px 9px;
+	font-size: 10.5px;
+}
+
+.carving-layer {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 4px 5px;
+	border-radius: 7px;
+	cursor: pointer;
+	border: 1px solid transparent;
+}
+
+.carving-layer--sel {
+	background: rgba(240, 217, 168, .08);
+	border-color: rgba(240, 217, 168, .35);
+}
+
+.carving-layer__glyph {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--periwinkle-deep);
+	width: 14px;
+	flex-shrink: 0;
+}
+
+.carving-layer__name {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: #c3cbf2;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.carving-layers__empty {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--periwinkle-deep);
+	font-style: italic;
+}
+
+.carving-ghostpick .input {
+	font-size: 11px;
+	padding: 6px 8px;
+}
+
+/* ---- the canvas ---- */
+
+.carving-canvas-wrap {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+}
+
+.carving-canvas {
+	width: 100%;
+	height: 100%;
+	display: block;
+	touch-action: none;
+	cursor: crosshair;
+}
+
+.carving-canvas--select {
+	cursor: default;
+}
+
+.carving-canvas--locked {
+	cursor: grab;
+}
+
+.carving-empty {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 40px;
+	text-align: center;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: #8a93c4;
+}
+
+.carving-bench__note {
+	position: absolute;
+	bottom: 14px;
 	left: 16px;
 	right: 16px;
 	font-family: var(--font-mono);
-	font-size: 11px;
-	color: var(--text-quip);
+	font-size: 11.5px;
+	color: #8a93c4;
 	font-style: italic;
 	text-align: center;
+	z-index: 7;
 }
+
+/* ---- zoom cluster + bench swap ---- */
+
+.carving-zoom {
+	position: absolute;
+	bottom: 12px;
+	right: 14px;
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	background: rgba(19, 23, 40, .92);
+	border: 1px solid rgba(150, 160, 220, .3);
+	border-radius: 999px;
+	padding: 4px 6px;
+	z-index: 7;
+	backdrop-filter: blur(6px);
+}
+
+.carving-zoom button {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--periwinkle);
+	font-family: var(--font-mono);
+	user-select: none;
+	transition: color .2s;
+}
+
+.carving-zoom button:hover {
+	color: var(--gold);
+}
+
+.carving-zoom__swap {
+	font-size: 11px;
+	padding: 2px 9px;
+	border-right: 1px solid rgba(150, 160, 220, .25);
+}
+
+.carving-zoom__btn {
+	font-size: 14px;
+	padding: 2px 9px;
+}
+
+.carving-zoom__pct {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: #c3cbf2;
+	min-width: 44px;
+	text-align: center;
+}
+
+.carving-zoom__fit {
+	font-size: 11px;
+	padding: 2px 9px;
+	border-left: 1px solid rgba(150, 160, 220, .25);
+}
+
+/* ---- the markup drawer ---- */
+
+.carving-drawer {
+	background: #171a2e;
+	border: 1px solid rgba(150, 160, 220, .22);
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+.carving-drawer__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 14px;
+	cursor: pointer;
+	width: 100%;
+	background: none;
+	border: none;
+	color: inherit;
+	font: inherit;
+	transition: background .2s;
+}
+
+.carving-drawer__head:hover {
+	background: rgba(147, 160, 232, .05);
+}
+
+.carving-drawer__kicker {
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	letter-spacing: .13em;
+	color: var(--periwinkle);
+	text-transform: uppercase;
+}
+
+.carving-drawer__right {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+
+.carving-drawer__sub {
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	color: var(--periwinkle-deep);
+	text-align: right;
+}
+
+.carving-drawer__chevron {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--periwinkle);
+	white-space: nowrap;
+}
+
+.carving-drawer__body {
+	padding: 0 14px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.carving-src {
+	width: 100%;
+	box-sizing: border-box;
+	background: #131728;
+	border: 1px solid rgba(150, 160, 220, .25);
+	border-radius: 10px;
+	padding: 13px 14px;
+	color: #c3cbf2;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	line-height: 1.65;
+	resize: vertical;
+	white-space: pre-wrap;
+}
+
+.carving-src[readonly] {
+	opacity: .7;
+}
+
+.carving-drawer__locked {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+/* ---- bolting ---- */
 
 .carving-bolt-row {
 	display: flex;
@@ -194,14 +759,68 @@
 	flex-wrap: wrap;
 }
 
+.carving-bolt-row__hint {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--gold);
+}
+
+.carving-bolt-row__act {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.carving-assign {
+	max-width: 320px;
+	width: auto;
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
+.carving-bolt {
+	padding: 10px 20px;
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	cursor: pointer;
+	user-select: none;
+	white-space: nowrap;
+	transform: rotate(-.5deg);
+	background: var(--gold);
+	color: #1b2033;
+	border: 1px solid transparent;
+	box-shadow: 3px 3px 0 rgba(147, 160, 232, .6);
+	transition: transform .2s, background .3s, color .3s, box-shadow .3s;
+}
+
+.carving-bolt:hover:not(:disabled) {
+	transform: rotate(0deg) translateY(-2px);
+}
+
+.carving-bolt--done {
+	background: rgba(111, 202, 151, .15);
+	color: #6fca97;
+	border: 1px solid rgba(111, 202, 151, .5);
+	box-shadow: none;
+}
+
+.carving-bolt:disabled {
+	opacity: .5;
+	cursor: default;
+	box-shadow: none;
+	transform: none;
+}
+
 @media (max-width: 900px) {
-	.carving-catalog {
-		flex-basis: 100%;
-		max-height: 320px;
+	.carving-bench {
+		min-height: min(72vh, 560px);
 	}
 
-	.carving-canvas {
-		min-height: 260px;
-		padding: 28px;
+	.carving-drawer__sub {
+		display: none;
 	}
 }
