@@ -177,7 +177,7 @@ test('blanking a bolted carving is caught on the bench, before the wire', async 
 });
 
 test('an unsaved draft cannot bolt: the bolt waits for the saved block', async ({ page }) => {
-	await signIn(page);
+	const mock = await signIn(page);
 	await nav(page, 'the carving shop').click();
 
 	await page.getByRole('button', { name: '+ a fresh block' }).click();
@@ -189,6 +189,7 @@ test('an unsaved draft cannot bolt: the bolt waits for the saved block', async (
 	await page.getByLabel('carving source').fill('<svg viewBox="0 0 10 10"><rect width="10" height="10"></rect></svg>');
 	await expect(page.getByText('◍ unsaved')).toBeVisible();
 	await expect(bolt).toBeDisabled();
+	expect(mock.find('POST', /\/bolt$/)).toHaveLength(0);
 
 	await page.getByRole('button', { name: 'save the block' }).click();
 	await expect(page.getByText('○ saved')).toBeVisible();
