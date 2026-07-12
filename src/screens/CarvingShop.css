@@ -39,6 +39,15 @@
 	background: #f4f2ec;
 }
 
+/* the carving sits proud of the bench, drop-shadow keyed to the bench top */
+.carving-bench--navy .carving-canvas {
+	filter: drop-shadow(0 10px 22px rgba(0, 0, 0, .4));
+}
+
+.carving-bench--white .carving-canvas {
+	filter: drop-shadow(0 10px 22px rgba(40, 40, 60, .25));
+}
+
 /* ---- top bar: catalog picker + fresh block ---- */
 
 .carving-topbar {

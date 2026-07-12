@@ -511,6 +511,8 @@ const SHAPE_FIELDS: Record<Shape['type'], (keyof Shape)[]> = {
 	line:    ['x1', 'y1', 'x2', 'y2'],
 };
 
+const KNOWN_SHAPE_TYPES = new Set<string>(Object.keys(SHAPE_FIELDS));
+
 /**
  * Strip fields that don't belong to the shape's type and everything unset;
  * renderers write only the fields present (contract), so a rect that was once
@@ -612,7 +614,11 @@ export function readCarvingModel(svg: string): CarvingModel | null {
 		if (!parsed || !Array.isArray(parsed.shapes)) {
 			return null;
 		}
-		return { viewBox: String(parsed.viewBox ?? '0 0 40 40'), shapes: parsed.shapes as Shape[] };
+		// only shapes of a type we know how to render survive: an unknown type would
+		// serialize to the literal string "undefined" through shapeMarkup on next save
+		const shapes = (parsed.shapes as unknown[]).filter((s): s is Shape =>
+			Boolean(s) && KNOWN_SHAPE_TYPES.has((s as { type?: string }).type ?? ''));
+		return { viewBox: String(parsed.viewBox ?? '0 0 40 40'), shapes };
 	} catch {
 		return null;
 	}

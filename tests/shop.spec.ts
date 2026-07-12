@@ -108,10 +108,13 @@ test('reopening a model-backed carving restores its editable shapes', async ({ p
 	await page.locator('.carving-picker').click();
 	await page.locator('.carving-tile', { hasText: 'fresh carving no. 1' }).click();
 
-	// the island restores the model: tools are live and the markup carries it
+	// the island restores the model: tools are live, and the markup carries both
+	// the island and the drawn element, so the shape survived deserialization
 	await expect(tool(page, 'select')).toBeEnabled();
 	await page.locator('.carving-drawer__head').click();
-	await expect(page.getByLabel('carving source', { exact: true })).toContainText('<metadata id="argsea-carving-model">');
+	const reopened = page.getByLabel('carving source', { exact: true });
+	await expect(reopened).toContainText('<metadata id="argsea-carving-model">');
+	await expect(reopened).toContainText('<path');
 });
 
 test('hand-editing the markup drops the island and steps the tools back', async ({ page }) => {

@@ -131,7 +131,7 @@ type Mode = 'note' | 'locked' | 'model' | 'raw';
 type Loaded =
 	| { kind: 'note'; entry: CarvingCatalogEntry }
 	| { kind: 'carving'; carving: Carving }
-	| { kind: 'fresh'; nonce: number; name: string; viewBox: string; shapes: Shape[]; ghostSvg: string | null };
+	| { kind: 'fresh'; nonce: number; name: string; viewBox: string; shapes: Shape[]; ghostId: string | null };
 
 interface EngineInit {
 	mode:     Mode;
@@ -140,25 +140,25 @@ interface EngineInit {
 	viewBox:  string;
 	shapes:   Shape[];
 	rawSvg:   string;
-	ghostSvg: string | null;
+	ghostId:  string | null;
 }
 
 function initEngine(loaded: Loaded): EngineInit {
 	if (loaded.kind === 'note') {
-		return { mode: 'note', savedId: null, name: loaded.entry.name, viewBox: STARTER_VIEWBOX, shapes: [], rawSvg: '', ghostSvg: null };
+		return { mode: 'note', savedId: null, name: loaded.entry.name, viewBox: STARTER_VIEWBOX, shapes: [], rawSvg: '', ghostId: null };
 	}
 	if (loaded.kind === 'fresh') {
-		return { mode: 'model', savedId: null, name: loaded.name, viewBox: loaded.viewBox, shapes: loaded.shapes, rawSvg: '', ghostSvg: loaded.ghostSvg };
+		return { mode: 'model', savedId: null, name: loaded.name, viewBox: loaded.viewBox, shapes: loaded.shapes, rawSvg: '', ghostId: loaded.ghostId };
 	}
 	const c = loaded.carving;
 	if (c.builtin) {
-		return { mode: 'locked', savedId: c.id, name: c.name, viewBox: svgViewBox(c.svg), shapes: [], rawSvg: c.svg, ghostSvg: null };
+		return { mode: 'locked', savedId: c.id, name: c.name, viewBox: svgViewBox(c.svg), shapes: [], rawSvg: c.svg, ghostId: null };
 	}
 	const model = readCarvingModel(c.svg);
 	if (model) {
-		return { mode: 'model', savedId: c.id, name: c.name, viewBox: model.viewBox, shapes: model.shapes, rawSvg: '', ghostSvg: null };
+		return { mode: 'model', savedId: c.id, name: c.name, viewBox: model.viewBox, shapes: model.shapes, rawSvg: '', ghostId: null };
 	}
-	return { mode: 'raw', savedId: c.id, name: c.name, viewBox: svgViewBox(c.svg), shapes: [], rawSvg: c.svg, ghostSvg: null };
+	return { mode: 'raw', savedId: c.id, name: c.name, viewBox: svgViewBox(c.svg), shapes: [], rawSvg: c.svg, ghostId: null };
 }
 
 interface BenchProps {
@@ -203,7 +203,8 @@ function Bench(props: BenchProps) {
 	const [defaults, setDefaults] = useState<StyleDefaults>({
 		fill: 'none', stroke: '#93a0e8', strokeWidth: 1.6, opacity: 1, linecap: 'round', linejoin: 'round',
 	});
-	const [ghostSvg, setGhostSvg] = useState<string | null>(init.ghostSvg);
+	const [ghostId, setGhostId] = useState<string | null>(init.ghostId);
+	const ghostSvg = ghostId ? h.carvings.find((c) => c.id === ghostId)?.svg ?? null : null;
 	const [drawerOpen, setDrawerOpen] = useState(props.loaded.kind === 'fresh');
 	const [foldout, setFoldout] = useState<'inks' | 'layers' | 'ghost' | null>(null);
 	const [bolted, setBolted] = useState(false);
@@ -1048,11 +1049,11 @@ function Bench(props: BenchProps) {
 							</button>
 							{foldout === 'ghost' && isModel && (
 								<div className="carving-ghostpick">
-									<select className="input" aria-label="ghost a carving" value={ghostSvg ?? ''}
-										onChange={(e) => setGhostSvg(e.target.value || null)}>
+									<select className="input" aria-label="ghost a carving" value={ghostId ?? ''}
+										onChange={(e) => setGhostId(e.target.value || null)}>
 										<option value="">no ghost</option>
 										{h.carvings.filter((c) => c.svg.trim()).map((c) => (
-											<option key={c.id} value={c.svg}>{c.name}</option>
+											<option key={c.id} value={c.id}>{c.name}</option>
 										))}
 									</select>
 									<span className="footnote">// trace a carving behind the block.</span>
@@ -1281,7 +1282,7 @@ function Bench(props: BenchProps) {
 			{/* bolting */}
 			{mode !== 'note' && (
 				<div className="carving-bolt-row">
-					<span className="carving-bolt-row__hint">◐ {spotHint} bolted carvings ship with the next hoist.</span>
+					<span className="carving-bolt-row__hint">◐ {spotHint} bolted carvings ship with the next hoist</span>
 					<div className="carving-bolt-row__act">
 						<span className="field-label">bolt to</span>
 						<select className="input carving-assign" aria-label="bolt it to" value={props.assignSpot}
@@ -1344,7 +1345,7 @@ export default function CarvingShop() {
 		select({
 			kind: 'fresh', nonce: nonce.current, name: `fresh carving no. ${n}`,
 			viewBox: STARTER_VIEWBOX, shapes: STARTER_SHAPES.map((s) => ({ ...s })),
-			ghostSvg: holder?.svg ?? null,
+			ghostId: holder?.id ?? null,
 		});
 	};
 
