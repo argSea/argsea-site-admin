@@ -95,7 +95,7 @@ export default function ShipsLog() {
 			</div>
 
 			<div style={{ display: 'flex', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 12.5 }}>
-				<span className={`pill ${tab === 'log' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('log')}>the wandering chart</span>
+				<span className={`pill ${tab === 'log' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('log')}>the roll call</span>
 				<span className={`pill ${tab === 'chart' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('chart')}>the chart</span>
 			</div>
 
