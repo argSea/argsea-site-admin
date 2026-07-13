@@ -7,6 +7,7 @@ import { useHarbor } from '../state/harbor';
 import type { Coord, Hobby, HobbyState } from '../lib/api';
 import { HOBBY_STATES, onWatch } from '../lib/api';
 import CatPerch from '../components/CatPerch';
+import BearingChart from './BearingChart';
 
 const ROW_TILTS = ['-.4deg', '.35deg', '-.25deg', '.45deg', '-.5deg', '.3deg'];
 
@@ -67,6 +68,7 @@ function Row({ hobby, index }: { hobby: Hobby; index: number }) {
 
 export default function ShipsLog() {
 	const h = useHarbor();
+	const [tab, setTab] = useState<'log' | 'chart'>('log');
 	const [newSuggestion, setNewSuggestion] = useState('');
 	const inPort = h.hobbies.filter(onWatch);
 	const adrift = h.hobbies.filter((x) => !onWatch(x));
@@ -92,39 +94,50 @@ export default function ShipsLog() {
 				<button className="btn" onClick={() => h.openEdit('hobby', null)}>+ pick something up</button>
 			</div>
 
-			<div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp .7s ease .15s both' }}>
-				<span className="card-kicker card-kicker--gold">in port · on watch</span>
-				{inPort.map((hobby, index) => <Row key={hobby.id} hobby={hobby} index={index} />)}
-
-				<span className="card-kicker" style={{ marginTop: 10 }}>off course · adrift</span>
-				{adrift.map((hobby, index) => <Row key={hobby.id} hobby={hobby} index={index + inPort.length} />)}
+			<div style={{ display: 'flex', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 12.5 }}>
+				<span className={`pill ${tab === 'log' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('log')}>the roll call</span>
+				<span className={`pill ${tab === 'chart' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('chart')}>the chart</span>
 			</div>
 
-			<div className="card card--alt tilt" style={{
-				'--tilt': '.3deg', display: 'flex', flexDirection: 'column', gap: 12,
-				animation: 'fadeUp .7s ease .25s both',
-			} as React.CSSProperties}>
-				<span className="card-kicker">the "next: ???" pool</span>
-				<span style={{ fontSize: 14, color: 'var(--text-dim)', fontStyle: 'italic' }}>
-					Suggestions the chart's "next: ???" mark cycles through. Feed it responsibly.
-				</span>
-				<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-					{h.suggestions.map((suggestion) => (
-						<span key={suggestion.id} className="sway-chip">
-							{suggestion.value}
-							<span className="chip-x" onClick={() => h.removeSuggestion(suggestion)}>✕</span>
+			{tab === 'chart' && <BearingChart />}
+
+			{tab === 'log' && (
+				<>
+					<div style={{ display: 'flex', flexDirection: 'column', gap: 12, animation: 'fadeUp .7s ease .15s both' }}>
+						<span className="card-kicker card-kicker--gold">in port · on watch</span>
+						{inPort.map((hobby, index) => <Row key={hobby.id} hobby={hobby} index={index} />)}
+
+						<span className="card-kicker" style={{ marginTop: 10 }}>off course · adrift</span>
+						{adrift.map((hobby, index) => <Row key={hobby.id} hobby={hobby} index={index + inPort.length} />)}
+					</div>
+
+					<div className="card card--alt tilt" style={{
+						'--tilt': '.3deg', display: 'flex', flexDirection: 'column', gap: 12,
+						animation: 'fadeUp .7s ease .25s both',
+					} as React.CSSProperties}>
+						<span className="card-kicker">the "next: ???" pool</span>
+						<span style={{ fontSize: 14, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+							Suggestions the chart's "next: ???" mark cycles through. Feed it responsibly.
 						</span>
-					))}
-				</div>
-				<form onSubmit={temptFate} style={{ display: 'flex', gap: 10, margin: 0, flexWrap: 'wrap' }}>
-					<input type="text" className="input" placeholder="blacksmithing? kayaking?"
-						value={newSuggestion} onChange={(e) => setNewSuggestion(e.target.value)}
-						style={{ flex: 1, minWidth: 180, width: 'auto', padding: '9px 12px', fontSize: 12.5 }} />
-					<button type="submit" className="chip-dashed" style={{ padding: '9px 16px' }}>+ tempt fate</button>
-				</form>
-			</div>
+						<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+							{h.suggestions.map((suggestion) => (
+								<span key={suggestion.id} className="sway-chip">
+									{suggestion.value}
+									<span className="chip-x" onClick={() => h.removeSuggestion(suggestion)}>✕</span>
+								</span>
+							))}
+						</div>
+						<form onSubmit={temptFate} style={{ display: 'flex', gap: 10, margin: 0, flexWrap: 'wrap' }}>
+							<input type="text" className="input" placeholder="blacksmithing? kayaking?"
+								value={newSuggestion} onChange={(e) => setNewSuggestion(e.target.value)}
+								style={{ flex: 1, minWidth: 180, width: 'auto', padding: '9px 12px', fontSize: 12.5 }} />
+							<button type="submit" className="chip-dashed" style={{ padding: '9px 16px' }}>+ tempt fate</button>
+						</form>
+					</div>
 
-			<span className="footnote">// the chart only gets more crowded. that's fine.</span>
+					<span className="footnote">// the chart only gets more crowded. that's fine.</span>
+				</>
+			)}
 		</div>
 	);
 }
