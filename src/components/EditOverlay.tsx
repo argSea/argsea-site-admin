@@ -533,6 +533,34 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 	);
 }
 
+// The chart window the ships-log plots bearings into: the mock's chartWin
+// bounds inset 3% per side, so a snapped mark sits fully inside the frame and
+// never half-clips at the edge. The same band the API's bearings-clamp slice
+// holds on the wire, named here so what the keeper sees is what will save.
+// Longitude runs negative (west), the sign fmtCoord reads as W.
+const CHART_LAT = [57.82, 58.56] as const;
+const CHART_LON = [-7.94, -6.59] as const;
+
+// Snap a coordinate input to its band on blur: blank stays blank (unplotted),
+// an in-band value is left exactly as typed, an out-of-band number jumps to the
+// nearest bound. Non-numeric text is left for the save-time pair check to catch.
+function snapCoord(text: string, [lo, hi]: readonly [number, number]): string {
+	if (text.trim() === '') {
+		return text;
+	}
+	const n = parseFloat(text);
+	if (isNaN(n)) {
+		return text;
+	}
+	if (n < lo) {
+		return String(lo);
+	}
+	if (n > hi) {
+		return String(hi);
+	}
+	return text;
+}
+
 function HobbyFields({ draft }: { draft: HobbyDraft }) {
 	const h = useHarbor();
 
@@ -554,14 +582,19 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 				<label className="field">
 					<span className="field-label">charted position · latitude</span>
 					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="58.20"
-						value={draft.coordLat} onChange={(e) => h.patchDraft({ coordLat: e.target.value })} />
+						value={draft.coordLat} onChange={(e) => h.patchDraft({ coordLat: e.target.value })}
+						onBlur={() => h.patchDraft({ coordLat: snapCoord(draft.coordLat, CHART_LAT) })} />
 				</label>
 				<label className="field">
 					<span className="field-label">· longitude</span>
 					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="-7.40"
-						value={draft.coordLon} onChange={(e) => h.patchDraft({ coordLon: e.target.value })} />
+						value={draft.coordLon} onChange={(e) => h.patchDraft({ coordLon: e.target.value })}
+						onBlur={() => h.patchDraft({ coordLon: snapCoord(draft.coordLon, CHART_LON) })} />
 				</label>
 			</div>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				{`// the chart runs ${CHART_LAT[0]} to ${CHART_LAT[1]} north, ${-CHART_LON[0]} to ${-CHART_LON[1]} west · a bearing off the edge snaps back onto it`}
+			</span>
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
 				<span className="field-label">state · how it sits on the chart</span>
 				<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
@@ -580,12 +613,14 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 					<label className="field">
 						<span className="field-label">origin lat</span>
 						<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if never left"
-							value={draft.fromLat} onChange={(e) => h.patchDraft({ fromLat: e.target.value })} />
+							value={draft.fromLat} onChange={(e) => h.patchDraft({ fromLat: e.target.value })}
+							onBlur={() => h.patchDraft({ fromLat: snapCoord(draft.fromLat, CHART_LAT) })} />
 					</label>
 					<label className="field">
 						<span className="field-label">origin lon</span>
 						<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if never left"
-							value={draft.fromLon} onChange={(e) => h.patchDraft({ fromLon: e.target.value })} />
+							value={draft.fromLon} onChange={(e) => h.patchDraft({ fromLon: e.target.value })}
+							onBlur={() => h.patchDraft({ fromLon: snapCoord(draft.fromLon, CHART_LON) })} />
 					</label>
 				</div>
 				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
