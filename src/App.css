@@ -1,9 +1,10 @@
 /*
- * The shell's phone collapse. Above the drawer breakpoint none of this fires
- * and the office keeps its fixed sidebar; below it the sidebar hides behind a
- * hamburger in a slim top bar and opens as an overlay drawer. Lives in its own
- * file (the co-located-CSS idiom) so it never collides with global.css.
- * Keep the breakpoint in sync with DRAWER_MAX in App.tsx.
+ * The shell's phone collapse. Above the phone line none of this fires and the
+ * office keeps its fixed sidebar; below it the sidebar hides and the sticky
+ * topbar (logo, deploy verb, way ashore, scrollable nav chips) stands in for
+ * the rail. Keep the 600 breakpoint in sync with the site's phone line.
+ * Lives in its own file (the co-located-CSS idiom) so it never collides with
+ * global.css.
  */
 
 .office-sidebar {
@@ -21,112 +22,80 @@
 	overflow-y: auto;
 }
 
+/* The phone topbar renders in the DOM at every width but only shows below the
+   phone line; above it the fixed sidebar carries the nav. */
 .office-topbar {
 	display: none;
 }
 
-.office-burger {
-	background: none;
-	border: 0;
-	padding: 8px;
-	margin: -8px -4px -8px 0;
-	cursor: pointer;
-	color: var(--periwinkle);
-}
-
-/* Same treatment as the site's burger: no UA box on pointer taps, gold ring
-   on keyboard reach */
-.office-burger:focus {
-	outline: none;
-}
-
-.office-burger:focus-visible {
-	outline: 2px solid var(--gold);
-	outline-offset: 3px;
-	border-radius: 8px;
-}
-
-.office-burger__box {
+.office-topbar__row {
 	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	gap: 5px;
-	width: 22px;
-	height: 16px;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
 }
 
-.office-burger__bar {
-	height: 2px;
-	width: 100%;
-	background: currentColor;
-	border-radius: 2px;
-	transform-origin: center;
-	transition: transform .2s ease, opacity .2s ease;
+.office-topbar__nav {
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	padding-bottom: 2px;
+	-webkit-overflow-scrolling: touch;
 }
 
-/* Base transforms carry the resting/X poses so the reduced-motion kill-switch
-   (which drops the transition) leaves a clean shape, never a broken one */
-.office-burger__box--open .office-burger__bar:nth-child(1) {
-	transform: translateY(7px) rotate(45deg);
+.topbar-deploy {
+	padding: 8px 14px;
+	font-size: 12px;
+	white-space: nowrap;
 }
 
-.office-burger__box--open .office-burger__bar:nth-child(2) {
-	opacity: 0;
+.topbar-ashore {
+	font-family: var(--font-mono);
+	font-size: 15px;
+	color: var(--text-dim);
+	cursor: pointer;
+	padding: 4px;
+	transition: color .2s;
 }
 
-.office-burger__box--open .office-burger__bar:nth-child(3) {
-	transform: translateY(-7px) rotate(-45deg);
+.topbar-ashore:hover {
+	color: var(--gold);
 }
 
-.office-drawer-backdrop {
-	position: fixed;
-	inset: 0;
-	z-index: 30;
-	background: rgba(9, 11, 20, .5);
-	animation: drawerFade .18s ease both;
+.topbar-chip {
+	flex-shrink: 0;
+	white-space: nowrap;
+	padding: 7px 13px;
+	border-radius: 999px;
+	border: 1px solid var(--border-chip);
+	background: rgba(147, 160, 232, .06);
+	color: var(--text-body);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.topbar-chip--active {
+	border-color: var(--gold-dash-hot);
+	background: rgba(240, 217, 168, .08);
+	color: var(--gold);
 }
 
 @media (max-width: 600px) {
-	.office-topbar {
-		position: sticky;
-		top: 0;
-		z-index: 20;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		padding: 10px 16px 10px 20px;
-		border-bottom: 1px solid var(--border-faint);
-		background: rgba(17, 19, 31, .88);
-		backdrop-filter: blur(8px);
-	}
-
 	.office-sidebar {
 		display: none;
 	}
 
-	.office-sidebar--open {
-		display: flex;
-		position: fixed;
+	.office-topbar {
+		position: sticky;
 		top: 0;
-		left: 0;
-		bottom: 0;
-		height: 100dvh;
-		width: min(280px, 84vw);
-		z-index: 31;
-		background: var(--overlay-card);
-		border-right: 1px solid var(--border-chip);
-		box-shadow: 0 18px 40px rgba(0, 0, 0, .5);
-		animation: drawerIn .2s ease both;
+		z-index: 40;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 11px 14px;
+		border-bottom: 1px solid var(--border-faint);
+		background: rgba(15, 18, 32, .97);
+		backdrop-filter: blur(10px);
 	}
-}
-
-@keyframes drawerIn {
-	from { opacity: 0; transform: translateX(-16px); }
-	to   { opacity: 1; transform: none; }
-}
-
-@keyframes drawerFade {
-	from { opacity: 0; }
-	to   { opacity: 1; }
 }

@@ -6,7 +6,8 @@ import { useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { EditState, HobbyDraft, NoteDraft, ProjectDraft } from '../state/harbor';
-import type { Category, Fact, LightColor, LightKind, Marker, Note, Project } from '../lib/api';
+import type { Category, Fact, LightColor, LightKind, Note, Project } from '../lib/api';
+import { HOBBY_STATES } from '../lib/api';
 import { codeFor, LETTERS, randomLight, RHYTHM_KINDS, wordsFor } from '../lib/lightChar';
 import { printBackground } from '../lib/prints';
 import { relativeTime } from '../lib/time';
@@ -17,7 +18,7 @@ const CATEGORIES: Category[] = ['backend', 'games', 'this website', 'tinkering']
 
 const KICKERS: Record<EditState['type'], string> = {
 	project: 'light · ',
-	hobby:   'headstone · ',
+	hobby:   'chart mark · ',
 	note:    'note · ',
 };
 
@@ -532,12 +533,8 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 	);
 }
 
-const MARKERS: Marker[] = ['stone', 'sticks', 'driftwood', 'cairn', 'buoy'];
-
 function HobbyFields({ draft }: { draft: HobbyDraft }) {
 	const h = useHarbor();
-	const toggleAlive = () => h.patchDraft({ active: !draft.active, disposition: draft.active ? 'laid to rest' : 'still on watch' });
-	const wearPct = `${Math.round((draft.wear || 0) * 100)}%`;
 
 	return (
 		<div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -549,59 +546,61 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 				</label>
 				<label className="field">
 					<span className="field-label">service · "one summer" reads as ancient</span>
-					<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="2023 - 2024" value={draft.service}
+					<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="2023 · 2024" value={draft.service}
 						onChange={(e) => h.patchDraft({ service: e.target.value })} />
 				</label>
 			</div>
-			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, alignItems: 'end' }}>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 				<label className="field">
-					<span className="field-label">light kept · characteristic</span>
-					<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="Fl W 3s" value={draft.char}
-						onChange={(e) => h.patchDraft({ char: e.target.value })} />
+					<span className="field-label">charted position · latitude</span>
+					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="58.20"
+						value={draft.coordLat} onChange={(e) => h.patchDraft({ coordLat: e.target.value })} />
 				</label>
-				<div className="field">
-					<span className="field-label">standing</span>
-					<button type="button" aria-pressed={draft.active} style={{ alignSelf: 'flex-start' }}
-						className={draft.active ? 'chip-dashed' : 'pill pill--quiet'} onClick={toggleAlive}>
-						{draft.active ? '● still learning' : '❦ at rest'}
-					</button>
+				<label className="field">
+					<span className="field-label">· longitude</span>
+					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="-7.40"
+						value={draft.coordLon} onChange={(e) => h.patchDraft({ coordLon: e.target.value })} />
+				</label>
+			</div>
+			<div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+				<span className="field-label">state · how it sits on the chart</span>
+				<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+					{HOBBY_STATES.map((st) => (
+						<DesignerChip key={st.key} selected={draft.state === st.key} label={st.label}
+							onClick={() => h.patchDraft({ state: st.key })} />
+					))}
 				</div>
+				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+					// moored & made-port ride in port · adrift, marooned & ink-spilled have wandered off the fairway
+				</span>
 			</div>
-			<label className="field">
-				<span className="field-label">disposition · the status pill</span>
-				<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="occasionally haunting" value={draft.disposition}
-					onChange={(e) => h.patchDraft({ disposition: e.target.value })} />
-			</label>
 			<div className="fieldset-dashed">
-				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>the marker · how the plot is kept</span>
-				{draft.active ? (
-					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
-						// the living don't get markers: their lamp stays lit on the plot
-					</span>
-				) : (
-					<>
-						<div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-							{MARKERS.map((m) => (
-								<DesignerChip key={m} selected={(draft.marker || 'stone') === m} label={m}
-									onClick={() => h.patchDraft({ marker: m })} />
-							))}
-						</div>
-						<label className="field">
-							<span className="field-label">weathering · {wearPct}</span>
-							<input type="range" min={0} max={1} step={0.05} value={draft.wear}
-								onChange={(e) => h.patchDraft({ wear: parseFloat(e.target.value) })}
-								style={{ width: '100%', accentColor: 'var(--gold)' }} />
-							<span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--periwinkle-deep)' }}>
-								// heavy wear cracks the stone. service dates without a year max this out on their own.
-							</span>
-						</label>
-					</>
-				)}
+				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>slipped from · where the drift began</span>
+				<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+					<label className="field">
+						<span className="field-label">origin lat</span>
+						<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if never left"
+							value={draft.fromLat} onChange={(e) => h.patchDraft({ fromLat: e.target.value })} />
+					</label>
+					<label className="field">
+						<span className="field-label">origin lon</span>
+						<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if never left"
+							value={draft.fromLon} onChange={(e) => h.patchDraft({ fromLon: e.target.value })} />
+					</label>
+				</div>
+				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+					// leave both blank and it draws no wake · fill them and a dotted drift runs from here to the mark
+				</span>
 			</div>
 			<label className="field">
-				<span className="field-label">from the log · the register line</span>
+				<span className="field-label">sounding · seasons afloat</span>
+				<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="2"
+					value={draft.seasons} onChange={(e) => h.patchDraft({ seasons: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">the bearing · how it reads on the chart</span>
 				<input type="text" className="input input--serif-italic" placeholder="Kettle warm. Shoes by the door. Sea calm."
-					value={draft.log} onChange={(e) => h.patchDraft({ log: e.target.value })} />
+					value={draft.bearing} onChange={(e) => h.patchDraft({ bearing: e.target.value })} />
 			</label>
 			<label className="field">
 				<span className="field-label">final entry · quoted on the record</span>
@@ -610,20 +609,20 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 			</label>
 			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 				<label className="field">
-					<span className="field-label">what was found</span>
-					<input type="text" className="input input--serif" value={draft.found}
-						onChange={(e) => h.patchDraft({ found: e.target.value })} />
+					<span className="field-label">what floats · what survived</span>
+					<input type="text" className="input input--serif" value={draft.floats}
+						onChange={(e) => h.patchDraft({ floats: e.target.value })} />
 				</label>
 				<label className="field">
-					<span className="field-label">cause of vanishing</span>
-					<input type="text" className="input input--serif" value={draft.cause}
-						onChange={(e) => h.patchDraft({ cause: e.target.value })} />
+					<span className="field-label">how it went off course</span>
+					<input type="text" className="input input--serif" value={draft.offCourse}
+						onChange={(e) => h.patchDraft({ offCourse: e.target.value })} />
 				</label>
 			</div>
 			<label className="field">
-				<span className="field-label">re-appointment odds</span>
+				<span className="field-label">odds of return</span>
 				<input type="text" className="input input--serif" placeholder="spring makes promises it won't keep"
-					value={draft.return} onChange={(e) => h.patchDraft({ return: e.target.value })} />
+					value={draft.odds} onChange={(e) => h.patchDraft({ odds: e.target.value })} />
 			</label>
 		</div>
 	);

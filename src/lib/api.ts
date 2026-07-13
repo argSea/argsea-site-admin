@@ -104,31 +104,51 @@ export interface Note {
 	updatedAt:     string;
 }
 
-// How a resting hobby's plot is kept; 'lamp' marks a still-lit one and never
-// shows in the marker picker (the living don't get markers).
-export type Marker = 'stone' | 'sticks' | 'driftwood' | 'cairn' | 'buoy' | 'lamp';
+export type HobbyState = 'moored' | 'port' | 'adrift' | 'marooned' | 'inkspill';
+
+// A charted position on the wandering chart. Null on the wire when the hobby
+// has never been plotted: the API migrates old docs with coords null, and the
+// editor opens those with blank inputs for charting by hand.
+export interface Coord {
+	lat: number;
+	lon: number;
+}
+
+// The five states a hobby sits in on the chart, ordered as the editor's chips
+// read. moored/made-port ride in port; adrift/marooned/ink-spilled have
+// wandered off the fairway.
+export const HOBBY_STATES: readonly { key: HobbyState; label: string }[] = [
+	{ key: 'moored',   label: 'moored · on watch' },
+	{ key: 'port',     label: 'made port' },
+	{ key: 'adrift',   label: 'adrift' },
+	{ key: 'marooned', label: 'marooned' },
+	{ key: 'inkspill', label: 'ink-spilled' },
+];
+
+// On watch = riding in port. The chart's groups and the watch-room census both
+// split on this, the same test the API and site use.
+export function onWatch(h: { state: HobbyState }): boolean {
+	return h.state === 'moored' || h.state === 'port';
+}
 
 export interface Hobby {
-	id:          string;
-	name:        string;
-	dates:       string;    // dormant, superseded by `service`
-	active:      boolean;   // the standing toggle: true = currently learning
-	epitaph:     string;    // dormant, superseded by `disposition`
-	eulogy:      string;    // dormant, superseded by `log`/`lastLog`
-	tags:        string[];  // dormant
-	service:     string;    // "2023 - 2024" · how long the keeper kept at it
-	char:        string;    // freeform light characteristic, e.g. "Fl W 3s"
-	marker:      Marker;    // how the plot is kept; only picked once resting
-	wear:        number;    // 0..1, weathering on the stone
-	disposition: string;    // the status pill, freeform
-	log:         string;    // from the log · the register line
-	lastLog:     string;    // final entry, quoted on the record
-	found:       string;    // what was found
-	cause:       string;    // cause of vanishing
-	return:      string;    // re-appointment odds
-	order:       number;
-	createdAt:   string;
-	updatedAt:   string;
+	id:        string;
+	name:      string;
+	service:   string;    // "2023 · 2024" · how long the keeper kept at it
+	state:     HobbyState;
+	coord:     Coord | null;   // charted position; null until plotted by hand
+	from:      Coord | null;   // where the drift began; null draws no wake
+	seasons:   string;    // soundings · seasons afloat
+	bearing:   string;    // how it reads on the chart · the register line
+	lastLog:   string;    // final entry, quoted on the record
+	offCourse: string;    // how it went off course
+	floats:    string;    // what floats · what survived
+	odds:      string;    // odds of return
+	tags?:     string[];  // the site's home page renders these; the admin has no
+	                      // editor for them, so it passes them through untouched
+	order:     number;
+	createdAt: string;
+	updatedAt: string;
 }
 
 export interface Suggestion {
@@ -540,6 +560,11 @@ export interface TopHobby {
 	visits:  number;
 }
 
+export interface FlareRoll {
+	subject: string;   // a hobby id; the admin resolves the name from its store
+	flares:  number;   // distinct visitors who sent one up for this hobby
+}
+
 export interface TrafficPort {
 	port:  string;
 	share: number;     // integer percentage
@@ -560,6 +585,13 @@ export interface TrafficReport {
 	topHobby:    TopHobby | null;
 	ports:       TrafficPort[];
 	bottles:     number;
+	// the flare tally rides the same aggregate: `flares` is the headline count
+	// (distinct visitors who signaled), `flareRolls` the per-hobby breakdown,
+	// sorted descending with zero counts omitted, [] when none. Both are
+	// optional on the wire: an API from before the tally omits them, and the
+	// watch room falls soft to a quiet tile and an empty roll call.
+	flares?:     number;
+	flareRolls?: FlareRoll[];
 }
 
 export function traffic(days = 7): Promise<TrafficReport> {

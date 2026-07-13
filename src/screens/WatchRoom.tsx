@@ -1,17 +1,19 @@
 // The watch room. The greeting, the tiles, and the harbor-traffic card all read
-// live now: ships-sighted and the traffic card ride the sightings API, while
-// notes/lights/graveyard come off the harbor store. Only the weather line stays
-// local whimsy, reporting on no real sea. Every read fails soft, so a report
-// that is still loading, errored, or served by an API too old to know the route
-// leaves quiet placeholders instead of a broken board.
+// live now: ships-sighted, the flares tally, and the traffic card ride the
+// sightings API, while notes, lights, and the off-fairway count come off the
+// harbor store. Only the weather line stays local whimsy, reporting on no real
+// sea. Every read fails soft, so a report that is still loading, errored, or
+// served by an API too old to know the route or the flare fields leaves quiet
+// placeholders instead of a broken board.
 import { useMemo } from 'react';
 import { useHarbor } from '../state/harbor';
+import { onWatch } from '../lib/api';
 import { dateLine, greeting, pickWeatherLine } from '../lib/whimsy';
 import { relativeTime } from '../lib/time';
 import { Boat, Fish } from '../components/art';
 import CatPerch from '../components/CatPerch';
 
-const STAT_TILTS = ['-.6deg', '.4deg', '-.3deg', '.5deg'];
+const STAT_TILTS = ['-.6deg', '.4deg', '-.3deg', '.5deg', '-.4deg'];
 
 const CAT_QUIPS = [
 	'almost had it.', 'the fish owes me money.', 'the traffic can wait. the fish cannot.', 'two jumped. zero landed. rigged.',
@@ -21,7 +23,7 @@ const CAT_QUIPS = [
 // glance; the figurehead and carving lines arrive from the API and get a
 // face here.
 const LOG_GLYPHS: Record<string, string> = {
-	project: '✉', note: '✎', hobby: '†', sitecopy: '⚑', media: '❏',
+	project: '✉', note: '✎', hobby: '✳', sitecopy: '⚑', media: '❏',
 	user: '☸', lantern: '☀', figurehead: '♆', carving: '⚒',
 };
 
@@ -41,13 +43,22 @@ export default function WatchRoom() {
 
 	const pubProjects = h.projects.filter((p) => p.status === 'published').length;
 	const pubNotes = h.notes.filter((n) => n.status === 'published').length;
-	const resting = h.hobbies.filter((x) => !x.active).length;
+	const offFairway = h.hobbies.filter((x) => !onWatch(x)).length;
 
 	const t = h.traffic;
 	const maxSails = t ? Math.max(1, ...t.days.map((d) => d.sails)) : 1;
 	const lightTitle = (id: string): string => h.projects.find((p) => p.id === id)?.title ?? 'an unlisted light';
 	const noteTitle = (id: string): string => h.notes.find((n) => n.id === id)?.title ?? 'a stray note';
 	const plotName = (id: string): string => h.hobbies.find((x) => x.id === id)?.name ?? 'an unmarked plot';
+
+	// the flare tally rides the traffic report; an API from before it omits the
+	// field, which reads quiet, distinct from a present count of zero
+	const flares = t?.flares;
+	const hasFlareField = t != null && flares !== undefined;
+	const topFlare = t?.flareRolls?.[0];
+	const flareSub = !hasFlareField || flares === 0 || !topFlare
+		? 'the coast is quiet. no flares yet.'
+		: `most wanted back: ${plotName(topFlare.subject).toLowerCase()}`;
 
 	const stats = [
 		{
@@ -56,7 +67,7 @@ export default function WatchRoom() {
 		},
 		{ label: 'notes posted', value: `${pubNotes} / ${h.notes.length}`, sub: 'posted / at the desk' },
 		{ label: 'lights burning', value: `${pubProjects} / ${h.projects.length}`, sub: 'lit / on the list' },
-		{ label: 'graveyard census', value: String(resting), sub: 'resting. none dead.' },
+		{ label: 'off the fairway', value: String(offFairway), sub: 'adrift. none sunk.' },
 	];
 
 	const errands = [
@@ -87,6 +98,16 @@ export default function WatchRoom() {
 						<span style={{ fontSize: 13.5, color: 'var(--text-dim)', fontStyle: 'italic' }}>{stat.sub}</span>
 					</div>
 				))}
+				<div className="tilt" onClick={h.openFlareRoll} style={{
+					'--tilt': STAT_TILTS[4], padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 7, cursor: 'pointer',
+					background: 'linear-gradient(180deg,#251a22,#1a1526)', border: '1px solid rgba(255,106,82,.5)', borderRadius: 12,
+					boxShadow: '0 10px 24px rgba(0,0,0,.35), inset 0 0 26px rgba(255,106,82,.09)',
+				} as React.CSSProperties}>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '.13em', color: 'var(--periwinkle)', textTransform: 'uppercase' }}>flares from the coast</span>
+					<span style={{ fontFamily: 'var(--font-display)', fontSize: 30, color: '#ff7a63' }}>{hasFlareField ? String(flares) : QUIET_VALUE}</span>
+					<span style={{ fontSize: 13.5, color: 'var(--text-dim)', fontStyle: 'italic' }}>{flareSub}</span>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#ff7a63', marginTop: 2 }}>tap for the roll call →</span>
+				</div>
 			</div>
 
 			<div className="wave-strip" style={{ position: 'relative', height: 18 }}>

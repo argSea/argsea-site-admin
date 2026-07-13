@@ -1,7 +1,8 @@
-// The office shell. One screen state, no router: exactly like the design:
-// login gate, sidebar + main pane, the two overlays, one toast. Below the
-// drawer breakpoint the sidebar folds behind a hamburger in a slim top bar.
-import { useEffect, useRef, useState } from 'react';
+// The office shell. One screen state, no router, exactly like the design: login
+// gate, sidebar + main pane, the overlays, one toast. Below the phone line the
+// sidebar hides and a sticky MobileTopbar stands in (parallel DOM off the same
+// nav data, the SPA exception to the site's reflow rule).
+import { useState } from 'react';
 import { useHarbor } from './state/harbor';
 import type { Screen } from './state/harbor';
 import { useEscapeKey } from './lib/useEscapeKey';
@@ -9,7 +10,7 @@ import { PROVERBS } from './lib/whimsy';
 import Login from './screens/Login';
 import WatchRoom from './screens/WatchRoom';
 import Projects from './screens/Projects';
-import Graveyard from './screens/Graveyard';
+import ShipsLog from './screens/ShipsLog';
 import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
 import SmugglersCove from './screens/SmugglersCove';
@@ -18,19 +19,17 @@ import Marginalia from './screens/Marginalia';
 import Darkroom from './screens/Darkroom';
 import Keeper from './screens/Keeper';
 import Sidebar from './components/Sidebar';
+import MobileTopbar from './components/MobileTopbar';
 import EditOverlay from './components/EditOverlay';
 import PeekOverlay from './components/PeekOverlay';
-import { DriftDot, LighthouseMark } from './components/art';
+import FlareRoll from './components/FlareRoll';
+import { DriftDot } from './components/art';
 import './App.css';
-
-// The phone breakpoint, mirrors the site's hamburger ruling. Keep in sync
-// with the media query in App.css.
-const DRAWER_MAX = 600;
 
 const SCREENS: Record<Screen, () => React.JSX.Element> = {
 	dash:       WatchRoom,
 	projects:   Projects,
-	hobbies:    Graveyard,
+	hobbies:    ShipsLog,
 	notes:      WritingDesk,
 	copy:       SignalFlags,
 	eggs:       SmugglersCove,
@@ -43,39 +42,18 @@ const SCREENS: Record<Screen, () => React.JSX.Element> = {
 export default function App() {
 	const h = useHarbor();
 	const [proverbIdx, setProverbIdx] = useState(0);
-	const [navOpen, setNavOpen] = useState(false);
-	const burger = useRef<HTMLButtonElement>(null);
 
-	const closeNav = () => setNavOpen(false);
-
-	// Dismissals that don't land focus anywhere (Escape, backdrop) hand it back
-	// to the toggle; a nav tap switches screens, so plain close is enough there
-	const dismissNav = () => {
-		closeNav();
-		burger.current?.focus();
-	};
-
-	// Escape peels the chrome back one layer at a time: the drawer first, then
-	// the peek, then the edit
-	useEscapeKey(Boolean(navOpen || h.peek || h.edit), () => {
-		if (navOpen) {
-			dismissNav();
+	// Escape peels the chrome back one layer at a time: the flares roll call
+	// first (it opens over the watch room), then the peek, then the edit.
+	useEscapeKey(Boolean(h.flareRoll || h.peek || h.edit), () => {
+		if (h.flareRoll) {
+			h.closeFlareRoll();
 		} else if (h.peek) {
 			h.closePeek();
 		} else {
 			h.cancelEdit();
 		}
 	});
-
-	// A jump past the breakpoint leaves no way to close the drawer, so drop it.
-	// Watch the exact query App.css uses; a mirrored min-width would leave a
-	// fractional-width gap between the two where neither side fires.
-	useEffect(() => {
-		const phone = window.matchMedia(`(max-width: ${DRAWER_MAX}px)`);
-		const onChange = () => { if (!phone.matches) { setNavOpen(false); } };
-		phone.addEventListener('change', onChange);
-		return () => phone.removeEventListener('change', onChange);
-	}, []);
 
 	if (h.booting) {
 		return null;
@@ -95,29 +73,10 @@ export default function App() {
 	return (
 		<>
 			<div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-				<header className="office-topbar">
-					<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-						<LighthouseMark width={20} height={24} style={{ transform: 'rotate(-4deg)' }} />
-						<span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--text-nav)' }}>argsea</span>
-					</div>
-					<button
-						ref={burger}
-						className="office-burger"
-						aria-label={navOpen ? 'close the sidebar' : 'open the sidebar'}
-						aria-expanded={navOpen}
-						aria-controls="office-sidebar"
-						onClick={() => setNavOpen((prev) => !prev)}
-					>
-						<span className={`office-burger__box${navOpen ? ' office-burger__box--open' : ''}`}>
-							<span className="office-burger__bar" />
-							<span className="office-burger__bar" />
-							<span className="office-burger__bar" />
-						</span>
-					</button>
-				</header>
+				<MobileTopbar />
 
 				<div style={{ display: 'flex', flex: 1, alignItems: 'stretch' }}>
-					<Sidebar open={navOpen} onNavigate={closeNav} />
+					<Sidebar />
 
 					<div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
 						<DriftDot color="gold" duration="12s" style={{ right: '12%', top: '10%' }} />
@@ -146,9 +105,9 @@ export default function App() {
 				</div>
 			</div>
 
-			{navOpen && <div className="office-drawer-backdrop" onClick={dismissNav} />}
 			{h.edit && <EditOverlay />}
 			{h.peek && <PeekOverlay />}
+			{h.flareRoll && <FlareRoll />}
 			{h.toast && <div className="toast">{h.toast}</div>}
 		</>
 	);
