@@ -6,10 +6,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Carving, Category, CopyTextField, Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose, Hobby,
-	KeeperProfile, LanternStatus, Light, Lighthouse, Marker, MediaItem, Note, Project, Revision, Shape,
+	ActivityEntry, Carving, Category, Coord, CopyTextField, Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose,
+	Hobby, HobbyState, KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Revision, Shape,
 	SiteCopy, Suggestion, TrafficReport,
 } from '../lib/api';
+import { onWatch } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { DEFAULT_LIGHT } from '../lib/lightChar';
 
@@ -170,23 +171,23 @@ export interface NoteDraft {
 	doodleCaption: string;
 }
 
+// The chart editor keeps coordinates as the raw text of their number inputs:
+// blank means "not plotted" (null on the wire), and a half-filled pair is a
+// save-time validation error, not a silent zero-fill.
 export interface HobbyDraft {
-	name:        string;
-	dates:       string;    // dormant
-	epitaph:     string;    // dormant
-	eulogy:      string;    // dormant
-	tagsText:    string;    // dormant
-	active:      boolean;
-	service:     string;
-	char:        string;
-	marker:      Marker;
-	wear:        number;
-	disposition: string;
-	log:         string;
-	lastLog:     string;
-	found:       string;
-	cause:       string;
-	return:      string;
+	name:      string;
+	service:   string;
+	state:     HobbyState;
+	coordLat:  string;
+	coordLon:  string;
+	fromLat:   string;
+	fromLon:   string;
+	seasons:   string;
+	bearing:   string;
+	lastLog:   string;
+	floats:    string;
+	offCourse: string;
+	odds:      string;
 }
 
 interface EditBase {
@@ -285,18 +286,41 @@ function noteDraft(n?: Note): NoteDraft {
 		: { title: '', date: monthYear(), teaser: '', bodyText: '', conditions: '', doodleId: null, doodleCaption: '' };
 }
 
+// A coord loads into the two number inputs as text, or blank when unplotted;
+// the editor charts a migrated (null-coord) hobby by hand from there.
+const coordText = (c: number | undefined): string => (c === undefined ? '' : String(c));
+
 function hobbyDraft(h?: Hobby): HobbyDraft {
 	return h
 		? {
-			name: h.name, dates: h.dates, epitaph: h.epitaph, eulogy: h.eulogy, tagsText: (h.tags ?? []).join(', '),
-			active: h.active, service: h.service, char: h.char, marker: h.marker || 'stone', wear: h.wear || 0,
-			disposition: h.disposition, log: h.log, lastLog: h.lastLog, found: h.found, cause: h.cause, return: h.return,
+			name: h.name, service: h.service, state: h.state,
+			coordLat: coordText(h.coord?.lat), coordLon: coordText(h.coord?.lon),
+			fromLat: coordText(h.from?.lat), fromLon: coordText(h.from?.lon),
+			seasons: h.seasons, bearing: h.bearing, lastLog: h.lastLog,
+			floats: h.floats, offCourse: h.offCourse, odds: h.odds,
 		}
 		: {
-			name: '', dates: `${new Date().getFullYear()} – present`, epitaph: '', eulogy: '', tagsText: '', active: true,
-			service: `${new Date().getFullYear()} - present`, char: 'Fl W 4s', marker: 'stone', wear: 0,
-			disposition: 'still on watch', log: '', lastLog: '', found: '', cause: '', return: '',
+			name: '', service: `${new Date().getFullYear()} · present`, state: 'moored',
+			coordLat: '58.20', coordLon: '-7.40', fromLat: '', fromLon: '',
+			seasons: '1', bearing: '', lastLog: '', floats: '', offCourse: '', odds: '',
 		};
+}
+
+// Blank both bearings and the mark draws no wake (null on the wire); fill both
+// and it charts; fill exactly one and the save bounces. A filled-but-unparseable
+// value counts as filled, so "58.2x" is rejected rather than silently dropped.
+function parseCoord(latStr: string, lonStr: string): Coord | null | 'half' {
+	const latBlank = latStr.trim() === '';
+	const lonBlank = lonStr.trim() === '';
+	if (latBlank && lonBlank) {
+		return null;
+	}
+	const lat = parseFloat(latStr);
+	const lon = parseFloat(lonStr);
+	if (latBlank || lonBlank || isNaN(lat) || isNaN(lon)) {
+		return 'half';
+	}
+	return { lat, lon };
 }
 
 interface HarborValue {
@@ -350,10 +374,14 @@ interface HarborValue {
 	burnNote:            (n: Note) => Promise<void>;
 	toggleNoteTie:       (p: Project, noteId: string) => Promise<void>;
 
-	moveHobby:      (h: Hobby, dir: -1 | 1) => Promise<void>;
-	retireRevive:   (h: Hobby) => Promise<void>;
+	moveHobby:       (h: Hobby, dir: -1 | 1) => Promise<void>;
+	setAdriftOrPort: (h: Hobby) => Promise<void>;
 	addSuggestion:    (value: string) => Promise<void>;
 	removeSuggestion: (s: Suggestion) => Promise<void>;
+
+	flareRoll:      boolean;
+	openFlareRoll:  () => void;
+	closeFlareRoll: () => void;
 
 	setCopyField:   (key: CopyTextField, value: string) => void;
 	setKeeperField: (key: keyof KeeperProfile, value: string) => void;
@@ -425,6 +453,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [confirmKey, setConfirmKey] = useState<string | null>(null);
 	const [edit, setEdit] = useState<EditState | null>(null);
 	const [peek, setPeek] = useState<PeekState | null>(null);
+	const [flareRoll, setFlareRoll] = useState(false);
 
 	const [lantern, setLantern] = useState<LanternStatus | null>(null);
 	const [lanternAbsent, setLanternAbsent] = useState(false);
@@ -551,6 +580,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		setScreen('dash');
 		setEdit(null);
 		setPeek(null);
+		setFlareRoll(false);
 	}, []);
 
 	const goTo = useCallback((next: Screen) => {
@@ -691,18 +721,30 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					showToast('✎ filed at the writing desk');
 				}
 			} else {
-				const { tagsText, ...rest } = edit.draft;
-				const d = { ...rest, tags: tagsText.split(',').map((t) => t.trim()).filter(Boolean) };
+				const d = edit.draft;
+				// blank both = null (no wake); one filled = a half-charted mark the
+				// wire won't take, so bounce it here rather than zero-fill it
+				const coord = parseCoord(d.coordLat, d.coordLon);
+				const from = parseCoord(d.fromLat, d.fromLon);
+				if (coord === 'half' || from === 'half') {
+					showToast('⚠ a mark needs both bearings, or neither');
+					return;
+				}
+				const fields = {
+					name: d.name, service: d.service, state: d.state, coord, from,
+					seasons: d.seasons, bearing: d.bearing, lastLog: d.lastLog,
+					floats: d.floats, offCourse: d.offCourse, odds: d.odds,
+				};
 				if (edit.id === null) {
-					replaceHobby(await api.hobbies.create({ ...d }));
-					showToast('† a new hobby enters the cycle');
+					replaceHobby(await api.hobbies.create(fields));
+					showToast('✳ a new mark on the chart');
 				} else {
 					const current = hobbies.find((h) => h.id === edit.id);
 					if (!current) {
 						return;
 					}
-					replaceHobby(await api.hobbies.update(edit.id, { ...current, ...d }));
-					showToast('† groundskeeping done');
+					replaceHobby(await api.hobbies.update(edit.id, { ...current, ...fields }));
+					showToast('✳ position updated');
 				}
 			}
 			setEdit(null);
@@ -712,7 +754,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [edit, projects, notes, hobbies, replaceProject, replaceNote, replaceHobby, showToast, oops, refreshActivity]);
 
-	// ---- rack / desk / graveyard actions ----
+	// ---- rack / desk / chart actions ----
 
 	const toggleProjectStatus = useCallback(async (p: Project) => {
 		try {
@@ -832,8 +874,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	}, [replaceProject, oops]);
 
 	const moveHobby = useCallback(async (h: Hobby, dir: -1 | 1) => {
-		// reorder stays inside the hobby's own group (learning vs resting)
-		const group = hobbies.filter((x) => x.active === h.active).sort(byOrder);
+		// reorder stays inside the hobby's own group (on watch vs off the fairway)
+		const group = hobbies.filter((x) => onWatch(x) === onWatch(h)).sort(byOrder);
 		const at = group.findIndex((x) => x.id === h.id);
 		const neighbor = group[at + dir];
 		if (!neighbor) {
@@ -859,15 +901,14 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [hobbies, oops, refreshActivity]);
 
-	const retireRevive = useCallback(async (h: Hobby) => {
+	// the chart-list toggle: an on-watch hobby is logged adrift, an off-fairway
+	// one is brought back into port. Both flip `state` through a full-replace PUT.
+	const setAdriftOrPort = useCallback(async (h: Hobby) => {
 		try {
-			// retiring/reviving flips the standing and the status pill together,
-			// the same pairing the standing toggle inside the editor makes
-			const doc = h.active
-				? { ...h, active: false, disposition: 'laid to rest' }
-				: { ...h, active: true, disposition: 'still on watch' };
+			const goAdrift = onWatch(h);
+			const doc: Hobby = { ...h, state: goAdrift ? 'adrift' : 'port' };
 			replaceHobby(await api.hobbies.update(h.id, doc));
-			showToast(h.active ? '† laid to rest. gently.' : '↺ back from the graveyard');
+			showToast(goAdrift ? '≈ logged adrift. still afloat.' : '⚓ brought into port');
 			refreshActivity();
 		} catch (error) {
 			oops(error);
@@ -1344,6 +1385,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const openPeek = useCallback((type: PeekState['type'], id: string) => setPeek({ type, id }), []);
 	const closePeek = useCallback(() => setPeek(null), []);
 
+	const openFlareRoll = useCallback(() => setFlareRoll(true), []);
+	const closeFlareRoll = useCallback(() => setFlareRoll(false), []);
+
 	const value: HarborValue = {
 		session, booting, screen, goTo, signIn, goAshore,
 		projects, notes, hobbies, suggestions, prints, copy, keeper, activity, designs, doodles, carvings, traffic,
@@ -1351,9 +1395,10 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toast, showToast, confirmKey, askConfirm,
 		edit, openEdit, patchDraft, patchLight, loadRevision, saveEdit, cancelEdit,
 		peek, openPeek, closePeek,
+		flareRoll, openFlareRoll, closeFlareRoll,
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, toggleFlagship, moveProject, arrangeProjects, strikeProject, burnNote,
 		toggleNoteTie,
-		moveHobby, retireRevive, addSuggestion, removeSuggestion,
+		moveHobby, setAdriftOrPort, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		saveDesign, renameDesign, deleteDesign, publishDesign,

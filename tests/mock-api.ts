@@ -124,30 +124,51 @@ export class MockApi {
 		},
 	];
 
+	// the ships-log shape: state + charted coords (nullable on the wire), the
+	// renamed fields, no graveyard machinery. h5 is a migrated (null-coord)
+	// hobby, waiting to be charted by hand.
 	hobbies: Doc[] = [
 		{
-			id: 'h1', name: 'The home lab', dates: '2021 – present', active: true, epitaph: '', eulogy: 'One tweak from perfect, forever.',
-			service: '2021 - present', char: 'F W', marker: 'stone', wear: 0, disposition: 'still on watch',
-			log: 'One tweak from perfect, forever.', lastLog: '', found: '', cause: '', return: '',
+			id: 'h1', name: 'The home lab', service: '2021 · present', state: 'moored',
+			coord: { lat: 58.22, lon: -7.50 }, from: null, seasons: '5',
+			bearing: 'Moored in the lee of Eilean Mòr. Never left the harbor.',
+			lastLog: '"All lamps green. One tweak from perfect."', floats: 'everything. that is the whole point.',
+			offCourse: 'It never went off course.', odds: 'in port indefinitely',
 			order: 1, createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z',
 		},
 		{
-			id: 'h2', name: 'CachyOS tinkering', dates: 'always', active: true, epitaph: '', eulogy: 'The day job wearing a hat.',
-			service: 'always', char: 'F W', marker: 'stone', wear: 0, disposition: 'still on watch',
-			log: 'The day job wearing a hat.', lastLog: '', found: '', cause: '', return: '',
+			id: 'h2', name: 'CachyOS tinkering', service: 'always', state: 'moored',
+			coord: { lat: 58.17, lon: -7.45 }, from: null, seasons: '∞',
+			bearing: 'The day job wearing a different hat, moored beside the home lab.',
+			lastLog: '"One more systemd unit. For flavor."', floats: 'a desktop that suspiciously just works',
+			offCourse: 'Has never once drifted.', odds: 'in port permanently',
 			order: 2, createdAt: '2026-01-02T00:00:00Z', updatedAt: '2026-01-02T00:00:00Z',
 		},
 		{
-			id: 'h3', name: 'Piano', dates: '2023 – 2024', active: false, epitaph: '† got good enough', eulogy: 'Quietly closed the lid.',
-			service: '2023 - 2024', char: 'Fl W 3s', marker: 'stone', wear: 0.15, disposition: 'occasionally haunting',
-			log: 'Quietly closed the lid.', lastLog: '', found: '', cause: '', return: '',
+			id: 'h3', name: 'Piano', service: '2023 · 2024', state: 'adrift',
+			coord: { lat: 58.42, lon: -7.12 }, from: { lat: 58.24, lon: -7.44 }, seasons: '2',
+			bearing: 'Last seen drifting off the north point, sails slack.',
+			lastLog: '"Got through the piece with both hands tonight."', floats: 'one shaky recording the family still requests',
+			offCourse: 'Slipped its mooring the night it was "good enough".', odds: 'likely · pending a child’s curiosity',
+			// tags have no admin editor this wave: the site's home renders them,
+			// the office passes them through untouched on a full-replace PUT
+			tags: ['keys', 'practice'],
 			order: 3, createdAt: '2026-01-03T00:00:00Z', updatedAt: '2026-01-03T00:00:00Z',
 		},
 		{
-			id: 'h4', name: 'Running', dates: 'one summer', active: false, epitaph: '† it was a phase', eulogy: 'The shoes remain, as evidence.',
-			service: 'one summer', char: 'Fl W 8s', marker: 'sticks', wear: 0.65, disposition: 'vanished without trace',
-			log: 'The shoes remain, as evidence.', lastLog: '', found: '', cause: '', return: '',
+			id: 'h4', name: 'Running', service: 'one summer', state: 'inkspill',
+			coord: { lat: 57.92, lon: -7.02 }, from: { lat: 58.06, lon: -7.10 }, seasons: '¼',
+			bearing: 'Coordinates smudged. An ink-well tipped across this one.',
+			lastLog: '"5k tomorrow, then every morning after."', floats: 'the shoes. the shoes remain.',
+			offCourse: 'An ink-well tipped over the chart and blotted the bearing.', odds: 'every January the ink threatens to run again',
 			order: 4, createdAt: '2026-01-04T00:00:00Z', updatedAt: '2026-01-04T00:00:00Z',
+		},
+		{
+			id: 'h5', name: 'Chess', service: '2022', state: 'moored',
+			coord: null, from: null, seasons: '1',
+			bearing: 'Charted position lost in the migration; awaiting a hand at the table.',
+			lastLog: '', floats: '', offCourse: '', odds: '',
+			order: 5, createdAt: '2026-01-05T00:00:00Z', updatedAt: '2026-01-05T00:00:00Z',
 		},
 	];
 
@@ -312,7 +333,7 @@ export class MockApi {
 		{ id: 'a7', timestamp: '2026-07-05T08:10:00Z', message: 'note "The home lab ate my weekend" edited', entityType: 'note', entityId: 'n2' },
 		{ id: 'a8', timestamp: '2026-07-05T08:00:00Z', message: 'signal flags re-flown', entityType: 'sitecopy', entityId: 'c1' },
 		{ id: 'a9', timestamp: '2026-07-04T21:00:00Z', message: 'lantern hoisted, site rebuilt in 41s', entityType: 'lantern', entityId: 'l1' },
-		{ id: 'a10', timestamp: '2026-07-03T12:00:00Z', message: 'hobby "Running" moved to the graveyard (again)', entityType: 'hobby', entityId: 'h4' },
+		{ id: 'a10', timestamp: '2026-07-03T12:00:00Z', message: 'hobby "Running" logged adrift (again)', entityType: 'hobby', entityId: 'h4' },
 	];
 
 	revisions: Record<string, Doc[]> = {
@@ -374,6 +395,13 @@ export class MockApi {
 			{ port: 'fediverse', share: 25 },
 		],
 		bottles: 428,
+		// the flare tally: 12 visitors signaled, Piano wanted back most, sorted
+		// descending with zero counts omitted (the subjects are seeded hobby ids)
+		flares: 12,
+		flareRolls: [
+			{ subject: 'h3', flares: 7 },
+			{ subject: 'h4', flares: 5 },
+		],
 	};
 
 	private nextId = 100;

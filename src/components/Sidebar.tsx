@@ -1,24 +1,11 @@
 // Sidebar: brand, nav, the lantern panel, and the way ashore. The harbor cat
-// moved out to a perch per screen; this rail no longer carries one. Fixed
-// rail on desktop; below the drawer breakpoint it hides until the shell's
-// hamburger opens it as an overlay drawer (layout lives in App.css).
+// moved out to a perch per screen; this rail no longer carries one. Fixed rail
+// on desktop; below the phone line it hides entirely and the sticky
+// MobileTopbar stands in for it (layout lives in App.css).
 import { useHarbor } from '../state/harbor';
-import type { Screen } from '../state/harbor';
+import { NAV_ITEMS } from '../lib/nav';
 import { relativeTime } from '../lib/time';
 import { Boat, LighthouseMark } from './art';
-
-const NAV: { id: Screen; glyph: string; label: string }[] = [
-	{ id: 'dash', glyph: '✦', label: 'the watch room' },
-	{ id: 'projects', glyph: '✺', label: 'the light list' },
-	{ id: 'hobbies', glyph: '†', label: 'the graveyard' },
-	{ id: 'notes', glyph: '✎', label: 'writing desk' },
-	{ id: 'copy', glyph: '⚑', label: 'signal flags' },
-	{ id: 'eggs', glyph: '✧', label: "smuggler's cove" },
-	{ id: 'shop', glyph: '♆', label: 'the carving shop' },
-	{ id: 'marginalia', glyph: '✒', label: 'marginalia' },
-	{ id: 'media', glyph: '❏', label: 'the darkroom' },
-	{ id: 'keeper', glyph: '☸', label: 'the keeper' },
-];
 
 function Lantern() {
 	const h = useHarbor();
@@ -75,16 +62,11 @@ function Lantern() {
 	);
 }
 
-interface Props {
-	open:       boolean;
-	onNavigate: () => void;
-}
-
-export default function Sidebar({ open, onNavigate }: Props) {
+export default function Sidebar() {
 	const h = useHarbor();
 
 	return (
-		<div id="office-sidebar" className={`office-sidebar${open ? ' office-sidebar--open' : ''}`}>
+		<div id="office-sidebar" className="office-sidebar">
 			<div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0 6px 18px' }}>
 				<LighthouseMark style={{ transform: 'rotate(-4deg)' }} />
 				<div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -93,10 +75,10 @@ export default function Sidebar({ open, onNavigate }: Props) {
 				</div>
 			</div>
 
-			{NAV.map((item) => (
+			{NAV_ITEMS.map((item) => (
 				<div key={item.id}
 					className={`nav-item${h.screen === item.id ? ' nav-item--active' : ''}`}
-					onClick={() => { h.goTo(item.id); onNavigate(); }}>
+					onClick={() => h.goTo(item.id)}>
 					<span style={{ width: 18, display: 'inline-block', textAlign: 'center' }}>{item.glyph}</span>
 					{item.label}
 				</div>
@@ -105,7 +87,7 @@ export default function Sidebar({ open, onNavigate }: Props) {
 			<div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 20 }}>
 				<Lantern />
 
-				<div className="ghost-link" style={{ fontSize: 12, padding: '4px 6px' }} onClick={() => { onNavigate(); h.goAshore(); }}>
+				<div className="ghost-link" style={{ fontSize: 12, padding: '4px 6px' }} onClick={h.goAshore}>
 					← go ashore
 				</div>
 			</div>
