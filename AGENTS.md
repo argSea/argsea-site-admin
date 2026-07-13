@@ -1,12 +1,16 @@
 # AGENTS.md
 
 ## Purpose
-The argSea admin: "The Harbormaster's Office", the night-harbor back office
+The argSea admin: "The Keeper's Office", the night-harbor back office
 for argsea.com. A single-page Vite + React 19 + TypeScript app and a live
 client of the `argsea-site-api` Go backend. It owns the admin UI and its
 client behavior; it does not own the API, its data model, or the public site.
 No router, no UI kit, no rich-text editor; one shell with screen state and
-bespoke CSS, translated value-for-value from the design.
+bespoke CSS, translated value-for-value from the design. The log desk is a
+block editor over plain-text fields (the marks bar writes keeper syntax, not
+rich text), so the "no rich text" ruling stands. The one crack in the
+zero-dependency posture is `mermaid`, bundled but dynamically imported the
+first time the desk renders a diagram block (no CDN).
 
 ## Voice: we are a lighthouse
 

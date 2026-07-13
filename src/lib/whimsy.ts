@@ -2,7 +2,7 @@
 // all of it sits behind the reduced-motion kill-switch where it moves.
 
 export const PROVERBS = [
-	'The harbormaster is also the intern.',
+	'The keeper is also the intern.',
 	'A tidy harbor is a suspicious harbor.',
 	'Red sky at night, deploy delight.',
 	'Never trust a quiet queue.',

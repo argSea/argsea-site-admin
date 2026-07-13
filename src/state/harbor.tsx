@@ -6,7 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactNode } from 'react';
 import * as api from '../lib/api';
 import type {
-	ActivityEntry, Carving, Category, Coord, CopyTextField, Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose,
+	ActivityEntry, Block, BlockKind, BlockSet, CaseLog, CaseLogStatus, Carving, Category, Coord, CopyTextField,
+	Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose,
 	Hobby, HobbyState, KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Revision, Shape,
 	SiteCopy, Suggestion, TrafficReport,
 } from '../lib/api';
@@ -64,7 +65,7 @@ export const CAT_CATALOG: CatPage[] = [
 			{ id: 'hello.hero', label: 'The hero', hint: 'peeking beside the hero headline' },
 			{ id: 'hello.postcard', label: 'An open light entry', hint: 'on a light entry when it opens' },
 			{ id: 'hello.manifest', label: "The keeper's stores", hint: 'at the end of the stores list' },
-			{ id: 'hello.graveyard', label: 'The hobby graveyard', hint: 'among the graveyard chips' },
+			{ id: 'hello.graveyard', label: "The ship's log", hint: "among the ship's log chips" },
 			{ id: 'hello.contact', label: 'The contact lighthouse', hint: 'by the contact-band lighthouse' },
 		],
 	},
@@ -323,6 +324,127 @@ function parseCoord(latStr: string, lonStr: string): Coord | null | 'half' {
 	return { lat, lon };
 }
 
+// ---- the log desk ----
+
+const HIST_CAP = 60;
+
+// A block gains a client-only id (`bid`) while a desk is open: React keys,
+// selection, and the undo stack all need a stable handle the wire block union
+// deliberately omits. Ids are ephemeral per desk session, minted on open and
+// stripped before every PUT.
+export type EditorBlock = Block & { bid: string };
+
+// The open desk's working copy. Blocks carry bids; everything else mirrors the
+// CaseLog the shelf holds. The shelf list stays the wire shape; the desk keeps
+// this so a slow autosave echo never clobbers in-flight keystrokes or bids.
+export interface DeskDoc {
+	id:          string;
+	projectId:   string;
+	status:      CaseLogStatus;
+	title:       string;
+	blocks:      EditorBlock[];
+	revision:    number;
+	publishedAt: string;
+}
+
+export interface LogNew {
+	step:      'light' | 'template';
+	projectId: string | null;
+	template:  'standard' | 'blank';
+}
+
+export interface DeskPick {
+	bid:  string;
+	kind: 'figure' | 'comparison';
+	idx?: number;   // the stage index, comparison only
+}
+
+let bidSeq = 0;
+function bid(): string {
+	bidSeq += 1;
+	return `b${Date.now().toString(36)}${bidSeq.toString(36)}`;
+}
+
+const withBids = (blocks: Block[]): EditorBlock[] => blocks.map((b) => ({ ...b, bid: bid() }));
+const stripBids = (blocks: EditorBlock[]): Block[] => blocks.map(({ bid: _bid, ...rest }) => rest as Block);
+
+// The display title is the first title block's text on every save, falling back
+// to "Untitled log" when it is blank (pinned wire contract).
+function firstTitle(blocks: { kind: string; text?: string }[]): string {
+	const block = blocks.find((b) => b.kind === 'title');
+	return (block?.text ?? '').trim() || 'Untitled log';
+}
+
+// The header lives in the blocks, seeded from the light: title, subhead, an
+// empty facts grid, and the established/tags line.
+function headerBlocks(project?: Project): Block[] {
+	return [
+		{ kind: 'title',   text: project?.title ?? '' },
+		{ kind: 'subhead', text: project?.shortDesc ?? '' },
+		{ kind: 'facts',   rows: [{ heading: '', fact: '' }] },
+		{ kind: 'meta',    established: project?.firstLit ?? '', tags: [...(project?.tags ?? [])] },
+	];
+}
+
+// The house structure the "standard log" template drops in below the header,
+// the mock's standardLogBody expressed straight as blocks (no parser).
+function standardBody(): Block[] {
+	return [
+		{ kind: 'heading',   text: 'The starting point' },
+		{ kind: 'paragraph', text: 'Set the scene: what existed, who it ran for, and the constraint that made it interesting. [? the constraint only you remember ?]' },
+		{ kind: 'quote',     text: 'A line from the log, in the keeper’s hand.' },
+		{ kind: 'heading',   text: 'The shape of it' },
+		{ kind: 'paragraph', text: 'How it was built. Spend the novelty budget on the problem, not the plumbing.' },
+		{ kind: 'heading',   text: 'Outcomes' },
+		{ kind: 'outcomes',  rows: [{ value: 'the number', caption: 'what it means' }, { value: 'the number', caption: 'what it means' }] },
+	];
+}
+
+function seedBlocks(project: Project, template: 'standard' | 'blank'): Block[] {
+	return [...headerBlocks(project), ...(template === 'blank' ? [] : standardBody())];
+}
+
+// A fresh block of the given kind, wire defaults matching the mock's newBlock.
+function newBlock(kind: BlockKind): EditorBlock {
+	const table: Record<BlockKind, Block> = {
+		title:      { kind: 'title', text: 'The light title' },
+		subhead:    { kind: 'subhead', text: '' },
+		meta:       { kind: 'meta', established: '', tags: [] },
+		heading:    { kind: 'heading', text: 'New section' },
+		paragraph:  { kind: 'paragraph', text: '' },
+		quote:      { kind: 'quote', text: '' },
+		list:       { kind: 'list', ordered: false, items: [''] },
+		code:       { kind: 'code', lang: 'bash', code: '' },
+		mermaid:    { kind: 'mermaid', code: 'flowchart TB\n  a[start] --> b[end]' },
+		facts:      { kind: 'facts', rows: [{ heading: '', fact: '' }] },
+		outcomes:   { kind: 'outcomes', rows: [{ value: '', caption: '' }] },
+		figure:     { kind: 'figure', image: '', caption: '' },
+		comparison: { kind: 'comparison', stages: [{ image: '', label: 'before' }, { image: '', label: 'after' }] },
+		timeline:   { kind: 'timeline', rows: [{ date: '', event: '', link: '' }] },
+		links:      { kind: 'links', rows: [{ label: '', url: '' }] },
+		callout:    { kind: 'callout', register: 'note', text: '' },
+	};
+	return { ...table[kind], bid: bid() };
+}
+
+// The block kinds the insert palette offers, in the union's order. `links` is
+// here by integrator ruling (the public mock renders it; the desk palette
+// omitted it by mistake), sync back to the mock at the next design bank.
+export const BLOCK_PALETTE: { kind: BlockKind; label: string }[] = [
+	{ kind: 'title', label: 'title' }, { kind: 'subhead', label: 'subhead' }, { kind: 'heading', label: 'heading' },
+	{ kind: 'paragraph', label: 'paragraph' }, { kind: 'quote', label: 'quote' }, { kind: 'list', label: 'list' },
+	{ kind: 'code', label: 'code' }, { kind: 'mermaid', label: 'mermaid' }, { kind: 'facts', label: 'facts' },
+	{ kind: 'meta', label: 'established / tags' }, { kind: 'outcomes', label: 'outcomes' }, { kind: 'figure', label: 'figure' },
+	{ kind: 'comparison', label: 'comparison' }, { kind: 'timeline', label: 'timeline' }, { kind: 'links', label: 'links' },
+	{ kind: 'callout', label: 'callout' },
+];
+
+export const BLOCK_TYPE_LABEL: Record<BlockKind, string> = {
+	title: 'title', subhead: 'subhead', meta: 'established / tags', heading: 'heading', paragraph: 'paragraph',
+	quote: 'from the log', list: 'list', code: 'code', mermaid: 'diagram', facts: 'facts', outcomes: 'outcomes',
+	figure: 'figure', comparison: 'comparison', timeline: 'timeline', links: 'links', callout: 'callout',
+};
+
 interface HarborValue {
 	session:  Session | null;
 	booting:  boolean;
@@ -419,6 +541,64 @@ interface HarborValue {
 	deployPct:      number;
 	hoistLantern:   () => Promise<void>;
 	rollbackLantern: () => Promise<void>;
+
+	// ---- the log desk ----
+	logs:      CaseLog[];
+	blockSets: BlockSet[];
+	regNo:     (projectId: string) => string;
+
+	desk:      DeskDoc | null;
+	openDesk:  (id: string) => void;
+	closeDesk: () => void;
+
+	logNew:       LogNew | null;
+	startNewLog:  () => void;
+	cancelNewLog: () => void;
+	pickNewLight: (projectId: string) => void;
+	backToLights: () => void;
+	pickTemplate: (template: 'standard' | 'blank') => void;
+	createLog:    () => Promise<void>;
+
+	logConfirm:     { id: string } | null;
+	askPublishLog:  (id: string) => void;
+	cancelPublish:  () => void;
+	confirmPublish: () => Promise<void>;
+	unpublishLog:   (id: string) => Promise<void>;
+	scrapLog:       (id: string) => Promise<void>;
+	dupLog:         (id: string) => Promise<void>;
+
+	setBlock:    (bid: string, patch: Record<string, unknown>) => void;
+	deleteBlock: (bid: string) => void;
+	dupBlock:    (bid: string) => void;
+	moveBlock:   (bid: string, dir: -1 | 1) => void;
+	setRow:      (bid: string, key: string, idx: number, patch: Record<string, unknown>) => void;
+	addRow:      (bid: string, key: string, item: unknown) => void;
+	delRow:      (bid: string, key: string, idx: number) => void;
+
+	blockMenu:   number | null;
+	openInsert:  (index: number) => void;
+	closeInsert: () => void;
+	addBlockAt:  (index: number, kind: BlockKind) => void;
+	addSetAt:    (index: number, setId: string) => void;
+
+	blockSel:      string[];
+	toggleBlockSel: (bid: string) => void;
+	clearBlockSel: () => void;
+	tplName:       { open: boolean; value: string };
+	openSaveSet:   () => void;
+	setTplName:    (value: string) => void;
+	cancelSaveSet: () => void;
+	confirmSaveSet: () => Promise<void>;
+
+	deskUndo: () => void;
+	deskRedo: () => void;
+	applyMark: (kind: 'bold' | 'italic' | 'code' | 'link' | 'chip') => void;
+
+	deskPick:      DeskPick | null;
+	openDeskPick:  (target: DeskPick) => void;
+	closeDeskPick: () => void;
+	chooseDeskPick: (name: string) => void;
+	developAndPick: (files: Iterable<File>) => Promise<void>;
 }
 
 const HarborContext = createContext<HarborValue | null>(null);
@@ -455,6 +635,16 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [peek, setPeek] = useState<PeekState | null>(null);
 	const [flareRoll, setFlareRoll] = useState(false);
 
+	const [logs, setLogs] = useState<CaseLog[]>([]);
+	const [blockSets, setBlockSets] = useState<BlockSet[]>([]);
+	const [desk, setDesk] = useState<DeskDoc | null>(null);
+	const [logNew, setLogNew] = useState<LogNew | null>(null);
+	const [logConfirm, setLogConfirm] = useState<{ id: string } | null>(null);
+	const [blockMenu, setBlockMenu] = useState<number | null>(null);
+	const [blockSel, setBlockSel] = useState<string[]>([]);
+	const [deskPick, setDeskPick] = useState<DeskPick | null>(null);
+	const [tplName, setTplNameState] = useState<{ open: boolean; value: string }>({ open: false, value: '' });
+
 	const [lantern, setLantern] = useState<LanternStatus | null>(null);
 	const [lanternAbsent, setLanternAbsent] = useState(false);
 	const [deployPct, setDeployPct] = useState(0);
@@ -471,6 +661,21 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	keeperRef.current = keeper;
 	const sessionRef = useRef(session);
 	sessionRef.current = session;
+	const deskRef = useRef(desk);
+	deskRef.current = desk;
+	const logNewRef = useRef(logNew);
+	logNewRef.current = logNew;
+	const logConfirmRef = useRef(logConfirm);
+	logConfirmRef.current = logConfirm;
+	const blockSelRef = useRef(blockSel);
+	blockSelRef.current = blockSel;
+	const deskPickRef = useRef(deskPick);
+	deskPickRef.current = deskPick;
+	const tplNameRef = useRef(tplName);
+	tplNameRef.current = tplName;
+	const histRef = useRef<Record<string, { stack: string[]; i: number }>>({});
+	const deskSaveTimer = useRef<number>(undefined);
+	const deskEditSeq = useRef(0);
 
 	const showToast = useCallback((message: string) => {
 		window.clearTimeout(toastTimer.current);
@@ -531,6 +736,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.figurehead.list().then(setDesigns).catch(oops);
 		api.doodle.list().then(setDoodles).catch(oops);
 		api.carvings.list().then(setCarvings).catch(oops);
+		api.caselog.list().then(setLogs).catch(oops);
+		api.blockset.list().then(setBlockSets).catch(oops);
 		api.getCopy().then((doc) => setCopy(seedCove(doc))).catch(() => setCopy(EMPTY_COPY));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
 		// deploy skew or a quiet sea: a 404/error leaves the report null and the
@@ -581,6 +788,14 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		setEdit(null);
 		setPeek(null);
 		setFlareRoll(false);
+		setDesk(null);
+		setLogNew(null);
+		setLogConfirm(null);
+		setBlockMenu(null);
+		setDeskPick(null);
+		setBlockSel([]);
+		setTplNameState({ open: false, value: '' });
+		histRef.current = {};
 	}, []);
 
 	const goTo = useCallback((next: Screen) => {
@@ -1308,6 +1523,432 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [projects, replaceProject, showToast, oops, refreshActivity]);
 
+	// ---- the log desk ----
+
+	const regNo = useCallback((projectId: string): string => {
+		const at = projects.findIndex((p) => p.id === projectId);
+		return String((at + 1) * 2).padStart(3, '0');
+	}, [projects]);
+
+	const replaceLog = useCallback((saved: CaseLog) => {
+		setLogs((cur) => {
+			const at = cur.findIndex((l) => l.id === saved.id);
+			return at === -1 ? [saved, ...cur] : cur.map((l) => (l.id === saved.id ? saved : l));
+		});
+	}, []);
+
+	// The open draft saves itself: every block mutation queues a debounced,
+	// echo-guarded full-doc PUT (the copy-autosave pattern). The echo brings the
+	// fresh revision/status/timestamps; local blocks are kept as-is so a slow
+	// response never clobbers newer keystrokes or drops the block ids.
+	const queueDeskSave = useCallback(() => {
+		deskEditSeq.current += 1;
+		window.clearTimeout(deskSaveTimer.current);
+		deskSaveTimer.current = window.setTimeout(() => {
+			const d = deskRef.current;
+			if (!d) {
+				return;
+			}
+			const dispatchedAt = deskEditSeq.current;
+			const doc: CaseLog = {
+				id: d.id, projectId: d.projectId, status: d.status, title: firstTitle(d.blocks),
+				blocks: stripBids(d.blocks), revision: d.revision, publishedAt: d.publishedAt,
+				createdAt: '', updatedAt: '',
+			};
+			api.caselog.update(d.id, doc).then((saved) => {
+				if (deskEditSeq.current === dispatchedAt) {
+					setDesk((cur) => (cur && cur.id === saved.id
+						? { ...cur, revision: saved.revision, status: saved.status, title: saved.title, publishedAt: saved.publishedAt }
+						: cur));
+				}
+				replaceLog(saved);
+				refreshActivity();
+			}).catch(oops);
+		}, AUTOSAVE_DELAY);
+	}, [oops, refreshActivity, replaceLog]);
+
+	const recordHist = useCallback((id: string, blocks: EditorBlock[]) => {
+		const h = histRef.current[id] ?? { stack: [], i: -1 };
+		h.stack = h.stack.slice(0, h.i + 1);
+		h.stack.push(JSON.stringify(blocks));
+		if (h.stack.length > HIST_CAP) {
+			h.stack.shift();
+		}
+		h.i = h.stack.length - 1;
+		histRef.current[id] = h;
+	}, []);
+
+	// The one write path for the open desk: run a pure transform over the blocks,
+	// snapshot it onto the undo stack, and queue the autosave.
+	const mutBlocks = useCallback((fn: (blocks: EditorBlock[]) => EditorBlock[]) => {
+		const cur = deskRef.current;
+		if (!cur) {
+			return;
+		}
+		const next = fn(cur.blocks.map((b) => ({ ...b })));
+		recordHist(cur.id, next);
+		setDesk({ ...cur, blocks: next, title: firstTitle(next) });
+		queueDeskSave();
+	}, [recordHist, queueDeskSave]);
+
+	const restoreHist = useCallback((id: string) => {
+		const h = histRef.current[id];
+		const cur = deskRef.current;
+		if (!h || !cur || cur.id !== id) {
+			return;
+		}
+		const blocks = JSON.parse(h.stack[h.i]) as EditorBlock[];
+		setDesk({ ...cur, blocks, title: firstTitle(blocks) });
+		queueDeskSave();
+	}, [queueDeskSave]);
+
+	const setBlock = useCallback((blockId: string, patch: Record<string, unknown>) => {
+		mutBlocks((bl) => bl.map((b) => (b.bid === blockId ? { ...b, ...patch } as EditorBlock : b)));
+	}, [mutBlocks]);
+
+	const deleteBlock = useCallback((blockId: string) => {
+		mutBlocks((bl) => bl.filter((b) => b.bid !== blockId));
+	}, [mutBlocks]);
+
+	const dupBlock = useCallback((blockId: string) => {
+		mutBlocks((bl) => {
+			const at = bl.findIndex((b) => b.bid === blockId);
+			if (at < 0) {
+				return bl;
+			}
+			const copy = { ...(JSON.parse(JSON.stringify(bl[at])) as EditorBlock), bid: bid() };
+			const next = bl.slice();
+			next.splice(at + 1, 0, copy);
+			return next;
+		});
+	}, [mutBlocks]);
+
+	const moveBlock = useCallback((blockId: string, dir: -1 | 1) => {
+		mutBlocks((bl) => {
+			const at = bl.findIndex((b) => b.bid === blockId);
+			const to = at + dir;
+			if (at < 0 || to < 0 || to >= bl.length) {
+				return bl;
+			}
+			const next = bl.slice();
+			[next[at], next[to]] = [next[to], next[at]];
+			return next;
+		});
+	}, [mutBlocks]);
+
+	const setRow = useCallback((blockId: string, key: string, idx: number, patch: Record<string, unknown>) => {
+		mutBlocks((bl) => bl.map((b) => {
+			if (b.bid !== blockId) {
+				return b;
+			}
+			const arr = ((b as unknown as Record<string, unknown[]>)[key] ?? []);
+			const rows = arr.map((row, k) => (k === idx
+				? (typeof row === 'string' ? (patch as { val: string }).val : { ...(row as object), ...patch })
+				: row));
+			return { ...b, [key]: rows } as EditorBlock;
+		}));
+	}, [mutBlocks]);
+
+	const addRow = useCallback((blockId: string, key: string, item: unknown) => {
+		mutBlocks((bl) => bl.map((b) => (b.bid === blockId
+			? { ...b, [key]: [...((b as unknown as Record<string, unknown[]>)[key] ?? []), item] } as EditorBlock
+			: b)));
+	}, [mutBlocks]);
+
+	const delRow = useCallback((blockId: string, key: string, idx: number) => {
+		mutBlocks((bl) => bl.map((b) => (b.bid === blockId
+			? { ...b, [key]: ((b as unknown as Record<string, unknown[]>)[key] ?? []).filter((_, k) => k !== idx) } as EditorBlock
+			: b)));
+	}, [mutBlocks]);
+
+	const openInsert = useCallback((index: number) => setBlockMenu((cur) => (cur === index ? null : index)), []);
+	const closeInsert = useCallback(() => setBlockMenu(null), []);
+
+	const addBlockAt = useCallback((index: number, kind: BlockKind) => {
+		mutBlocks((bl) => {
+			const next = bl.slice();
+			next.splice(index, 0, newBlock(kind));
+			return next;
+		});
+		setBlockMenu(null);
+	}, [mutBlocks]);
+
+	const addSetAt = useCallback((index: number, setId: string) => {
+		const set = blockSets.find((s) => s.id === setId);
+		if (!set) {
+			return;
+		}
+		mutBlocks((bl) => {
+			const next = bl.slice();
+			next.splice(index, 0, ...withBids(set.blocks));
+			return next;
+		});
+		setBlockMenu(null);
+	}, [blockSets, mutBlocks]);
+
+	const toggleBlockSel = useCallback((blockId: string) => {
+		setBlockSel((cur) => (cur.includes(blockId) ? cur.filter((x) => x !== blockId) : [...cur, blockId]));
+	}, []);
+	const clearBlockSel = useCallback(() => setBlockSel([]), []);
+
+	const openSaveSet = useCallback(() => {
+		if (!blockSelRef.current.length) {
+			return;
+		}
+		setTplNameState({ open: true, value: '' });
+	}, []);
+	const setTplName = useCallback((value: string) => setTplNameState((cur) => ({ ...cur, value })), []);
+	const cancelSaveSet = useCallback(() => setTplNameState({ open: false, value: '' }), []);
+	const confirmSaveSet = useCallback(async () => {
+		const name = tplNameRef.current.value.trim();
+		const d = deskRef.current;
+		const sel = blockSelRef.current;
+		if (!name || !d) {
+			return;
+		}
+		const chosen = stripBids(d.blocks.filter((b) => sel.includes(b.bid)));
+		if (!chosen.length) {
+			return;
+		}
+		try {
+			const saved = await api.blockset.create({ name, blocks: chosen });
+			setBlockSets((cur) => [...cur, saved]);
+			setTplNameState({ open: false, value: '' });
+			setBlockSel([]);
+			showToast(`saved "${name}" as a block set.`);
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops]);
+
+	const deskUndo = useCallback(() => {
+		const cur = deskRef.current;
+		if (!cur) {
+			return;
+		}
+		const h = histRef.current[cur.id];
+		if (h && h.i > 0) {
+			h.i -= 1;
+			restoreHist(cur.id);
+		}
+	}, [restoreHist]);
+	const deskRedo = useCallback(() => {
+		const cur = deskRef.current;
+		if (!cur) {
+			return;
+		}
+		const h = histRef.current[cur.id];
+		if (h && h.i < h.stack.length - 1) {
+			h.i += 1;
+			restoreHist(cur.id);
+		}
+	}, [restoreHist]);
+
+	// The marks bar writes the keeper syntax around the live selection: reach the
+	// focused input, splice the wrap in, and fire a native input event so the
+	// controlled onChange picks it up (verbatim from the mock's applyMark).
+	const applyMark = useCallback((kind: 'bold' | 'italic' | 'code' | 'link' | 'chip') => {
+		const el = document.activeElement as HTMLTextAreaElement | HTMLInputElement | null;
+		if (!el || (el.tagName !== 'TEXTAREA' && el.tagName !== 'INPUT')) {
+			showToast('click into a text block first');
+			return;
+		}
+		const start = el.selectionStart ?? 0;
+		const end = el.selectionEnd ?? 0;
+		const value = el.value;
+		const sel = value.slice(start, end);
+		const wraps: Record<typeof kind, [string, string]> = {
+			bold: ['**', '**'], italic: ['*', '*'], code: ['`', '`'], link: ['[', '](https://)'], chip: ['[? ', ' ?]'],
+		};
+		const [open, close] = wraps[kind];
+		const inserted = (kind === 'chip' && !sel)
+			? '[? a fact only you know ?]'
+			: open + (sel || (kind === 'link' ? 'link text' : 'text')) + close;
+		const next = value.slice(0, start) + inserted + value.slice(end);
+		const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+		Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(el, next);
+		el.dispatchEvent(new Event('input', { bubbles: true }));
+	}, [showToast]);
+
+	const openDeskPick = useCallback((target: DeskPick) => setDeskPick(target), []);
+	const closeDeskPick = useCallback(() => setDeskPick(null), []);
+	const chooseDeskPick = useCallback((name: string) => {
+		const target = deskPickRef.current;
+		if (!target) {
+			return;
+		}
+		if (target.kind === 'comparison') {
+			setRow(target.bid, 'stages', target.idx ?? 0, { image: name });
+		} else {
+			setBlock(target.bid, { image: name });
+		}
+		setDeskPick(null);
+	}, [setBlock, setRow]);
+
+	// Develop straight from the picker: upload into the darkroom, then drop the
+	// first fresh print into the block that opened the picker.
+	const developAndPick = useCallback(async (files: Iterable<File>) => {
+		const images = Array.from(files).filter((f) => f.type.startsWith('image/') || /\.(png|jpe?g|gif|svg|webp)$/i.test(f.name));
+		if (!images.length) {
+			showToast('the darkroom only develops images');
+			return;
+		}
+		const settled = await Promise.allSettled(images.map((f) => api.media.upload(f)));
+		const developed = settled
+			.filter((r): r is PromiseFulfilledResult<MediaItem> => r.status === 'fulfilled')
+			.map((r) => r.value);
+		if (!developed.length) {
+			showToast('the darkroom only develops images');
+			return;
+		}
+		setPrints((cur) => [...developed, ...cur]);
+		const target = deskPickRef.current;
+		if (target) {
+			const name = developed[0].filename;
+			if (target.kind === 'comparison') {
+				setRow(target.bid, 'stages', target.idx ?? 0, { image: name });
+			} else {
+				setBlock(target.bid, { image: name });
+			}
+			setDeskPick(null);
+		}
+		refreshActivity();
+		showToast(developed.length === 1 ? 'developed in the darkroom and placed.' : `${developed.length} prints developed in the darkroom.`);
+	}, [showToast, refreshActivity, setBlock, setRow]);
+
+	// Open the desk on a full log doc: mint block ids, guarantee a header, seed a
+	// one-entry undo stack.
+	const openDeskDoc = useCallback((log: CaseLog) => {
+		const project = projects.find((p) => p.id === log.projectId);
+		let blocks = withBids(log.blocks ?? []);
+		if (!blocks.length || blocks[0].kind !== 'title') {
+			blocks = [...withBids(headerBlocks(project)), ...blocks];
+		}
+		histRef.current[log.id] = { stack: [JSON.stringify(blocks)], i: 0 };
+		setDesk({
+			id: log.id, projectId: log.projectId, status: log.status,
+			title: firstTitle(blocks), blocks, revision: log.revision, publishedAt: log.publishedAt,
+		});
+		setBlockMenu(null);
+		setDeskPick(null);
+		setBlockSel([]);
+	}, [projects]);
+
+	const openDesk = useCallback((id: string) => {
+		const log = logs.find((l) => l.id === id);
+		if (log) {
+			openDeskDoc(log);
+		}
+	}, [logs, openDeskDoc]);
+	const closeDesk = useCallback(() => setDesk(null), []);
+
+	const startNewLog = useCallback(() => setLogNew({ step: 'light', projectId: null, template: 'standard' }), []);
+	const cancelNewLog = useCallback(() => setLogNew(null), []);
+	const pickNewLight = useCallback((projectId: string) => setLogNew((cur) => (cur ? { ...cur, projectId, step: 'template' } : cur)), []);
+	const backToLights = useCallback(() => setLogNew((cur) => (cur ? { ...cur, step: 'light' } : cur)), []);
+	const pickTemplate = useCallback((template: 'standard' | 'blank') => setLogNew((cur) => (cur ? { ...cur, template } : cur)), []);
+
+	const createLog = useCallback(async () => {
+		const nf = logNewRef.current;
+		if (!nf || !nf.projectId) {
+			return;
+		}
+		const project = projects.find((p) => p.id === nf.projectId);
+		if (!project) {
+			return;
+		}
+		const blocks = seedBlocks(project, nf.template);
+		try {
+			const saved = await api.caselog.create({ projectId: project.id, status: 'draft', title: firstTitle(blocks), blocks });
+			replaceLog(saved);
+			setLogNew(null);
+			openDeskDoc(saved);
+			showToast('a new log, seeded from the light. saved as a draft.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [projects, replaceLog, openDeskDoc, showToast, oops, refreshActivity]);
+
+	const askPublishLog = useCallback((id: string) => setLogConfirm({ id }), []);
+	const cancelPublish = useCallback(() => setLogConfirm(null), []);
+	// Publishing is an atomic swap: any other lit log of the same light drops
+	// back to draft. The API rejects the hoist when the light has no slug; that
+	// bounce surfaces as a toast.
+	const confirmPublish = useCallback(async () => {
+		const id = logConfirmRef.current?.id;
+		if (!id) {
+			return;
+		}
+		try {
+			const saved = await api.caselog.publish(id);
+			setLogs((cur) => cur.map((l) => (l.id === saved.id
+				? saved
+				: (l.projectId === saved.projectId && l.status === 'published') ? { ...l, status: 'draft' } : l)));
+			setDesk((cur) => (cur && cur.id === saved.id
+				? { ...cur, status: saved.status, revision: saved.revision, publishedAt: saved.publishedAt }
+				: cur));
+			setLogConfirm(null);
+			showToast('● lit. it goes public with the next hoist.');
+			refreshActivity();
+		} catch (error) {
+			setLogConfirm(null);
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const unpublishLog = useCallback(async (id: string) => {
+		try {
+			const saved = await api.caselog.unpublish(id);
+			setLogs((cur) => cur.map((l) => (l.id === saved.id ? saved : l)));
+			setDesk((cur) => (cur && cur.id === saved.id
+				? { ...cur, status: saved.status, revision: saved.revision, publishedAt: saved.publishedAt }
+				: cur));
+			showToast('○ back to draft. the coast will not see it.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const scrapLog = useCallback(async (id: string) => {
+		try {
+			await api.caselog.remove(id);
+			setLogs((cur) => cur.filter((l) => l.id !== id));
+			if (deskRef.current?.id === id) {
+				setDesk(null);
+			}
+			showToast('scrapped. the shelf is one lighter.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const dupLog = useCallback(async (id: string) => {
+		const src = logs.find((l) => l.id === id);
+		if (!src) {
+			return;
+		}
+		const rewrite = `${src.title} (rewrite)`;
+		let renamed = false;
+		const blocks = src.blocks.map((b) => {
+			if (b.kind === 'title' && !renamed) {
+				renamed = true;
+				return { ...b, text: rewrite };
+			}
+			return b;
+		});
+		try {
+			const saved = await api.caselog.create({ projectId: src.projectId, status: 'draft', title: rewrite, blocks });
+			replaceLog(saved);
+			showToast('duplicated as a fresh draft to rewrite.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [logs, replaceLog, showToast, oops, refreshActivity]);
+
 	// ---- the lantern ----
 
 	const deploying = lantern !== null && (lantern.state === 'building' || lantern.state === 'swapping');
@@ -1406,6 +2047,15 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		saveCarving, boltCarving,
 		printUsage, developPrints, tearOffPrint,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
+		logs, blockSets, regNo,
+		desk, openDesk, closeDesk,
+		logNew, startNewLog, cancelNewLog, pickNewLight, backToLights, pickTemplate, createLog,
+		logConfirm, askPublishLog, cancelPublish, confirmPublish, unpublishLog, scrapLog, dupLog,
+		setBlock, deleteBlock, dupBlock, moveBlock, setRow, addRow, delRow,
+		blockMenu, openInsert, closeInsert, addBlockAt, addSetAt,
+		blockSel, toggleBlockSel, clearBlockSel, tplName, openSaveSet, setTplName, cancelSaveSet, confirmSaveSet,
+		deskUndo, deskRedo, applyMark,
+		deskPick, openDeskPick, closeDeskPick, chooseDeskPick, developAndPick,
 	};
 
 	return <HarborContext.Provider value={value}>{children}</HarborContext.Provider>;

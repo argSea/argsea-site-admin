@@ -6,9 +6,69 @@ import { useHarbor } from '../state/harbor';
 import type { Project } from '../lib/api';
 import { printBackground } from '../lib/prints';
 import { codeFor, DEFAULT_LIGHT, GLOW_RGB } from '../lib/lightChar';
+import { relativeTime } from '../lib/time';
 import Lamp from '../components/Lamp';
 import CatPerch from '../components/CatPerch';
 import ProjectWall from './ProjectWall';
+
+const litChip: React.CSSProperties = {
+	fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase',
+	padding: '3px 10px', borderRadius: 999, whiteSpace: 'nowrap', flex: 'none',
+	color: 'var(--gold)', border: '1px solid rgba(240,217,168,.5)', background: 'rgba(240,217,168,.12)',
+};
+const draftChip: React.CSSProperties = {
+	...litChip, color: 'var(--periwinkle)', border: '1px dashed rgba(147,160,232,.5)', background: 'rgba(147,160,232,.08)',
+};
+
+// The logs shelf: every full log under the light list's third pill, one lit per
+// light with drafts alongside. Opening a row raises the full-screen desk.
+function LogsShelf() {
+	const h = useHarbor();
+	const lit = h.logs.filter((l) => l.status === 'published').length;
+	const lightTitle = (projectId: string) => h.projects.find((p) => p.id === projectId)?.title ?? 'a struck light';
+
+	return (
+		<div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'fadeUp .5s ease both' }}>
+			<div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+				<span className="footnote">{h.logs.length} logs on the shelf · {lit} lit · the full logs. one lit per light, any number of drafts.</span>
+				<button className="btn btn--gold" onClick={h.startNewLog}>+ new log</button>
+			</div>
+			{h.logs.map((log) => {
+				const scrapHot = h.confirmKey === `log-${log.id}`;
+				return (
+					<div key={log.id} className="log-row" style={{
+						display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px', borderRadius: 12,
+						border: '1px solid var(--border-faint)', background: 'var(--card)', flexWrap: 'wrap',
+					}}>
+						<span style={log.status === 'published' ? litChip : draftChip}>{log.status === 'published' ? 'lit' : 'draft'}</span>
+						<div onClick={() => h.openDesk(log.id)} style={{ flex: '1 1 260px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
+							<span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--text-head)', lineHeight: 1.2 }}>{log.title}</span>
+							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle)' }}>
+								no. {h.regNo(log.projectId)} · {lightTitle(log.projectId)} · rev {log.revision} · {relativeTime(log.updatedAt)}
+							</span>
+						</div>
+						<div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+							<span className="pill" onClick={() => h.openDesk(log.id)}>open the desk</span>
+							{log.status !== 'published' && <span className="pill" onClick={() => h.askPublishLog(log.id)}>publish</span>}
+							{log.status === 'published' && <span className="pill" onClick={() => h.unpublishLog(log.id)}>unpublish</span>}
+							<span className="pill pill--quiet" onClick={() => { void h.dupLog(log.id); }}>duplicate</span>
+							<span className={`pill ${scrapHot ? 'pill--danger' : 'pill--quiet'}`}
+								onClick={() => h.askConfirm(`log-${log.id}`, () => { void h.scrapLog(log.id); })}>
+								{scrapHot ? 'sure? scrap it.' : 'scrap'}
+							</span>
+						</div>
+					</div>
+				);
+			})}
+			{h.logs.length === 0 && (
+				<span style={{ fontFamily: 'var(--font-body)', fontStyle: 'italic', fontSize: 15, color: 'var(--text-dim)', padding: '8px 2px' }}>
+					The shelf is empty. Start a log from a light with + new log.
+				</span>
+			)}
+			<span className="footnote">// a log belongs to one light. publishing swaps the lit one. nothing is public until the next hoist.</span>
+		</div>
+	);
+}
 
 const ROW_TILTS = ['-.4deg', '.35deg', '-.25deg', '.45deg', '-.5deg', '.3deg'];
 
@@ -71,7 +131,7 @@ function Row({ project, index }: { project: Project; index: number }) {
 
 export default function Projects() {
 	const h = useHarbor();
-	const [tab, setTab] = useState<'rack' | 'coast'>('rack');
+	const [tab, setTab] = useState<'rack' | 'coast' | 'logs'>('rack');
 	const published = h.projects.filter((p) => p.status === 'published').length;
 	const drafts = h.projects.length - published;
 	const featured = h.projects.filter((p) => p.featured);
@@ -93,9 +153,11 @@ export default function Projects() {
 			<div style={{ display: 'flex', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 12.5 }}>
 				<span className={`pill ${tab === 'rack' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('rack')}>the rack</span>
 				<span className={`pill ${tab === 'coast' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('coast')}>the coast</span>
+				<span className={`pill ${tab === 'logs' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('logs')}>the logs</span>
 			</div>
 
 			{tab === 'coast' && <ProjectWall />}
+			{tab === 'logs' && <LogsShelf />}
 
 			{tab === 'rack' && (
 				<>

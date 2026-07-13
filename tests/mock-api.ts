@@ -124,6 +124,55 @@ export class MockApi {
 		},
 	];
 
+	// the full logs (case studies): their own entity, blocks persisted as JSON,
+	// one lit per light. cl1 is p1's lit log, cl2 a p1 draft rewrite (publishing
+	// it swaps cl1 back to draft), cl3 a draft for p3 with nothing lit yet.
+	caselogs: Doc[] = [
+		{
+			id: 'cl1', projectId: 'p1', status: 'published', title: 'The Great Un-monolithing', revision: 7,
+			blocks: [
+				{ kind: 'title', text: 'The Great Un-monolithing' },
+				{ kind: 'subhead', text: 'One giant app became many small, well-behaved services.' },
+				{ kind: 'facts', rows: [{ heading: 'ownership', fact: 'design to operations, solo' }] },
+				{ kind: 'meta', established: '2024', tags: ['kubernetes', 'python'] },
+				{ kind: 'heading', text: 'The starting point' },
+				{ kind: 'paragraph', text: 'One app, every team, one deploy queue.' },
+			],
+			publishedAt: '2026-06-01T12:00:00Z', createdAt: '2026-05-01T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
+		},
+		{
+			id: 'cl2', projectId: 'p1', status: 'draft', title: 'Un-monolithing (rewrite)', revision: 2,
+			blocks: [
+				{ kind: 'title', text: 'Un-monolithing (rewrite)' },
+				{ kind: 'subhead', text: '' },
+				{ kind: 'facts', rows: [{ heading: '', fact: '' }] },
+				{ kind: 'meta', established: '2024', tags: [] },
+			],
+			publishedAt: '', createdAt: '2026-05-06T12:00:00Z', updatedAt: '2026-06-02T12:00:00Z',
+		},
+		{
+			id: 'cl3', projectId: 'p3', status: 'draft', title: 'The home lab', revision: 1,
+			blocks: [
+				{ kind: 'title', text: 'The home lab' },
+				{ kind: 'subhead', text: 'A small fleet of machines that mostly behave.' },
+				{ kind: 'facts', rows: [{ heading: '', fact: '' }] },
+				{ kind: 'meta', established: '2021', tags: [] },
+			],
+			publishedAt: '', createdAt: '2026-05-07T12:00:00Z', updatedAt: '2026-06-03T12:00:00Z',
+		},
+	];
+
+	blocksets: Doc[] = [
+		{
+			id: 'bs1', name: 'header', blocks: [
+				{ kind: 'title', text: 'The light title' },
+				{ kind: 'subhead', text: 'A one-line subhead, in the keeper voice.' },
+				{ kind: 'facts', rows: [{ heading: 'ownership', fact: '' }, { heading: 'outcome', fact: '' }, { heading: 'scope', fact: '' }] },
+				{ kind: 'meta', established: '', tags: [] },
+			],
+		},
+	];
+
 	// the ships-log shape: state + charted coords (nullable on the wire), the
 	// renamed fields, no graveyard machinery. h5 is a migrated (null-coord)
 	// hobby, waiting to be charted by hand.
@@ -505,11 +554,11 @@ export class MockApi {
 			if (verb === 'unfeature') { doc.featured = false; }
 			return json(200, doc);
 		}
-		if ((match = /^\/1\/(project|note)\/([^/]+)\/revisions$/.exec(path)) && method === 'GET') {
+		if ((match = /^\/1\/(project|note|caselog)\/([^/]+)\/revisions$/.exec(path)) && method === 'GET') {
 			return json(200, this.revisions[match[2]] ?? []);
 		}
-		if ((match = /^\/1\/(project|note)\/([^/]+)\/revisions\/([^/]+)\/restore$/.exec(path)) && method === 'POST') {
-			const list = match[1] === 'project' ? this.projects : this.notes;
+		if ((match = /^\/1\/(project|note|caselog)\/([^/]+)\/revisions\/([^/]+)\/restore$/.exec(path)) && method === 'POST') {
+			const list = match[1] === 'project' ? this.projects : match[1] === 'note' ? this.notes : this.caselogs;
 			const revision = (this.revisions[match[2]] ?? []).find((r) => r.id === match![3]);
 			const at = list.findIndex((d) => d.id === match![2]);
 			if (!revision || at === -1) {
@@ -542,6 +591,90 @@ export class MockApi {
 			if (match[2] === 'publish') { doc.status = 'published'; doc.publishedAt = now(); }
 			else { doc.status = 'draft'; doc.publishedAt = ''; }
 			return json(200, doc);
+		}
+
+		// ---- the full logs (case studies) ----
+		if (/^\/1\/caselog\/?$/.test(path)) {
+			if (method === 'GET') {
+				return json(200, this.caselogs.filter((l) => authed || l.status === 'published'));
+			}
+			if (method === 'POST') {
+				const doc = {
+					...body, id: `cl${this.nextId++}`, status: body.status ?? 'draft',
+					revision: 1, publishedAt: body.status === 'published' ? now() : '',
+					createdAt: now(), updatedAt: now(),
+				};
+				this.caselogs.push(doc);
+				return json(200, doc);
+			}
+		}
+		// publish is an atomic swap and rejects a light with no slug; must sit
+		// above the generic item route so it is not read as a caselog id
+		if ((match = /^\/1\/caselog\/([^/]+)\/(publish|unpublish)$/.exec(path)) && method === 'POST') {
+			const doc = this.caselogs.find((l) => l.id === match![1]);
+			if (!doc) {
+				return json(404, { status: 'error', code: 404, message: 'not found' });
+			}
+			if (match[2] === 'publish') {
+				const project = this.projects.find((p) => p.id === doc.projectId);
+				if (!project || !String(project.slug ?? '').trim()) {
+					return json(409, { status: 'error', code: 409, message: 'the light needs a slug before this log can be lit' });
+				}
+				this.caselogs.forEach((l) => {
+					if (l.projectId === doc.projectId && l.status === 'published' && l.id !== doc.id) {
+						l.status = 'draft';
+						l.publishedAt = '';
+					}
+				});
+				doc.status = 'published';
+				doc.publishedAt = now();
+			} else {
+				doc.status = 'draft';
+				doc.publishedAt = '';
+			}
+			// lifecycle flips leave the revision counter alone (pinned contract:
+			// create=1, update and restore increment, publish/unpublish untouched)
+			doc.updatedAt = now();
+			return json(200, doc);
+		}
+		if ((match = /^\/1\/caselog\/([^/]+)$/.exec(path))) {
+			const at = this.caselogs.findIndex((l) => l.id === match![1]);
+			if (at === -1) {
+				return json(404, { status: 'error', code: 404, message: 'not found' });
+			}
+			const doc = this.caselogs[at];
+			if (method === 'GET') {
+				return json(200, doc);
+			}
+			if (method === 'PUT') {
+				// full-replace, but status/publishedAt/createdAt are preserved
+				// server-side and the revision counter ticks up on every save
+				this.caselogs[at] = {
+					...body, id: doc.id, status: doc.status, publishedAt: doc.publishedAt,
+					createdAt: doc.createdAt, revision: (doc.revision ?? 0) + 1, updatedAt: now(),
+				};
+				return json(200, this.caselogs[at]);
+			}
+			if (method === 'DELETE') {
+				this.caselogs.splice(at, 1);
+				return json(200, { status: 'ok', code: 200 });
+			}
+		}
+
+		// ---- block sets (insert-only in v1: list / create / delete) ----
+		if (/^\/1\/blockset\/?$/.test(path)) {
+			if (method === 'GET') {
+				return json(200, this.blocksets);
+			}
+			if (method === 'POST') {
+				const doc = { id: `bs${this.nextId++}`, name: body.name, blocks: body.blocks ?? [] };
+				this.blocksets.push(doc);
+				return json(200, doc);
+			}
+		}
+		if ((match = /^\/1\/blockset\/([^/]+)$/.exec(path)) && method === 'DELETE') {
+			this.blocksets = this.blocksets.filter((s) => s.id !== match![1]);
+			return json(200, { status: 'ok', code: 200 });
 		}
 
 		// ---- hobbies ----
