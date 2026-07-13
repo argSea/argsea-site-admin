@@ -121,6 +121,75 @@ test('a migrated hobby opens with blank coordinate inputs and saves clean', asyn
 	expect(put.body.from).toBeNull();
 });
 
+test('every coordinate input snaps an out-of-band bearing to the chart edge on blur, at both bounds', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	await row(page, 'Piano').getByText('edit', { exact: true }).click();
+	const overlay = page.locator('.overlay-card');
+
+	// each of the four inputs snaps to its own band on blur: lat to
+	// [57.82, 58.56], lon to [-7.94, -6.59], and the snapped value shows at once
+	const bands = [
+		{ label: 'charted position · latitude', hi: '58.56', lo: '57.82' },
+		{ label: '· longitude', hi: '-6.59', lo: '-7.94' },
+		{ label: 'origin lat', hi: '58.56', lo: '57.82' },
+		{ label: 'origin lon', hi: '-6.59', lo: '-7.94' },
+	];
+	for (const band of bands) {
+		const input = overlay.getByLabel(band.label);
+		await input.fill('99');
+		await input.blur();
+		await expect(input).toHaveValue(band.hi);
+		await input.fill('-99');
+		await input.blur();
+		await expect(input).toHaveValue(band.lo);
+	}
+});
+
+test('an in-band bearing stays as typed, a blank origin stays blank, and the snapped values ride the PUT', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
+	const overlay = page.locator('.overlay-card');
+
+	// inside the band the text is left exactly as typed, trailing zero and all
+	const lat = overlay.getByLabel('charted position · latitude');
+	await lat.fill('58.10');
+	await lat.blur();
+	await expect(lat).toHaveValue('58.10');
+
+	// west of the edge it snaps to the bound
+	const lon = overlay.getByLabel('· longitude');
+	await lon.fill('-9');
+	await lon.blur();
+	await expect(lon).toHaveValue('-7.94');
+
+	// the blank origin pair stays blank on blur, no zero-fill
+	const fromLat = overlay.getByLabel('origin lat');
+	await fromLat.fill('');
+	await fromLat.blur();
+	await expect(fromLat).toHaveValue('');
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
+	const [put] = mock.find('PUT', /^\/1\/hobby\/h1$/);
+	expect(put.body.coord).toEqual({ lat: 58.1, lon: -7.94 });
+	expect(put.body.from).toBeNull();
+});
+
+test('a mono hint under the coordinates names the chart band', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
+	const overlay = page.locator('.overlay-card');
+	await expect(overlay.getByText(
+		'// the chart runs 57.82 to 58.56 north, 7.94 to 6.59 west · a bearing off the edge snaps back onto it',
+	)).toBeVisible();
+});
+
 test('a hobby with tags survives an edit round-trip with its tags intact', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the wandering chart').click();
