@@ -632,7 +632,8 @@ export class MockApi {
 				doc.status = 'draft';
 				doc.publishedAt = '';
 			}
-			doc.revision += 1;
+			// lifecycle flips leave the revision counter alone (pinned contract:
+			// create=1, update and restore increment, publish/unpublish untouched)
 			doc.updatedAt = now();
 			return json(200, doc);
 		}

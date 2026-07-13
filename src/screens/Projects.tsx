@@ -33,27 +33,33 @@ function LogsShelf() {
 				<span className="footnote">{h.logs.length} logs on the shelf · {lit} lit · the full logs. one lit per light, any number of drafts.</span>
 				<button className="btn btn--gold" onClick={h.startNewLog}>+ new log</button>
 			</div>
-			{h.logs.map((log) => (
-				<div key={log.id} className="log-row" style={{
-					display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px', borderRadius: 12,
-					border: '1px solid var(--border-faint)', background: 'var(--card)', flexWrap: 'wrap',
-				}}>
-					<span style={log.status === 'published' ? litChip : draftChip}>{log.status === 'published' ? 'lit' : 'draft'}</span>
-					<div onClick={() => h.openDesk(log.id)} style={{ flex: '1 1 260px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
-						<span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--text-head)', lineHeight: 1.2 }}>{log.title}</span>
-						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle)' }}>
-							no. {h.regNo(log.projectId)} · {lightTitle(log.projectId)} · rev {log.revision} · {relativeTime(log.updatedAt)}
-						</span>
+			{h.logs.map((log) => {
+				const scrapHot = h.confirmKey === `log-${log.id}`;
+				return (
+					<div key={log.id} className="log-row" style={{
+						display: 'flex', alignItems: 'center', gap: 16, padding: '16px 18px', borderRadius: 12,
+						border: '1px solid var(--border-faint)', background: 'var(--card)', flexWrap: 'wrap',
+					}}>
+						<span style={log.status === 'published' ? litChip : draftChip}>{log.status === 'published' ? 'lit' : 'draft'}</span>
+						<div onClick={() => h.openDesk(log.id)} style={{ flex: '1 1 260px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4, cursor: 'pointer' }}>
+							<span style={{ fontFamily: 'var(--font-display)', fontSize: 19, color: 'var(--text-head)', lineHeight: 1.2 }}>{log.title}</span>
+							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle)' }}>
+								no. {h.regNo(log.projectId)} · {lightTitle(log.projectId)} · rev {log.revision} · {relativeTime(log.updatedAt)}
+							</span>
+						</div>
+						<div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+							<span className="pill" onClick={() => h.openDesk(log.id)}>open the desk</span>
+							{log.status !== 'published' && <span className="pill" onClick={() => h.askPublishLog(log.id)}>publish</span>}
+							{log.status === 'published' && <span className="pill" onClick={() => h.unpublishLog(log.id)}>unpublish</span>}
+							<span className="pill pill--quiet" onClick={() => { void h.dupLog(log.id); }}>duplicate</span>
+							<span className={`pill ${scrapHot ? 'pill--danger' : 'pill--quiet'}`}
+								onClick={() => h.askConfirm(`log-${log.id}`, () => { void h.scrapLog(log.id); })}>
+								{scrapHot ? 'sure? scrap it.' : 'scrap'}
+							</span>
+						</div>
 					</div>
-					<div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-						<span className="pill" onClick={() => h.openDesk(log.id)}>open the desk</span>
-						{log.status !== 'published' && <span className="pill" onClick={() => h.askPublishLog(log.id)}>publish</span>}
-						{log.status === 'published' && <span className="pill" onClick={() => h.unpublishLog(log.id)}>unpublish</span>}
-						<span className="pill pill--quiet" onClick={() => { void h.dupLog(log.id); }}>duplicate</span>
-						<span className="pill pill--quiet" onClick={() => { void h.scrapLog(log.id); }}>scrap</span>
-					</div>
-				</div>
-			))}
+				);
+			})}
 			{h.logs.length === 0 && (
 				<span style={{ fontFamily: 'var(--font-body)', fontStyle: 'italic', fontSize: 15, color: 'var(--text-dim)', padding: '8px 2px' }}>
 					The shelf is empty. Start a log from a light with + new log.

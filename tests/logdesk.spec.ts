@@ -116,3 +116,16 @@ test('publishing a draft swaps the lit log after the confirm', async ({ page }) 
 	await expect(page.locator('.log-row', { hasText: 'Un-monolithing (rewrite)' }).getByText('lit', { exact: true })).toBeVisible();
 	await expect(page.locator('.log-row', { hasText: 'The Great Un-monolithing' }).getByText('draft', { exact: true })).toBeVisible();
 });
+
+test('scrapping a log takes two clicks', async ({ page }) => {
+	const mock = await signIn(page);
+	await openShelf(page);
+	const row = page.locator('.log-row', { hasText: 'The home lab' });
+	await row.getByText('scrap', { exact: true }).click();
+	// one click only arms it; nothing left the office yet
+	expect(mock.find('DELETE', /^\/1\/caselog\//)).toHaveLength(0);
+	await row.getByText('sure? scrap it.').click();
+	await expect(toast(page)).toHaveText('scrapped. the shelf is one lighter.');
+	expect(mock.find('DELETE', /^\/1\/caselog\/cl3$/)).toHaveLength(1);
+	await expect(row).toHaveCount(0);
+});
