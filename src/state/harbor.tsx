@@ -498,6 +498,7 @@ interface HarborValue {
 
 	moveHobby:       (h: Hobby, dir: -1 | 1) => Promise<void>;
 	setAdriftOrPort: (h: Hobby) => Promise<void>;
+	pinBearings:     (updated: Hobby[]) => Promise<void>;
 	addSuggestion:    (value: string) => Promise<void>;
 	removeSuggestion: (s: Suggestion) => Promise<void>;
 
@@ -1129,6 +1130,24 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			oops(error);
 		}
 	}, [replaceHobby, showToast, oops, refreshActivity]);
+
+	// The chart's pin: each moved hobby is a full-replace PUT of its whole
+	// document with the new coord/from, the same shape the editor saves. The
+	// caller hands over only the changed docs (positions clamped to the band),
+	// so the toast counts exactly the bearings that moved.
+	const pinBearings = useCallback(async (updated: Hobby[]) => {
+		if (0 === updated.length) {
+			return;
+		}
+		try {
+			const saved = await Promise.all(updated.map((hobby) => api.hobbies.update(hobby.id, hobby)));
+			setHobbies((cur) => cur.map((h) => saved.find((s) => s.id === h.id) ?? h).sort(byOrder));
+			showToast(`⚓ pinned. ${saved.length} bearings updated.`);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
 
 	const addSuggestion = useCallback(async (value: string) => {
 		const trimmed = value.trim();
@@ -2039,7 +2058,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		flareRoll, openFlareRoll, closeFlareRoll,
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, toggleFlagship, moveProject, arrangeProjects, strikeProject, burnNote,
 		toggleNoteTie,
-		moveHobby, setAdriftOrPort, addSuggestion, removeSuggestion,
+		moveHobby, setAdriftOrPort, pinBearings, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		saveDesign, renameDesign, deleteDesign, publishDesign,
