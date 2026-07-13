@@ -3,7 +3,6 @@
 // "File it" on a restored draft goes through the restore endpoint; that's
 // the server copy-forward that makes status travel with the printing.
 import { useState } from 'react';
-import type { ChangeEvent } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { EditState, HobbyDraft, NoteDraft, ProjectDraft } from '../state/harbor';
 import type { Category, Fact, LightColor, LightKind, Note, Project } from '../lib/api';
@@ -287,53 +286,38 @@ function FactsBox({ facts }: { facts: Fact[] }) {
 	);
 }
 
-const CASE_STUDY_PLACEHOLDER =
-	'## The starting point\n\nplain paragraphs · > log asides · - lists · [? facts to fill in ?]\n\n:::facts\ntimeline: 6 months\n:::\n\n```mermaid\nflowchart TB\n  a --> b\n```';
-
-// The full log: markdown in the keeper's dialect, hoistable from a file, plus
-// the slug field (operator ruling, beyond the mock: a project with a case
-// study needs a stable public route, argsea.com/projects/<slug>).
-function CaseStudyBox({ draft }: { draft: ProjectDraft }) {
+// The full log lives on its own logs shelf now, not in a textarea here. This
+// box keeps the light-owned slug (the log's public route, argsea.com/projects/
+// <slug>) and points across to the desk. "Open the log" raises the desk on this
+// light's log when one exists; a light with none starts one from the logs pill.
+function FullLogBox({ draft, id }: { draft: ProjectDraft; id: string | null }) {
 	const h = useHarbor();
-	const [fileNote, setFileNote] = useState<string | null>(null);
-
-	const onFile = (e: ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		e.target.value = '';
-		if (!file) {
-			return;
-		}
-		const reader = new FileReader();
-		reader.onload = () => {
-			h.patchDraft({ caseStudy: String(reader.result ?? '') });
-			setFileNote(`⚑ ${file.name} hoisted aboard`);
-		};
-		reader.readAsText(file);
-	};
+	const logs = id ? h.logs.filter((l) => l.projectId === id) : [];
+	const open = logs.find((l) => l.status === 'published') ?? logs[0];
 
 	return (
 		<div className="fieldset-dashed fieldset-dashed--gold">
-			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-				<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--gold)' }}>
-					the full log · case study, markdown
-				</span>
-				<label className="pill" style={{ cursor: 'pointer' }}>
-					⇪ hoist a .md file
-					<input type="file" accept=".md,.markdown,.txt" style={{ display: 'none' }} onChange={onFile} />
-				</label>
-			</div>
+			<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--gold)' }}>
+				the full log · lives on the logs shelf
+			</span>
 			<label className="field">
 				<span className="field-label">slug · argsea.com/projects/&lt;slug&gt;</span>
 				<input type="text" className="input" style={{ maxWidth: 280 }} value={draft.slug}
 					onChange={(e) => h.patchDraft({ slug: e.target.value })} />
 			</label>
-			<textarea className="input" rows={10} placeholder={CASE_STUDY_PLACEHOLDER}
-				style={{ fontSize: 13, lineHeight: 1.6, padding: '13px 14px' }}
-				value={draft.caseStudy} onChange={(e) => h.patchDraft({ caseStudy: e.target.value })} />
+			{open
+				? (
+					<span className="chip-dashed" style={{ alignSelf: 'flex-start', color: 'var(--gold)' }}
+						onClick={() => { h.cancelEdit(); h.openDesk(open.id); }}>open the log →</span>
+				)
+				: (
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)', fontStyle: 'italic' }}>
+						no full log yet · start one from the logs pill on the light list
+					</span>
+				)}
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
-				// any light can carry a full log. dialect: ## sections · &gt; from-the-log asides · - lists · [? fact needed ?] · :::facts and :::outcomes blocks · ```mermaid charts. leave empty and the light simply gets no "full log" link.
+				// the full case study is its own log now, on the light list's logs pill. the slug stays here: it is the light's public route.
 			</span>
-			{fileNote && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--gold)' }}>{fileNote}</span>}
 		</div>
 	);
 }
@@ -483,7 +467,7 @@ function DoodlePicker({ selected }: { selected: string | null }) {
 	);
 }
 
-function ProjectFields({ draft }: { draft: ProjectDraft }) {
+function ProjectFields({ draft, id }: { draft: ProjectDraft; id: string | null }) {
 	const h = useHarbor();
 
 	return (
@@ -526,7 +510,7 @@ function ProjectFields({ draft }: { draft: ProjectDraft }) {
 			</label>
 			<NoteTiesBox draft={draft} />
 			<FactsBox facts={draft.facts} />
-			<CaseStudyBox draft={draft} />
+			<FullLogBox draft={draft} id={id} />
 			<LightEditor draft={draft} />
 			<PicturesBox images={draft.images} />
 		</div>
@@ -731,7 +715,7 @@ export default function EditOverlay() {
 					<span className="pill" onClick={h.cancelEdit}>close ✕</span>
 				</div>
 
-				{edit.type === 'project' && <ProjectFields draft={edit.draft} />}
+				{edit.type === 'project' && <ProjectFields draft={edit.draft} id={edit.id} />}
 				{edit.type === 'hobby' && <HobbyFields draft={edit.draft} />}
 				{edit.type === 'note' && <NoteFields draft={edit.draft} id={edit.id} />}
 

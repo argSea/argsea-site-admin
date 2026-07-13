@@ -1,5 +1,5 @@
 /*
- * Harbormaster's Office global stylesheet.
+ * The Keeper's Office global stylesheet.
  *
  * Owns the night-harbor tokens (values lifted from design/Admin.dc.html in
  * argsea-site), the shared vocabulary used on more than one screen (buttons,
@@ -461,7 +461,7 @@ textarea::placeholder {
 }
 
 /* two-shelf rack row: content shelf, divider, action tray. Scoped to the
-   modifier so WritingDesk/Graveyard keep the plain content-row. */
+   modifier so WritingDesk/ShipsLog keep the plain content-row. */
 .content-row--racked {
 	flex-direction: column;
 	align-items: stretch;

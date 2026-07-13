@@ -104,6 +104,60 @@ export interface Note {
 	updatedAt:     string;
 }
 
+// ---- the full logs (case studies) live in their own entity ----
+
+export type CaseLogStatus = 'draft' | 'published';
+export type CalloutRegister = 'note' | 'warning' | 'dead-end';
+
+// A block of a full log. The discriminator is `kind`; the header (title,
+// subhead, established/tags) lives IN the blocks, seeded from the light and
+// owned by the log. Persisted as JSON on the wire via full-replace PUT; there
+// is no dialect serializer (ruling: the mock's serialize-to-dialect is
+// illustrative only). Marks inside text fields are the keeper syntax the marks
+// bar writes (**b**, *i*, `code`, [text](url), [? chip ?]).
+export type Block =
+	| { kind: 'title';      text: string }
+	| { kind: 'subhead';    text: string }
+	| { kind: 'meta';       established: string; tags: string[] }
+	| { kind: 'heading';    text: string }
+	| { kind: 'paragraph';  text: string }
+	| { kind: 'quote';      text: string }
+	| { kind: 'list';       ordered: boolean; items: string[] }
+	| { kind: 'code';       lang: string; code: string }
+	| { kind: 'mermaid';    code: string }
+	| { kind: 'facts';      rows: { heading: string; fact: string }[] }
+	| { kind: 'outcomes';   rows: { value: string; caption: string }[] }
+	| { kind: 'figure';     image: string; caption: string }         // image = darkroom media name
+	| { kind: 'comparison'; stages: { image: string; label: string }[] }
+	| { kind: 'timeline';   rows: { date: string; event: string; link: string }[] }  // link optional, '' when unset
+	| { kind: 'links';      rows: { label: string; url: string }[] }
+	| { kind: 'callout';    register: CalloutRegister; text: string };
+
+export type BlockKind = Block['kind'];
+
+// A full log document. `title` is the display title for the shelf and lists,
+// kept synced from the first title block on save (fallback "Untitled log").
+// `revision` is the house edit counter the save line reads ("draft rev N").
+export interface CaseLog {
+	id:          string;
+	projectId:   string;      // the light this log belongs to; exactly one lit per light
+	status:      CaseLogStatus;
+	title:       string;
+	blocks:      Block[];
+	revision:    number;
+	publishedAt: string;
+	createdAt:   string;
+	updatedAt:   string;
+}
+
+// A named, reusable selection of blocks, insertable from the desk's palette.
+// The API seeds a "header" set; v1 keeps sets insert-only (list/create/delete).
+export interface BlockSet {
+	id:     string;
+	name:   string;
+	blocks: Block[];
+}
+
 export type HobbyState = 'moored' | 'port' | 'adrift' | 'marooned' | 'inkspill';
 
 // A charted position on the wandering chart. Null on the wire when the hobby
@@ -401,7 +455,7 @@ interface ContentApi<T> {
 	restore(id: string, revisionId: string):     Promise<T>;
 }
 
-function contentApi<T>(family: 'project' | 'note'): ContentApi<T> {
+function contentApi<T>(family: 'project' | 'note' | 'caselog'): ContentApi<T> {
 	const base = `/1/${family}`;
 	return {
 		list:      ()        => request<T[]>('GET', `${base}/`),
@@ -417,6 +471,23 @@ function contentApi<T>(family: 'project' | 'note'): ContentApi<T> {
 
 export const projects = contentApi<Project>('project');
 export const notes = contentApi<Note>('note');
+
+// The full logs ride the same content-lifecycle surface as projects/notes,
+// plus a `get` for a single log. publish is an atomic swap: any other lit log
+// of the same light returns to draft, and the API rejects the hoist if the
+// light has no slug (a lit log needs a public route).
+export const caselog = {
+	...contentApi<CaseLog>('caselog'),
+	get: (id: string): Promise<CaseLog> => request<CaseLog>('GET', `/1/caselog/${id}`),
+};
+
+// Block sets: insert-only in v1, so list/create/delete only. The API seeds a
+// "header" set. The collection route carries the trailing slash like the rest.
+export const blockset = {
+	list:   ()                            => request<BlockSet[]>('GET', '/1/blockset/'),
+	create: (doc: { name: string; blocks: Block[] }) => request<BlockSet>('POST', '/1/blockset/', doc),
+	remove: (id: string)                  => request<void>('DELETE', `/1/blockset/${id}`),
+};
 
 // Lifecycle-style rack endpoints (pinned contract: activity-logged, no
 // revision snapshot; reordering must not spam revisions)
@@ -652,7 +723,7 @@ export async function hoist(): Promise<HoistResult> {
 		return { accepted: response.status === 202, status: await response.json() };
 	}
 	throw new ApiError(response.status, response.status === 403
-		? 'the lantern only answers to the harbormaster'
+		? 'the lantern only answers to the keeper'
 		: `hoist failed (${response.status})`);
 }
 
@@ -675,6 +746,6 @@ export async function lanternRollback(): Promise<RollbackResult> {
 		return { ok: response.ok, status: await response.json() };
 	}
 	throw new ApiError(response.status, response.status === 403
-		? 'the lantern only answers to the harbormaster'
+		? 'the lantern only answers to the keeper'
 		: `rollback failed (${response.status})`);
 }

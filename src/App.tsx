@@ -23,6 +23,9 @@ import MobileTopbar from './components/MobileTopbar';
 import EditOverlay from './components/EditOverlay';
 import PeekOverlay from './components/PeekOverlay';
 import FlareRoll from './components/FlareRoll';
+import LogDesk from './components/LogDesk';
+import NewLogFlow from './components/NewLogFlow';
+import PublishConfirm from './components/PublishConfirm';
 import { DriftDot } from './components/art';
 import './App.css';
 
@@ -108,6 +111,9 @@ export default function App() {
 			{h.edit && <EditOverlay />}
 			{h.peek && <PeekOverlay />}
 			{h.flareRoll && <FlareRoll />}
+			{h.desk && <LogDesk />}
+			{h.logNew && <NewLogFlow />}
+			{h.logConfirm && <PublishConfirm />}
 			{h.toast && <div className="toast">{h.toast}</div>}
 		</>
 	);
