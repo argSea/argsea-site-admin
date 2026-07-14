@@ -18,7 +18,7 @@ interface Doc { [key: string]: any; }
 
 const CORS = {
 	'Access-Control-Allow-Origin': '*',
-	'Access-Control-Allow-Headers': 'Authorization, Content-Type',
+	'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Argsea-Console',
 	'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
@@ -458,6 +458,10 @@ export class MockApi {
 
 	async install(page: Page): Promise<void> {
 		await page.route((url) => url.port === '8181', (route) => this.handle(route));
+		// a failed hail floods the door with youtube iframes; no spec depends on
+		// real playback, so blackhole youtube and keep the suite off the network
+		await page.route(/youtube(-nocookie)?\.com/, (route) =>
+			route.fulfill({ status: 200, contentType: 'text/html', body: '' }));
 	}
 
 	find(method: string, path: RegExp): RecordedCall[] {
