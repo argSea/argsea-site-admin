@@ -389,8 +389,8 @@ export function mediaUrl(url: string): string {
 	return encodeURI(/^https?:/.test(url) ? url : API_URL + url);
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-	const headers: Record<string, string> = {};
+async function request<T>(method: string, path: string, body?: unknown, extra?: Record<string, string>): Promise<T> {
+	const headers: Record<string, string> = { ...extra };
 	if (bearer) {
 		headers['Authorization'] = `Bearer ${bearer}`;
 	}
@@ -429,8 +429,12 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
 interface LoginWire { userName: string; userID: string; token: string; }
 
+// The console marks its own hail with X-Argsea-Console so the API answers a
+// failed login with JSON (the office catches it and floods the door) instead of
+// the direct-request redirect trap. The bearer/content-type headers are set
+// after, so this never disturbs them.
 export async function login(userName: string, password: string): Promise<LoginResult> {
-	const wire = await request<LoginWire>('POST', '/1/auth/login/', { userName, password });
+	const wire = await request<LoginWire>('POST', '/1/auth/login/', { userName, password }, { 'X-Argsea-Console': '1' });
 	return { userName: wire.userName, userID: wire.userID, token: wire.token };
 }
 

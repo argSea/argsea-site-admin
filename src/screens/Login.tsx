@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useHarbor } from '../state/harbor';
 import { Boat, DriftDot, LighthouseMark } from '../components/art';
+import RickFlood from '../components/RickFlood';
 
 export default function Login() {
 	const h = useHarbor();
@@ -11,6 +12,7 @@ export default function Login() {
 	const [pass, setPass] = useState('');
 	const [error, setError] = useState<string | null>(null);
 	const [casting, setCasting] = useState(false);
+	const [misses, setMisses] = useState(0);
 
 	const submit = async (event: FormEvent) => {
 		event.preventDefault();
@@ -25,8 +27,13 @@ export default function Login() {
 		setCasting(true);
 		try {
 			await h.signIn(user.trim(), pass);
-		} catch {
-			setError('the harbor does not know that name and passphrase.');
+		} catch (err) {
+			// A struck light and a plain miss both come back a 400; the struck
+			// one carries the keeper's struck line, which we show as-is. Anything
+			// else reads as an ordinary bad hail. Either way the door floods.
+			const message = err instanceof Error ? err.message : '';
+			setError(/struck/i.test(message) ? message : 'the harbor does not know that name and passphrase.');
+			setMisses((n) => n + 1);
 		} finally {
 			setCasting(false);
 		}
@@ -35,8 +42,9 @@ export default function Login() {
 	const inputStyle = { fontFamily: 'var(--font-mono)', fontSize: 14, padding: '12px 14px' } as const;
 
 	return (
+		<>
 		<div style={{
-			minHeight: '100vh', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+			minHeight: '100vh', position: 'relative', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center',
 			padding: 'clamp(20px, 5vw, 52px)', boxSizing: 'border-box', overflow: 'hidden',
 			color: 'var(--text-base)',
 		}}>
@@ -95,5 +103,7 @@ export default function Login() {
 				© 2026 · argsea.com · back office
 			</div>
 		</div>
+		<RickFlood misses={misses} />
+		</>
 	);
 }
