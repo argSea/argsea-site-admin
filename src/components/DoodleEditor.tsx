@@ -8,8 +8,9 @@ import { useHarbor } from '../state/harbor';
 import type { Linecap, Linejoin, Shape } from '../lib/api';
 import type { Pt, SubPath } from '../lib/shapes';
 import {
-	cleanShape, fitPencil, nearestT, parsePath, parseViewBox, round2, rotateShape,
-	scaleShape, segmentCtrl, serializePath, shapeBox, splitSegment, translateShape,
+	bendSegment, cleanShape, cornerNode, fitPencil, nearestT, parsePath, parseViewBox,
+	round2, rotateShape, scaleShape, segmentCtrl, serializePath, shapeBox, smoothNode,
+	splitSegment, translateShape,
 } from '../lib/shapes';
 import { ShapeNode } from './ShapeEditor';
 import CatPerch from './CatPerch';
@@ -68,6 +69,7 @@ type Drag =
 	| { kind: 'pencil'; pts: Pt[] }
 	| { kind: 'anchor'; sub: number; idx: number; start: Pt; orig: SubPath[] }
 	| { kind: 'handle'; sub: number; idx: number; which: 'in' | 'out' }
+	| { kind: 'bend'; sub: number; idx: number; t: number; start: Pt; orig: SubPath[]; moved: boolean }
 	| { kind: 'penHandle'; start: Pt; moved: boolean };
 
 const clampScale = (s: number): number => Math.min(60, Math.max(0.15, s));
@@ -231,6 +233,18 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 		commit(live.current.map((s) => (s.id === nodeEdit.shapeId ? { ...s, d: serializePath(kept) } : s)));
 	};
 
+	const toggleNode = () => {
+		if (!nodeEdit?.sel) {
+			return;
+		}
+		const { sub, idx } = nodeEdit.sel;
+		const cur = nodeEdit.subs[sub].anchors[idx];
+		const subs = nodeEdit.subs.map((s, si) =>
+			si === sub ? (cur.in || cur.out ? cornerNode(s, idx) : smoothNode(s, idx)) : s);
+		setNodeEdit({ ...nodeEdit, subs });
+		commit(live.current.map((s) => (s.id === nodeEdit.shapeId ? { ...s, d: serializePath(subs) } : s)));
+	};
+
 	// ---- pen ----
 
 	const finishPen = (closed: boolean) => {
@@ -268,7 +282,7 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 
 	const abortDrag = () => {
 		const d = drag.current;
-		if (d && (d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate' || d.kind === 'anchor' || d.kind === 'handle')) {
+		if (d && (d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate' || d.kind === 'anchor' || d.kind === 'handle' || d.kind === 'bend')) {
 			setShapesLive(hist[histAt]);
 			setNodeEdit((ne) => (ne ? { ...ne, subs: parsePathOf(hist[histAt], ne.shapeId), sel: null } : ne));
 		}
@@ -456,6 +470,20 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 				applySubs(subs, nodeEdit);
 				break;
 			}
+			case 'bend': {
+				if (!nodeEdit) {
+					break;
+				}
+				// under the threshold this is still a tap; past it, the segment bows
+				if (!d.moved && Math.hypot(pt.x - d.start.x, pt.y - d.start.y) <= px(4)) {
+					break;
+				}
+				d.moved = true;
+				const subs = d.orig.map((s, si) =>
+					si === d.sub ? bendSegment(s, d.idx, d.t, { x: pt.x - d.start.x, y: pt.y - d.start.y }) : s);
+				applySubs(subs, nodeEdit);
+				break;
+			}
 			case 'penHandle': {
 				if (Math.hypot(pt.x - d.start.x, pt.y - d.start.y) > px(3)) {
 					d.moved = true;
@@ -492,6 +520,20 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 			case 'rotate':
 			case 'anchor':
 			case 'handle': {
+				commit(live.current);
+				break;
+			}
+			case 'bend': {
+				if (d.moved) {
+					commit(live.current);
+					break;
+				}
+				// a clean tap keeps the old gesture: grow an anchor at the tapped spot
+				if (!nodeEdit) {
+					break;
+				}
+				const subs = d.orig.map((s, si) => (si === d.sub ? splitSegment(s, d.idx, d.t) : s));
+				applySubs(subs, { ...nodeEdit, sel: { sub: d.sub, idx: d.idx + 1 } });
 				commit(live.current);
 				break;
 			}
@@ -622,6 +664,8 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 	const selBox = sel ? shapeBox(sel) : null;
 	const pad = px(6);
 	const interactive = tool === 'select' || tool === 'nodes';
+	const selNode = nodeEdit?.sel ? nodeEdit.subs[nodeEdit.sel.sub]?.anchors[nodeEdit.sel.idx] : null;
+	const selSmooth = Boolean(selNode && (selNode.in || selNode.out));
 
 	const handleSpecs = selBox ? [
 		{ hx: -1, hy: -1 }, { hx: 0, hy: -1 }, { hx: 1, hy: -1 },
@@ -678,6 +722,13 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 						<button type="button" className="doodle-tool doodle-tool--verb" onClick={() => finishPen(false)} title="finish the open path (Enter)">
 							<span aria-hidden="true">✓</span>
 							<span className="doodle-tool__name">finish</span>
+						</button>
+					)}
+					{nodeEdit?.sel && (
+						<button type="button" className="doodle-tool doodle-tool--verb" onClick={toggleNode}
+							title={selSmooth ? 'harden the selected node to a corner' : 'smooth the selected node, handles grown'}>
+							<span aria-hidden="true">{selSmooth ? '∟' : '⌒'}</span>
+							<span className="doodle-tool__name">{selSmooth ? 'corner' : 'smooth'}</span>
 						</button>
 					)}
 					{nodeEdit?.sel && (
@@ -785,13 +836,12 @@ export default function DoodleEditor({ doc, onClose }: { doc: DoodleEditorDoc; o
 													fill="none" stroke="transparent" strokeWidth={px(14)} pointerEvents="stroke"
 													style={{ cursor: 'copy' }}
 													onPointerDown={(e) => {
-														// tap a segment to grow an anchor there, ready to drag
-														const t = nearestT(a, b, toWorld(e.clientX, e.clientY));
-														const subs = nodeEdit.subs.map((x, xi) => (xi === si ? splitSegment(x, i, t) : x));
-														applySubs(subs, { ...nodeEdit, sel: { sub: si, idx: i + 1 } });
+														// a tap grows an anchor here; a drag past the threshold
+														// bows the segment instead, resolved on pointerup
+														const pt = toWorld(e.clientX, e.clientY);
 														overlayHit.current = {
-															kind: 'anchor', sub: si, idx: i + 1,
-															start: toWorld(e.clientX, e.clientY), orig: subs,
+															kind: 'bend', sub: si, idx: i,
+															t: nearestT(a, b, pt), start: pt, orig: nodeEdit.subs, moved: false,
 														};
 													}} />
 											);

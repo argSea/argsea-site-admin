@@ -2,7 +2,7 @@
 // model; this module parses path data into an editable anchor/handle form,
 // serializes it back, bakes transforms into coordinates (shapes carry no
 // transform field, by contract), and smooths freehand strokes into beziers.
-import type { Shape } from './api';
+import type { Linecap, Linejoin, Shape } from './api';
 
 export interface Pt {
 	x: number;
@@ -273,6 +273,70 @@ export function splitSegment(sub: SubPath, idx: number, t: number): SubPath {
 		? { x: mid.x, y: mid.y, in: p012, out: p123 }
 		: { x: mid.x, y: mid.y };
 	anchors.splice(idx + 1, 0, fresh);
+	return { ...sub, anchors };
+}
+
+/**
+ * Bow the segment after `idx` so its point at t follows the pointer: the delta
+ * lands on the two control points weighted by their Bernstein pull at t
+ * (w1 = 3(1-t)^2 t, w2 = 3(1-t)t^2, ctrl += delta * w / (w1^2 + w2^2)), which
+ * makes the grabbed point track the pointer exactly. A handleless (line)
+ * segment first grows handles at the 1/3 and 2/3 lerp points: the move that
+ * pulls a curve out of a rigid shape.
+ */
+export function bendSegment(sub: SubPath, idx: number, t: number, delta: Pt): SubPath {
+	const anchors = sub.anchors.map((a) => ({ ...a }));
+	const a = anchors[idx];
+	const b = anchors[(idx + 1) % anchors.length];
+	if (!a.out && !b.in) {
+		a.out = { x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3 };
+		b.in = { x: a.x + (2 * (b.x - a.x)) / 3, y: a.y + (2 * (b.y - a.y)) / 3 };
+	}
+	// a grab at the very ends has no leverage on the controls; keep t inboard
+	const tc = Math.min(0.9, Math.max(0.1, t));
+	const w1 = 3 * (1 - tc) * (1 - tc) * tc;
+	const w2 = 3 * (1 - tc) * tc * tc;
+	const norm = w1 * w1 + w2 * w2;
+	const c1 = a.out ?? { x: a.x, y: a.y };
+	const c2 = b.in ?? { x: b.x, y: b.y };
+	a.out = { x: c1.x + (delta.x * w1) / norm, y: c1.y + (delta.y * w1) / norm };
+	b.in = { x: c2.x + (delta.x * w2) / norm, y: c2.y + (delta.y * w2) / norm };
+	return { ...sub, anchors };
+}
+
+/** Drop the anchor's handles: a hard corner. */
+export function cornerNode(sub: SubPath, idx: number): SubPath {
+	const anchors = sub.anchors.map((a, ai) => (ai === idx ? { x: a.x, y: a.y } : { ...a }));
+	return { ...sub, anchors };
+}
+
+/**
+ * Grow tangent-aligned handles on the anchor: the tangent is the normalized
+ * prev→next chord, each handle a third of its neighbor distance long. An open
+ * end has one neighbor, so only that side gets a handle.
+ */
+export function smoothNode(sub: SubPath, idx: number): SubPath {
+	const anchors = sub.anchors.map((a) => ({ ...a }));
+	const n = anchors.length;
+	const a = anchors[idx];
+	const prev = sub.closed || idx > 0 ? anchors[(idx - 1 + n) % n] : null;
+	const next = sub.closed || idx < n - 1 ? anchors[(idx + 1) % n] : null;
+	const from = prev ?? a;
+	const to = next ?? a;
+	const chord = Math.hypot(to.x - from.x, to.y - from.y);
+	if (chord < 1e-9) {
+		return { ...sub, anchors };
+	}
+	const tx = (to.x - from.x) / chord;
+	const ty = (to.y - from.y) / chord;
+	if (prev) {
+		const len = Math.hypot(a.x - prev.x, a.y - prev.y) / 3;
+		a.in = { x: a.x - tx * len, y: a.y - ty * len };
+	}
+	if (next) {
+		const len = Math.hypot(next.x - a.x, next.y - a.y) / 3;
+		a.out = { x: a.x + tx * len, y: a.y + ty * len };
+	}
 	return { ...sub, anchors };
 }
 
@@ -640,4 +704,224 @@ export function svgInner(raw: string): string {
 	return stripCarvingModel(raw
 		.replace(/^[\s\S]*?<svg[^>]*>/i, '')
 		.replace(/<\/svg>\s*$/i, ''));
+}
+
+// ---- raw svg → shapes: the "carve it loose" import ----
+//
+// The one place raw markup IS parsed: a deliberate import into the shape
+// model, never a silent one. Everything drawable becomes a path shape (so
+// group transforms bake into plain coordinates); whatever the editor cannot
+// hold is named in `lost` instead of being quietly mangled.
+
+export interface ParsedSvg {
+	viewBox: string;
+	shapes:  Shape[];
+	lost:    string[];
+}
+
+// column-major 2x3 affine, svg's own (a b c d e f) order
+type Mat = [number, number, number, number, number, number];
+
+const IDENTITY: Mat = [1, 0, 0, 1, 0, 0];
+
+function matMul(m: Mat, n: Mat): Mat {
+	return [
+		m[0] * n[0] + m[2] * n[1],
+		m[1] * n[0] + m[3] * n[1],
+		m[0] * n[2] + m[2] * n[3],
+		m[1] * n[2] + m[3] * n[3],
+		m[0] * n[4] + m[2] * n[5] + m[4],
+		m[1] * n[4] + m[3] * n[5] + m[5],
+	];
+}
+
+function matApply(m: Mat, p: Pt): Pt {
+	return { x: m[0] * p.x + m[2] * p.y + m[4], y: m[1] * p.x + m[3] * p.y + m[5] };
+}
+
+const TRANSFORM_FN = /([a-zA-Z]+)\s*\(([^)]*)\)/g;
+
+function parseTransform(value: string, lost: string[]): Mat {
+	let m = IDENTITY;
+	for (const [, fn, argStr] of value.matchAll(TRANSFORM_FN)) {
+		const args = argStr.trim().split(/[\s,]+/).filter(Boolean).map(Number);
+		switch (fn) {
+			case 'translate':
+				m = matMul(m, [1, 0, 0, 1, args[0] ?? 0, args[1] ?? 0]);
+				break;
+			case 'scale':
+				m = matMul(m, [args[0] ?? 1, 0, 0, args[1] ?? args[0] ?? 1, 0, 0]);
+				break;
+			case 'rotate': {
+				const rad = ((args[0] ?? 0) * Math.PI) / 180;
+				const cos = Math.cos(rad);
+				const sin = Math.sin(rad);
+				const cx = args[1] ?? 0;
+				const cy = args[2] ?? 0;
+				m = matMul(m, [1, 0, 0, 1, cx, cy]);
+				m = matMul(m, [cos, sin, -sin, cos, 0, 0]);
+				m = matMul(m, [1, 0, 0, 1, -cx, -cy]);
+				break;
+			}
+			case 'matrix':
+				if (args.length === 6) {
+					m = matMul(m, args as Mat);
+				}
+				break;
+			default:
+				lost.push(`${fn} transform`);
+		}
+	}
+	return m;
+}
+
+const CAPS = new Set(['butt', 'round', 'square']);
+const JOINS = new Set(['miter', 'round', 'bevel']);
+
+/** The element's carried style over what it inherits: fill/stroke/width/opacity/cap/join. */
+function carriedStyle(el: Element, inherited: Partial<Shape>): Partial<Shape> {
+	const style: Partial<Shape> = { ...inherited };
+	const fill = el.getAttribute('fill');
+	if (fill !== null) {
+		style.fill = fill;
+	}
+	const stroke = el.getAttribute('stroke');
+	if (stroke !== null) {
+		style.stroke = stroke;
+	}
+	const width = Number(el.getAttribute('stroke-width') ?? NaN);
+	if (!Number.isNaN(width)) {
+		style.strokeWidth = width;
+	}
+	const opacity = Number(el.getAttribute('opacity') ?? NaN);
+	if (!Number.isNaN(opacity)) {
+		style.opacity = opacity;
+	}
+	const cap = el.getAttribute('stroke-linecap');
+	if (cap && CAPS.has(cap)) {
+		style.linecap = cap as Linecap;
+	}
+	const join = el.getAttribute('stroke-linejoin');
+	if (join && JOINS.has(join)) {
+		style.linejoin = join as Linejoin;
+	}
+	return style;
+}
+
+const numAttr = (el: Element, name: string): number => Number(el.getAttribute(name)) || 0;
+
+function parsePoints(value: string): Pt[] {
+	const nums = value.trim().split(/[\s,]+/).map(Number).filter((n) => !Number.isNaN(n));
+	const pts: Pt[] = [];
+	for (let i = 0; i + 1 < nums.length; i += 2) {
+		pts.push({ x: nums[i], y: nums[i + 1] });
+	}
+	return pts;
+}
+
+/** One drawable element as subpaths; null when this editor has no chisel for it. */
+function elementSubPaths(el: Element, lost: string[]): SubPath[] | null {
+	switch (el.tagName.toLowerCase()) {
+		case 'path': {
+			const d = el.getAttribute('d') ?? '';
+			if (/[Aa]/.test(d)) {
+				lost.push('arc segments (straightened)');
+			}
+			return parsePath(d);
+		}
+		case 'rect': {
+			if (el.getAttribute('rx') || el.getAttribute('ry')) {
+				lost.push('rounded rect corners');
+			}
+			const rect = toPathShape({
+				id: '', type: 'rect',
+				x: numAttr(el, 'x'), y: numAttr(el, 'y'), w: numAttr(el, 'width'), h: numAttr(el, 'height'),
+			});
+			return parsePath(rect.d ?? '');
+		}
+		case 'circle': {
+			const r = numAttr(el, 'r');
+			const disc = toPathShape({ id: '', type: 'ellipse', cx: numAttr(el, 'cx'), cy: numAttr(el, 'cy'), rx: r, ry: r });
+			return parsePath(disc.d ?? '');
+		}
+		case 'ellipse': {
+			const oval = toPathShape({
+				id: '', type: 'ellipse',
+				cx: numAttr(el, 'cx'), cy: numAttr(el, 'cy'), rx: numAttr(el, 'rx'), ry: numAttr(el, 'ry'),
+			});
+			return parsePath(oval.d ?? '');
+		}
+		case 'line':
+			return [{ closed: false, anchors: [
+				{ x: numAttr(el, 'x1'), y: numAttr(el, 'y1') },
+				{ x: numAttr(el, 'x2'), y: numAttr(el, 'y2') },
+			] }];
+		case 'polyline': {
+			const pts = parsePoints(el.getAttribute('points') ?? '');
+			return pts.length >= 2 ? [{ closed: false, anchors: pts.map((p) => ({ ...p })) }] : [];
+		}
+		case 'polygon': {
+			const pts = parsePoints(el.getAttribute('points') ?? '');
+			return pts.length >= 2 ? [{ closed: true, anchors: pts.map((p) => ({ ...p })) }] : [];
+		}
+		default:
+			return null;
+	}
+}
+
+// invisible bookkeeping tags; skipping them loses nothing worth naming
+const SKIPPED_SILENTLY = new Set(['title', 'desc', 'metadata']);
+
+// visual baggage the shape model has no field for
+const LOST_ATTRS = ['style', 'stroke-dasharray', 'filter', 'clip-path', 'mask'];
+
+function walkSvg(el: Element, matrix: Mat, inherited: Partial<Shape>, shapes: Shape[], lost: string[]): void {
+	for (const child of Array.from(el.children)) {
+		const tag = child.tagName.toLowerCase();
+		if (SKIPPED_SILENTLY.has(tag)) {
+			continue;
+		}
+		for (const name of LOST_ATTRS) {
+			if (child.hasAttribute(name)) {
+				lost.push(name === 'style' ? 'style attributes' : name);
+			}
+		}
+		const transform = child.getAttribute('transform');
+		const m = transform ? matMul(matrix, parseTransform(transform, lost)) : matrix;
+		if (tag === 'g') {
+			walkSvg(child, m, carriedStyle(child, inherited), shapes, lost);
+			continue;
+		}
+		const subs = elementSubPaths(child, lost);
+		if (!subs) {
+			lost.push(`<${tag}>`);
+			continue;
+		}
+		if (!subs.length) {
+			continue;
+		}
+		const baked = subs.map((sub) => ({
+			...sub,
+			anchors: sub.anchors.map((a) => ({
+				...matApply(m, a),
+				in:  a.in ? matApply(m, a.in) : undefined,
+				out: a.out ? matApply(m, a.out) : undefined,
+			})),
+		}));
+		shapes.push({ id: `loose-${shapes.length + 1}`, type: 'path', d: serializePath(baked), ...carriedStyle(child, inherited) });
+	}
+}
+
+/** Parse a raw svg document into editable shapes; whatever cannot survive is named in `lost`. */
+export function parseSvg(raw: string): ParsedSvg {
+	const viewBox = svgViewBox(raw);
+	const shapes: Shape[] = [];
+	const lost: string[] = [];
+	const doc = new DOMParser().parseFromString(stripCarvingModel(raw), 'image/svg+xml');
+	const root = doc.documentElement;
+	if (root.tagName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) {
+		return { viewBox, shapes, lost: ['markup the parser could not read'] };
+	}
+	walkSvg(root, IDENTITY, carriedStyle(root, {}), shapes, lost);
+	return { viewBox, shapes, lost: [...new Set(lost)] };
 }

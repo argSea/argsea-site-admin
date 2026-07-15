@@ -12,9 +12,10 @@ import { CARVING_CATALOG } from '../state/harbor';
 import type { Carving, Linecap, Linejoin, Shape } from '../lib/api';
 import type { Pt, SubPath } from '../lib/shapes';
 import {
-	carvingSvg, fitPencil, nearestT, parsePath, parseViewBox, readCarvingModel,
-	round2, rotateShape, scaleShape, segmentCtrl, serializePath, shapeBox, splitSegment,
-	stripCarvingModel, svgInner, svgViewBox, translateShape,
+	bendSegment, carvingSvg, cornerNode, fitPencil, nearestT, parsePath, parseSvg,
+	parseViewBox, readCarvingModel, round2, rotateShape, scaleShape, segmentCtrl,
+	serializePath, shapeBox, smoothNode, splitSegment, stripCarvingModel, svgInner,
+	svgViewBox, translateShape,
 } from '../lib/shapes';
 import { ShapeNode } from '../components/ShapeEditor';
 import CatPerch from '../components/CatPerch';
@@ -119,6 +120,7 @@ type Drag =
 	| { kind: 'pencil'; pts: Pt[] }
 	| { kind: 'anchor'; sub: number; idx: number; start: Pt; orig: SubPath[] }
 	| { kind: 'handle'; sub: number; idx: number; which: 'in' | 'out' }
+	| { kind: 'bend'; sub: number; idx: number; t: number; start: Pt; orig: SubPath[]; moved: boolean }
 	| { kind: 'penHandle'; start: Pt; moved: boolean };
 
 const clampScale = (s: number): number => Math.min(60, Math.max(0.15, s));
@@ -356,6 +358,18 @@ function Bench(props: BenchProps) {
 		commit(live.current.map((s) => (s.id === nodeEdit.shapeId ? { ...s, d: serializePath(kept) } : s)));
 	};
 
+	const toggleNode = () => {
+		if (!nodeEdit?.sel) {
+			return;
+		}
+		const { sub, idx } = nodeEdit.sel;
+		const cur = nodeEdit.subs[sub].anchors[idx];
+		const subs = nodeEdit.subs.map((s, si) =>
+			si === sub ? (cur.in || cur.out ? cornerNode(s, idx) : smoothNode(s, idx)) : s);
+		setNodeEdit({ ...nodeEdit, subs });
+		commit(live.current.map((s) => (s.id === nodeEdit.shapeId ? { ...s, d: serializePath(subs) } : s)));
+	};
+
 	// ---- pen ----
 
 	const finishPen = (closed: boolean) => {
@@ -393,7 +407,7 @@ function Bench(props: BenchProps) {
 
 	const abortDrag = () => {
 		const d = drag.current;
-		if (d && (d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate' || d.kind === 'anchor' || d.kind === 'handle')) {
+		if (d && (d.kind === 'move' || d.kind === 'scale' || d.kind === 'rotate' || d.kind === 'anchor' || d.kind === 'handle' || d.kind === 'bend')) {
 			setShapesLive(hist[histAt]);
 			setNodeEdit((ne) => (ne ? { ...ne, subs: parsePathOf(hist[histAt], ne.shapeId), sel: null } : ne));
 		}
@@ -575,6 +589,20 @@ function Bench(props: BenchProps) {
 				applySubs(subs, nodeEdit);
 				break;
 			}
+			case 'bend': {
+				if (!nodeEdit) {
+					break;
+				}
+				// under the threshold this is still a tap; past it, the segment bows
+				if (!d.moved && Math.hypot(pt.x - d.start.x, pt.y - d.start.y) <= px(4)) {
+					break;
+				}
+				d.moved = true;
+				const subs = d.orig.map((s, si) =>
+					si === d.sub ? bendSegment(s, d.idx, d.t, { x: pt.x - d.start.x, y: pt.y - d.start.y }) : s);
+				applySubs(subs, nodeEdit);
+				break;
+			}
 			case 'penHandle': {
 				if (Math.hypot(pt.x - d.start.x, pt.y - d.start.y) > px(3)) {
 					d.moved = true;
@@ -611,6 +639,20 @@ function Bench(props: BenchProps) {
 			case 'rotate':
 			case 'anchor':
 			case 'handle': {
+				commit(live.current);
+				break;
+			}
+			case 'bend': {
+				if (d.moved) {
+					commit(live.current);
+					break;
+				}
+				// a clean tap keeps the old gesture: grow an anchor at the tapped spot
+				if (!nodeEdit) {
+					break;
+				}
+				const subs = d.orig.map((s, si) => (si === d.sub ? splitSegment(s, d.idx, d.t) : s));
+				applySubs(subs, { ...nodeEdit, sel: { sub: d.sub, idx: d.idx + 1 } });
 				commit(live.current);
 				break;
 			}
@@ -788,6 +830,26 @@ function Bench(props: BenchProps) {
 		}
 	};
 
+	// "carve it loose": parse the raw markup into an editable model, riding the
+	// copy-to-fresh flow so a builtin stays locked as itself and the copy opens
+	// under the tools. the island embeds in that first save; fidelity losses
+	// are said out loud, never pretended away.
+	const carveLoose = async () => {
+		const parsed = parseSvg(rawSvg);
+		if (!parsed.shapes.length) {
+			h.showToast('⚠ nothing here the chisels can hold. it stays as carved.');
+			return;
+		}
+		const saved = await h.saveCarving(null, { name: `${name} copy`, svg: carvingSvg(parsed.viewBox, parsed.shapes) });
+		if (!saved) {
+			return;
+		}
+		if (parsed.lost.length) {
+			h.showToast(`⚒ carved loose, mostly. still in the block: ${parsed.lost.join(', ')}.`);
+		}
+		props.onSelect({ kind: 'carving', carving: saved });
+	};
+
 	// ---- catalog popover data ----
 
 	const boltedTo = (spotId: string): Carving | undefined => h.carvings.find((c) => c.boltedTo.includes(spotId));
@@ -808,6 +870,8 @@ function Bench(props: BenchProps) {
 	const selBox = sel ? shapeBox(sel) : null;
 	const pad = px(6);
 	const interactive = isModel && (tool === 'select' || tool === 'nodes');
+	const selNode = nodeEdit?.sel ? nodeEdit.subs[nodeEdit.sel.sub]?.anchors[nodeEdit.sel.idx] : null;
+	const selSmooth = Boolean(selNode && (selNode.in || selNode.out));
 	const handleSpecs = selBox ? [
 		{ hx: -1, hy: -1 }, { hx: 0, hy: -1 }, { hx: 1, hy: -1 },
 		{ hx: -1, hy: 0 }, { hx: 1, hy: 0 },
@@ -938,6 +1002,11 @@ function Bench(props: BenchProps) {
 								{penDraft && (
 									<button type="button" className="carving-tool carving-tool--verb" title="finish the open path (Enter)"
 										onClick={() => finishPen(false)}>✓</button>
+								)}
+								{nodeEdit?.sel && (
+									<button type="button" className="carving-tool carving-tool--verb"
+										title={selSmooth ? 'corner · drop the handles' : 'smooth · grow tangent handles'}
+										onClick={toggleNode}>{selSmooth ? '∟' : '⌒'}</button>
 								)}
 								{nodeEdit?.sel && (
 									<button type="button" className="carving-tool carving-tool--verb" title="remove the selected node (Delete)"
@@ -1170,12 +1239,12 @@ function Bench(props: BenchProps) {
 																fill="none" stroke="transparent" strokeWidth={px(14)} pointerEvents="stroke"
 																style={{ cursor: 'copy' }}
 																onPointerDown={(e) => {
-																	const t = nearestT(a, b, toWorld(e.clientX, e.clientY));
-																	const subs = nodeEdit.subs.map((x, xi) => (xi === si ? splitSegment(x, i, t) : x));
-																	applySubs(subs, { ...nodeEdit, sel: { sub: si, idx: i + 1 } });
+																	// a tap grows an anchor here; a drag past the threshold
+																	// bows the segment instead, resolved on pointerup
+																	const pt = toWorld(e.clientX, e.clientY);
 																	overlayHit.current = {
-																		kind: 'anchor', sub: si, idx: i + 1,
-																		start: toWorld(e.clientX, e.clientY), orig: subs,
+																		kind: 'bend', sub: si, idx: i,
+																		t: nearestT(a, b, pt), start: pt, orig: nodeEdit.subs, moved: false,
 																	};
 																}} />
 														);
@@ -1264,8 +1333,10 @@ function Bench(props: BenchProps) {
 								<textarea className="input carving-src" value={currentSvg} readOnly spellCheck={false}
 									aria-label="carving source, locked" rows={8} />
 								<div className="carving-drawer__locked">
-									<span className="footnote">a seed is carved, it stays. copy it to a fresh block to edit.</span>
+									<span className="footnote">a seed is carved, it stays. copy it raw, or carve the copy loose for the tools.</span>
 									<button type="button" className="pill" onClick={() => void copyToFresh()}>copy to a fresh block</button>
+									<button type="button" className="pill" title="parse the markup into editable shapes, on a fresh copy"
+										onClick={() => void carveLoose()}>carve it loose</button>
 								</div>
 							</div>
 						) : (
@@ -1273,6 +1344,13 @@ function Bench(props: BenchProps) {
 								<textarea className="input carving-src" value={currentSvg} spellCheck={false}
 									aria-label="carving source" rows={8}
 									onChange={(e) => editMarkup(e.target.value)} />
+								{mode === 'raw' && (
+									<div className="carving-drawer__locked">
+										<span className="footnote">raw markup, tools stepped back. carve it loose to get them back, on a fresh copy.</span>
+										<button type="button" className="pill" title="parse the markup into editable shapes, on a fresh copy"
+											onClick={() => void carveLoose()}>carve it loose</button>
+									</div>
+								)}
 							</div>
 						)
 					)}

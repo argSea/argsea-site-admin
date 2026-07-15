@@ -22,17 +22,47 @@ async function drawOnBench(page: Page, from: [number, number], to: [number, numb
 	await page.mouse.up();
 }
 
-test('the catalog groups every carving by page: seven spots plus three catalog-only rows', async ({ page }) => {
+async function tapOnBench(page: Page, at: [number, number]): Promise<void> {
+	const box = (await page.locator('.carving-canvas').boundingBox())!;
+	await page.mouse.click(box.x + box.width * at[0], box.y + box.height * at[1]);
+}
+
+// pen a rigid two-corner line across the block, then take the nodes tool to it
+// (the pen title needs its separator, or the prefix match grabs the pencil too)
+async function penLineUnderNodes(page: Page): Promise<void> {
+	await tool(page, 'pen ·').click();
+	await tapOnBench(page, [.2, .5]);
+	await tapOnBench(page, [.8, .5]);
+	await page.keyboard.press('Enter');
+	await tool(page, 'nodes').click();
+	await tapOnBench(page, [.5, .5]);
+}
+
+// the drawn shape is the block's only path element; the ring and mast are not
+async function drawnPathD(page: Page): Promise<string> {
+	const svg = await page.getByLabel('carving source', { exact: true }).inputValue();
+	return /<path d="([^"]+)"/.exec(svg)![1];
+}
+
+test('the catalog groups every carving by page: seven spots plus fourteen catalog-only rows, stamp off the books', async ({ page }) => {
 	await openShop(page);
 	await page.locator('.carving-picker').click();
 
 	const catalog = page.locator('.carving-catalog');
-	await expect(catalog.locator('.carving-catalog__count')).toHaveText('10 on the books · 0 fresh');
-	await expect(catalog.locator('.carving-tile')).toHaveCount(10);
+	await expect(catalog.locator('.carving-catalog__count')).toHaveText('21 on the books · 0 fresh');
+	await expect(catalog.locator('.carving-tile')).toHaveCount(21);
 
-	for (const name of ['The lighthouse', 'The little boat', 'Message in a bottle', 'Tower on the horizon', 'Paw print', 'The wave line', 'The boat wake', 'Postage lighthouse', 'The wreck', 'The harbor cat']) {
+	for (const name of [
+		'The lighthouse', 'The little boat', 'Message in a bottle', 'Tower on the horizon', 'Paw print',
+		'The wave line', 'The boat wake', 'The morse seal', 'The panel rose', 'The fleet wake',
+		'The rhumb lines', 'The chart rose', 'The sea serpent', 'The Flannan lights', 'The hobby marks',
+		'The signal flare', 'The gull', 'The grounded scene', 'The tab bar icons', 'The wreck', 'The harbor cat',
+	]) {
 		await expect(catalog.getByText(name, { exact: true })).toBeVisible();
 	}
+
+	// the postcard-era stamp entry is retired: its render target no longer exists
+	await expect(catalog.getByText('Postage lighthouse')).toHaveCount(0);
 });
 
 test('the default bench holds the lighthouse; the catalog popover swaps the selection', async ({ page }) => {
@@ -362,6 +392,93 @@ test('bolting a carving onto the spot it already holds says so instead of going 
 	await page.locator('.carving-bolt').click();
 	await expect(toast(page)).toHaveText('⚒ "The lighthouse" already holds the lighthouse. the bolt is tight.');
 	expect(mock.find('POST', /\/bolt$/)).toHaveLength(0);
+});
+
+test('a straight segment bends under a drag; a clean tap still grows a node', async ({ page }) => {
+	await openShop(page);
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await penLineUnderNodes(page);
+	await expect(page.locator('.carving-node')).toHaveCount(2);
+
+	// a clean tap keeps the old gesture: a node grows mid-segment, still rigid
+	await tapOnBench(page, [.5, .5]);
+	await expect(page.locator('.carving-node')).toHaveCount(3);
+	await expect.poll(() => drawnPathD(page)).not.toContain('C');
+
+	// a drag past the threshold bows the segment live: handles grow, no new node
+	await drawOnBench(page, [.35, .5], [.35, .72]);
+	await expect.poll(() => drawnPathD(page)).toContain('C');
+	await expect(page.locator('.carving-node')).toHaveCount(3);
+});
+
+test('the corner/smooth toggle round-trips a node on the bench', async ({ page }) => {
+	await openShop(page);
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await penLineUnderNodes(page);
+
+	// the tapped-in node arrives selected, a corner with no handles yet
+	await tapOnBench(page, [.5, .5]);
+	await expect.poll(() => drawnPathD(page)).not.toContain('C');
+
+	await tool(page, 'smooth').click();
+	await expect.poll(() => drawnPathD(page)).toContain('C');
+
+	await tool(page, 'corner').click();
+	await expect.poll(() => drawnPathD(page)).not.toContain('C');
+});
+
+test('carve it loose: a locked builtin copies into an editable model, the island embedded on the save', async ({ page }) => {
+	const mock = await openShop(page);
+
+	// the default bench holds the builtin lighthouse: locked, tools stepped back
+	await expect(tool(page, 'select')).toBeDisabled();
+	await page.locator('.carving-drawer__head').click();
+	await page.getByRole('button', { name: 'carve it loose' }).click();
+
+	// the copy opens under the tools; the seed itself never unlocked
+	await expect(page.locator('.carving-picker__name')).toHaveText('The lighthouse copy');
+	await expect(tool(page, 'select')).toBeEnabled();
+
+	// the copy's first save embeds the model island over real parsed elements,
+	// carried styles and all
+	const [post] = mock.find('POST', /^\/1\/carving\/carvings\/?$/);
+	expect(post.body.name).toBe('The lighthouse copy');
+	expect(post.body.svg).toContain('<metadata id="argsea-carving-model">');
+	expect(post.body.svg).toContain('<path');
+	expect(post.body.svg).toContain('#f0d9a8');
+});
+
+test('carve it loose from raw markup: the copy opens under the tools and names what it lost', async ({ page }) => {
+	const mock = await openShop(page);
+
+	// hand-pasted markup steps the tools back: a raw, island-less block
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	const source = page.getByLabel('carving source', { exact: true });
+	await source.fill('<svg viewBox="0 0 20 20"><g transform="translate(2 2)"><path d="M0 0 L16 0"/></g><text x="2" y="12">hi</text></svg>');
+	await expect(tool(page, 'select')).toBeDisabled();
+
+	await page.getByRole('button', { name: 'carve it loose' }).click();
+	await expect(toast(page)).toHaveText('⚒ carved loose, mostly. still in the block: <text>.');
+	await expect(page.locator('.carving-picker__name')).toHaveText('fresh carving no. 1 copy');
+	await expect(tool(page, 'select')).toBeEnabled();
+
+	// the island embeds, and the group transform baked into plain coordinates
+	const [post] = mock.find('POST', /^\/1\/carving\/carvings\/?$/);
+	expect(post.body.svg).toContain('<metadata id="argsea-carving-model">');
+	expect(post.body.svg).toContain('M2 2 L18 2');
+});
+
+test('the shop takes stock: a swept catalog row shows its note and offers no bench', async ({ page }) => {
+	await openShop(page);
+
+	await page.locator('.carving-picker').click();
+	await page.locator('.carving-tile', { hasText: 'The tab bar icons' }).click();
+
+	await expect(page.locator('.carving-picker__name')).toHaveText('The tab bar icons');
+	await expect(page.getByText('· not on this bench · see the note below ·')).toBeVisible();
+	await expect(page.getByText('the pocket set. the lighthouse copy is being rewired to the lighthouse-logo spot; the rest are carved in place.')).toBeVisible();
+	await expect(page.locator('.carving-canvas')).toHaveCount(0);
+	await expect(page.locator('.carving-bolt')).toHaveCount(0);
 });
 
 test("the figurehead entity keeps its frozen glyph in the keeper's log; the carving shop no longer edits it", async ({ page }) => {
