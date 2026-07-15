@@ -228,6 +228,13 @@ export interface Lighthouse {
 	line: string;
 }
 
+// A tool bench drawer. Max 4 drawers is the admin's rule (a bench with more
+// is a shed); the API stores what it is given.
+export interface StoreDrawer {
+	label: string;
+	tools: string[];
+}
+
 export interface SiteCopy {
 	id:             string;
 	quipHello:      string;
@@ -244,6 +251,7 @@ export interface SiteCopy {
 	catSpots:       Record<string, boolean>;  // per-perch, keyed by spot id
 	bottleProverbs: string[];
 	lighthouses:    Lighthouse[];
+	stores:         StoreDrawer[];   // absent on a doc from before the bench; the harbor seeds []
 	// the wall's "out with the mail" placard, same coordinate model as project
 	// wallPos; null means the site falls back to its own default placement
 	wallGhost:      { x: number; y: number; rotation: number; enabled: boolean } | null;
@@ -252,7 +260,7 @@ export interface SiteCopy {
 
 // The copy keys the flag locker edits as plain text; the cove's egg fields
 // and the wall ghost have actions of their own.
-export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses' | 'wallGhost'>;
+export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses' | 'stores' | 'wallGhost'>;
 
 // ---- the figurehead shop (contracts/figurehead.md, frozen 2026-07-07) ----
 
@@ -603,6 +611,46 @@ export function getCopy(): Promise<SiteCopy> {
 
 export function putCopy(doc: SiteCopy): Promise<SiteCopy> {
 	return request<SiteCopy>('PUT', '/1/copy', doc);
+}
+
+// ---- the current watch singleton ----
+
+export type WatchBearingKind = 'none' | 'light' | 'hobby' | 'note';
+
+// One row of the watch's TL;DR strip. The link rides on targetId (an id at
+// its source, "" when the bearing points nowhere), not on name (what the
+// front door shows): rename freely, the link holds.
+export interface WatchBearing {
+	verb:     string;
+	kind:     WatchBearingKind;
+	targetId: string;
+	name:     string;
+}
+
+// The one watch record, replaced whole on every keep: an upsert like the copy
+// singleton, never a list, no delete route (clearing is a keep of an empty
+// record). Empty watch = letter === ""; the site folds the section away.
+export interface Watch {
+	id:              string;
+	letter:          string;         // hand-written; a blank line splits paragraphs
+	rotation:        string;         // the "out of the rotation" line
+	bearings:        WatchBearing[]; // three at most
+	postcardMediaId: string;         // darkroom print id; "" = no postcard
+	quips:           string[];       // the watch cat's remarks
+	keptAt:          string;         // stamped server-side on every keep
+}
+
+export function watch(): Promise<Watch> {
+	return request<Watch>('GET', '/1/watch');
+}
+
+/**
+ * Keep the watch. keptAt is stamped server-side and a client-sent value is
+ * ignored, so it never rides the wire.
+ */
+export function saveWatch(doc: Watch): Promise<Watch> {
+	const { keptAt: _keptAt, ...body } = doc;
+	return request<Watch>('PUT', '/1/watch', body);
 }
 
 // ---- keeper's log ----

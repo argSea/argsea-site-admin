@@ -9,13 +9,13 @@ import type {
 	ActivityEntry, Block, BlockKind, BlockSet, CaseLog, CaseLogStatus, Carving, Category, Coord, CopyTextField,
 	Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose,
 	Hobby, HobbyState, KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Revision, Shape,
-	SiteCopy, Suggestion, TrafficReport,
+	SiteCopy, StoreDrawer, Suggestion, TrafficReport, Watch, WatchBearing,
 } from '../lib/api';
 import { onWatch } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { DEFAULT_LIGHT } from '../lib/lightChar';
 
-export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'shop' | 'media' | 'keeper' | 'marginalia';
+export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'watch' | 'shop' | 'media' | 'keeper' | 'marginalia' | 'bench';
 
 // What the shop's editor hands back on save: the document fields a PUT may
 // change (plus pose, which only a POST uses; the server preserves it after).
@@ -217,7 +217,7 @@ const EMPTY_COPY: SiteCopy = {
 	heroKicker: '', heroHeadline: '', heroBody: '', dict: '',
 	eggs: { bottle: true, cat: true, lights: true },
 	catPages: CAT_PAGES_ON, catSpots: CAT_SPOTS_ON,
-	bottleProverbs: [], lighthouses: [], wallGhost: null, updatedAt: '',
+	bottleProverbs: [], lighthouses: [], stores: [], wallGhost: null, updatedAt: '',
 };
 
 // Absent = on (agreed ruling): a copy doc from before the cove lacks the egg
@@ -232,8 +232,19 @@ function seedCove(doc: SiteCopy): SiteCopy {
 		catSpots:       { ...CAT_SPOTS_ON, ...doc.catSpots },
 		bottleProverbs: doc.bottleProverbs ?? [],
 		lighthouses:    doc.lighthouses ?? [],
+		stores:         doc.stores ?? [],
 	};
 }
+
+// A never-kept watch is just the empty default; the same shape a deploy-skewed
+// API (no /1/watch yet) falls back to.
+const EMPTY_WATCH: Watch = {
+	id: '', letter: '', rotation: '', bearings: [], postcardMediaId: '', quips: [], keptAt: '',
+};
+
+// The bench holds four drawers at most (a bench with more is a shed): the
+// admin's rule, enforced before the wire, the API stores what it is given.
+export const DRAWER_CAP = 4;
 
 const EMPTY_KEEPER: KeeperProfile = {
 	name: '', pronouns: '', location: '', title: '', bio: '',
@@ -519,6 +530,21 @@ interface HarborValue {
 	setLight:      (idx: number, patch: Partial<Lighthouse>) => void;
 	addLight:      () => void;
 	removeLight:   (idx: number) => void;
+	setDrawer:     (idx: number, patch: Partial<StoreDrawer>) => void;
+	addDrawer:     () => void;
+	removeDrawer:  (idx: number) => void;
+
+	watch:              Watch;
+	watchFlash:         string | null;
+	patchWatch:         (patch: Partial<Watch>) => void;
+	patchWatchBearing:  (idx: number, patch: Partial<WatchBearing>) => void;
+	addWatchBearing:    () => void;
+	removeWatchBearing: (idx: number) => void;
+	setWatchQuip:       (idx: number, value: string) => void;
+	addWatchQuip:       () => void;
+	removeWatchQuip:    (idx: number) => void;
+	keepWatch:          () => Promise<void>;
+	clearWatch:         () => Promise<void>;
 
 	saveDesign:    (id: string | null, fields: DesignFields) => Promise<FigureheadDesign | null>;
 	renameDesign:  (d: FigureheadDesign, label: string) => Promise<void>;
@@ -623,6 +649,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 	const [prints, setPrints] = useState<MediaItem[]>([]);
 	const [copy, setCopy] = useState<SiteCopy>(EMPTY_COPY);
+	const [watch, setWatch] = useState<Watch>(EMPTY_WATCH);
+	const [watchFlash, setWatchFlash] = useState<string | null>(null);
 	const [keeper, setKeeper] = useState<KeeperProfile>(EMPTY_KEEPER);
 	const [activity, setActivity] = useState<ActivityEntry[]>([]);
 	const [designs, setDesigns] = useState<FigureheadDesign[]>([]);
@@ -658,6 +686,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const keeperSaveTimer = useRef<number>(undefined);
 	const copyRef = useRef(copy);
 	copyRef.current = copy;
+	const watchRef = useRef(watch);
+	watchRef.current = watch;
+	const watchFlashTimer = useRef<number>(undefined);
 	const keeperRef = useRef(keeper);
 	keeperRef.current = keeper;
 	const sessionRef = useRef(session);
@@ -740,6 +771,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.caselog.list().then(setLogs).catch(oops);
 		api.blockset.list().then(setBlockSets).catch(oops);
 		api.getCopy().then((doc) => setCopy(seedCove(doc))).catch(() => setCopy(EMPTY_COPY));
+		// deploy skew: an API from before /1/watch 404s, and a never-kept watch
+		// is the empty default either way, so the desk fails soft to it
+		api.watch().then(setWatch).catch(() => setWatch(EMPTY_WATCH));
 		api.getProfile(userID).then((profile) => setKeeper({ ...EMPTY_KEEPER, ...profile })).catch(() => setKeeper(EMPTY_KEEPER));
 		// deploy skew or a quiet sea: a 404/error leaves the report null and the
 		// watch room fails soft, so swallow it like the log does
@@ -1266,6 +1300,84 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		setCopy((cur) => ({ ...cur, lighthouses: cur.lighthouses.filter((_, i) => i !== idx) }));
 		queueCopySave();
 	}, [queueCopySave]);
+
+	// the tool bench's drawers ride the copy singleton, same debounced
+	// full-replace PUT as the flags and the cove
+
+	const setDrawer = useCallback((idx: number, patch: Partial<StoreDrawer>) => {
+		setCopy((cur) => ({ ...cur, stores: cur.stores.map((d, i) => (i === idx ? { ...d, ...patch } : d)) }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const addDrawer = useCallback(() => {
+		if (copyRef.current.stores.length >= DRAWER_CAP) {
+			return;
+		}
+		setCopy((cur) => ({ ...cur, stores: [...cur.stores, { label: 'new drawer', tools: [] }] }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	const removeDrawer = useCallback((idx: number) => {
+		setCopy((cur) => ({ ...cur, stores: cur.stores.filter((_, i) => i !== idx) }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	// ---- the watch desk, kept explicitly (no autosave: one record, written
+	// over whole each time it is kept) ----
+
+	const patchWatch = useCallback((patch: Partial<Watch>) => {
+		setWatch((cur) => ({ ...cur, ...patch }));
+	}, []);
+
+	const patchWatchBearing = useCallback((idx: number, patch: Partial<WatchBearing>) => {
+		setWatch((cur) => ({ ...cur, bearings: cur.bearings.map((b, i) => (i === idx ? { ...b, ...patch } : b)) }));
+	}, []);
+
+	const addWatchBearing = useCallback(() => {
+		setWatch((cur) => (cur.bearings.length >= 3
+			? cur
+			: { ...cur, bearings: [...cur.bearings, { verb: 'minding', kind: 'none', targetId: '', name: 'a new thread' }] }));
+	}, []);
+
+	const removeWatchBearing = useCallback((idx: number) => {
+		setWatch((cur) => ({ ...cur, bearings: cur.bearings.filter((_, i) => i !== idx) }));
+	}, []);
+
+	const setWatchQuip = useCallback((idx: number, value: string) => {
+		setWatch((cur) => ({ ...cur, quips: cur.quips.map((q, i) => (i === idx ? value : q)) }));
+	}, []);
+
+	const addWatchQuip = useCallback(() => {
+		setWatch((cur) => ({ ...cur, quips: [...cur.quips, 'a fresh remark. the cat will workshop it.'] }));
+	}, []);
+
+	const removeWatchQuip = useCallback((idx: number) => {
+		setWatch((cur) => ({ ...cur, quips: cur.quips.filter((_, i) => i !== idx) }));
+	}, []);
+
+	const keepWatch = useCallback(async () => {
+		try {
+			// the echo brings the fresh server-stamped keptAt for the dateline
+			setWatch(await api.saveWatch(watchRef.current));
+			window.clearTimeout(watchFlashTimer.current);
+			setWatchFlash('kept · the front door reads this now');
+			watchFlashTimer.current = window.setTimeout(() => setWatchFlash(null), TOAST_WINDOW);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [oops, refreshActivity]);
+
+	// Clearing is a keep of the empty record (there is no delete route). The
+	// cat's remarks stay aboard: they belong to the watch cat, not the letter.
+	const clearWatch = useCallback(async () => {
+		try {
+			setWatch(await api.saveWatch({ ...watchRef.current, letter: '', rotation: '', bearings: [], postcardMediaId: '' }));
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [oops, refreshActivity]);
 
 	const setKeeperField = useCallback((key: keyof KeeperProfile, value: string) => {
 		setKeeper((cur) => ({ ...cur, [key]: value }));
@@ -2061,6 +2173,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		moveHobby, setAdriftOrPort, pinBearings, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
+		setDrawer, addDrawer, removeDrawer,
+		watch, watchFlash, patchWatch, patchWatchBearing, addWatchBearing, removeWatchBearing,
+		setWatchQuip, addWatchQuip, removeWatchQuip, keepWatch, clearWatch,
 		saveDesign, renameDesign, deleteDesign, publishDesign,
 		saveDoodle, renameDoodle, deleteDoodle,
 		saveCarving, boltCarving,

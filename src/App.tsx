@@ -14,8 +14,10 @@ import ShipsLog from './screens/ShipsLog';
 import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
 import SmugglersCove from './screens/SmugglersCove';
+import WatchDesk from './screens/WatchDesk';
 import CarvingShop from './screens/CarvingShop';
 import Marginalia from './screens/Marginalia';
+import ToolBench from './screens/ToolBench';
 import Darkroom from './screens/Darkroom';
 import Keeper from './screens/Keeper';
 import Sidebar from './components/Sidebar';
@@ -36,8 +38,10 @@ const SCREENS: Record<Screen, () => React.JSX.Element> = {
 	notes:      WritingDesk,
 	copy:       SignalFlags,
 	eggs:       SmugglersCove,
+	watch:      WatchDesk,
 	shop:       CarvingShop,
 	marginalia: Marginalia,
+	bench:      ToolBench,
 	media:      Darkroom,
 	keeper:     Keeper,
 };
