@@ -262,8 +262,33 @@ export class MockApi {
 			{ name: 'Fastnet Rock', pos: '51°23′N 9°36′W', line: 'Ireland’s teardrop, the last light the emigrants saw.' },
 			{ name: 'Bell Rock', pos: '56°26′N 2°23′W', line: 'built on a rock that vanishes twice a day.' },
 		],
+		stores: [
+			{ label: 'languages', tools: ['java', 'python', 'node.js', 'go', 'php'] },
+			{ label: 'data & queues', tools: ['mongodb', 'redis', 'rabbitmq', 'varnish'] },
+			{ label: 'infrastructure', tools: ['kubernetes', 'docker', 'nginx', 'linux'] },
+		],
 		wallGhost: null,
 		updatedAt: '2026-06-01T12:00:00Z',
+	};
+
+	// the current watch singleton: public GET, authed PUT-replace, keptAt
+	// stamped server-side. The bearings name real seeded ids so nothing reads
+	// as adrift until a spec strands one on purpose.
+	watch: Doc = {
+		id: 'w1',
+		letter: 'Most of my time right now goes to the ArcXP migration: moving the newsroom onto its new stack while the paper keeps publishing.\n\nI am trying to write things down while they are still true.',
+		rotation: 'Conference talks, one more framework, and the piano.',
+		bearings: [
+			{ verb: 'wrangling', kind: 'none', targetId: '', name: 'The ArcXP migration' },
+			{ verb: 'logging', kind: 'note', targetId: 'n1', name: 'The queue is the product' },
+			{ verb: 'tinkering', kind: 'hobby', targetId: 'h1', name: 'The home lab' },
+		],
+		postcardMediaId: '',
+		quips: [
+			'he says the migration is going fine. he is lying.',
+			'writing things down while they are still true. bold.',
+		],
+		keptAt: '2026-07-10T12:00:00Z',
 	};
 
 	// The two seeded v1 cats, shape-for-shape the site's HarborCat.tsx (perched
@@ -715,7 +740,7 @@ export class MockApi {
 		// ---- site copy ----
 		if (/^\/1\/copy\/?$/.test(path)) {
 			const serve = (doc: Doc) => this.copyPredatesCove
-				? { ...doc, eggs: null, catPages: null, catSpots: null, bottleProverbs: null, lighthouses: null }
+				? { ...doc, eggs: null, catPages: null, catSpots: null, bottleProverbs: null, lighthouses: null, stores: null }
 				: doc;
 			if (method === 'GET') {
 				return json(200, serve(this.copy));
@@ -728,6 +753,23 @@ export class MockApi {
 				return this.copyPutLatency
 					? new Promise<void>((resolve) => setTimeout(() => resolve(json(200, echo)), this.copyPutLatency))
 					: json(200, echo);
+			}
+		}
+
+		// ---- the current watch singleton ----
+		if (/^\/1\/watch\/?$/.test(path)) {
+			if (method === 'GET') {
+				return json(200, this.watch);
+			}
+			if (method === 'PUT') {
+				if (!authed) {
+					return json(401, { status: 'error', code: 401, message: 'Unauthorized' });
+				}
+				// keptAt is stamped server-side whatever the client sent, and the
+				// service truncates the bearings past three (pinned contract)
+				const { keptAt: _keptAt, ...rest } = body ?? {};
+				this.watch = { ...rest, id: this.watch.id, bearings: (rest.bearings ?? []).slice(0, 3), keptAt: now() };
+				return json(200, this.watch);
 			}
 		}
 

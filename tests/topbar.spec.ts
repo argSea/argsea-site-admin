@@ -19,7 +19,7 @@ test.describe('at phone width', () => {
 
 		// the whole nav rides along as scrollable chips, plus the deploy verb and
 		// the way ashore
-		await expect(page.locator('.topbar-chip')).toHaveCount(10);
+		await expect(page.locator('.topbar-chip')).toHaveCount(12);
 		await expect(topbar(page).locator('.topbar-deploy')).toBeVisible();
 		await expect(topbar(page).locator('.topbar-ashore')).toBeVisible();
 

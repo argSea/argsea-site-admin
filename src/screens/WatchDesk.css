@@ -1,0 +1,45 @@
+/*
+ * The watch desk's small strike marks: the ✕ that removes a bearing or a
+ * remark. Hover turns them the design's rust red rather than the shared
+ * gold, because striking is an ending, not an errand.
+ */
+
+.strike-x {
+	cursor: pointer;
+	color: var(--periwinkle-deep);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	padding: 2px 4px;
+	transition: color .2s;
+}
+
+.strike-x:hover {
+	color: #b0483a;
+}
+
+/* the live preview panel: the front door's watch section in miniature */
+.watch-preview {
+	position: relative;
+	background: linear-gradient(160deg, #161a2e, #12162a);
+	border: 1px solid var(--border-card);
+	border-radius: 14px;
+	padding: 24px 26px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+/* the TL;DR bearings strip: one line, spillover hidden, never wrapped */
+.watch-strip {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: baseline;
+	gap: 6px 10px;
+	border-top: 1px solid rgba(150, 160, 220, .14);
+	padding-top: 12px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	line-height: 1.7;
+	white-space: nowrap;
+	overflow: hidden;
+}

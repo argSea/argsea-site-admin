@@ -258,6 +258,25 @@ textarea::placeholder {
 	transform: scale(1.04);
 }
 
+/* the design's dashed gold add-a-row button (the watch desk, the tool bench) */
+.dash-add {
+	padding: 11px 16px;
+	background: transparent;
+	border: 1.5px dashed rgba(240, 217, 168, .45);
+	border-radius: 10px;
+	color: var(--gold);
+	font-family: var(--font-mono);
+	font-size: 12.5px;
+	cursor: pointer;
+	text-align: left;
+	transition: border-color .2s, background .2s;
+}
+
+.dash-add:hover {
+	border-color: rgba(240, 217, 168, .8);
+	background: rgba(240, 217, 168, .05);
+}
+
 .input {
 	width: 100%;
 	box-sizing: border-box;
@@ -299,6 +318,12 @@ textarea::placeholder {
 	color: var(--text-soft);
 	font-size: 12.5px;
 	padding: 10px 12px;
+}
+
+/* a well within a well: inputs nested inside an already-dark panel sit a
+   shade deeper, per the design (the watch desk's bearings, the tool bench) */
+.input--inset {
+	background: #0f1322;
 }
 
 .card {
@@ -605,6 +630,15 @@ textarea::placeholder {
 
 .ghost-link:hover {
 	color: var(--gold);
+}
+
+/* a ghost link that ends something (clear the watch, scrap this drawer) */
+.ghost-link--danger {
+	color: #8a86b8;
+}
+
+.ghost-link--danger:hover {
+	color: #b0483a;
 }
 
 .print-del {

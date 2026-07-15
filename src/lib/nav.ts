@@ -10,8 +10,10 @@ export const NAV_ITEMS: { id: Screen; glyph: string; label: string }[] = [
 	{ id: 'notes', glyph: '✎', label: 'writing desk' },
 	{ id: 'copy', glyph: '⚑', label: 'signal flags' },
 	{ id: 'eggs', glyph: '✧', label: "smuggler's cove" },
+	{ id: 'watch', glyph: '☉', label: 'the watch desk' },
 	{ id: 'shop', glyph: '♆', label: 'the carving shop' },
 	{ id: 'marginalia', glyph: '✒', label: 'marginalia' },
+	{ id: 'bench', glyph: '⚒', label: 'the tool bench' },
 	{ id: 'media', glyph: '❏', label: 'the darkroom' },
 	{ id: 'keeper', glyph: '☸', label: 'the keeper' },
 ];

@@ -286,7 +286,7 @@ test('at 390px the sidebar hides, the topbar chips navigate, and the deploy verb
 	// the desktop rail is gone; the sticky topbar stands in for it
 	await expect(page.locator('.office-sidebar')).toBeHidden();
 	await expect(page.locator('.office-topbar')).toBeVisible();
-	await expect(page.locator('.topbar-chip')).toHaveCount(10);
+	await expect(page.locator('.topbar-chip')).toHaveCount(12);
 
 	// a nav chip switches screens
 	await page.locator('.topbar-chip', { hasText: 'the wandering chart' }).click();
