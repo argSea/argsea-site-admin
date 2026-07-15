@@ -640,8 +640,14 @@ export interface Watch {
 	keptAt:          string;         // stamped server-side on every keep
 }
 
+// An API from before the empty-holds fix marshals a never-kept watch's nil
+// slices as null; the desk filters and maps these, so normalize on arrival.
 export function watch(): Promise<Watch> {
-	return request<Watch>('GET', '/1/watch');
+	return request<Watch>('GET', '/1/watch').then((doc) => ({
+		...doc,
+		bearings: doc.bearings ?? [],
+		quips:    doc.quips ?? [],
+	}));
 }
 
 /**
