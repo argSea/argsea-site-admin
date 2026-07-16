@@ -9,6 +9,23 @@ import { signIn } from './office';
 const sidebar = (page: Page) => page.locator('#office-sidebar');
 const topbar = (page: Page) => page.locator('.office-topbar');
 
+// the banked grouping: dash · watch through bench · marginalia through the
+// darkroom · signal flags through the cove, a rule above each group's first row
+const navOrder = [
+	/the watch room/,
+	/the watch desk/,
+	/the light list/,
+	/the wandering chart/,
+	/writing desk/,
+	/the tool bench/,
+	/marginalia/,
+	/the carving shop/,
+	/the darkroom/,
+	/signal flags/,
+	/the keeper/,
+	/smuggler's cove/,
+];
+
 test.describe('at phone width', () => {
 	test.use({ viewport: { width: 390, height: 844 } });
 
@@ -17,9 +34,12 @@ test.describe('at phone width', () => {
 		await expect(sidebar(page)).toBeHidden();
 		await expect(topbar(page)).toBeVisible();
 
-		// the whole nav rides along as scrollable chips, plus the deploy verb and
+		// the whole nav rides along as scrollable chips in the banked group
+		// order, with an upright rule between groups, plus the deploy verb and
 		// the way ashore
 		await expect(page.locator('.topbar-chip')).toHaveCount(12);
+		await expect(page.locator('.topbar-chip')).toHaveText(navOrder);
+		await expect(topbar(page).locator('.topbar-rule')).toHaveCount(3);
 		await expect(topbar(page).locator('.topbar-deploy')).toBeVisible();
 		await expect(topbar(page).locator('.topbar-ashore')).toBeVisible();
 
@@ -56,4 +76,8 @@ test('desktop keeps the fixed sidebar and hides the topbar', async ({ page }) =>
 	await expect(sidebar(page)).toBeVisible();
 	await expect(page.locator('.office-topbar')).toBeHidden();
 	await expect(sidebar(page)).toHaveCSS('position', 'sticky');
+
+	// the rail forms up in the same groups, a thin rule above each one
+	await expect(sidebar(page).locator('.nav-item')).toHaveText(navOrder);
+	await expect(sidebar(page).locator('.nav-rule')).toHaveCount(3);
 });

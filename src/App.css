@@ -81,6 +81,16 @@
 	color: var(--gold);
 }
 
+/* the rail's .nav-rule stood upright: a horizontal rule can't divide a
+   sideways-scrolling strip, so the same hairline runs top to bottom */
+.topbar-rule {
+	flex-shrink: 0;
+	width: 1px;
+	align-self: stretch;
+	margin: 2px 4px;
+	background: rgba(150, 160, 220, .14);
+}
+
 @media (max-width: 600px) {
 	.office-sidebar {
 		display: none;

@@ -2,6 +2,7 @@
 // moved out to a perch per screen; this rail no longer carries one. Fixed rail
 // on desktop; below the phone line it hides entirely and the sticky
 // MobileTopbar stands in for it (layout lives in App.css).
+import { Fragment } from 'react';
 import { useHarbor } from '../state/harbor';
 import { NAV_ITEMS } from '../lib/nav';
 import { relativeTime } from '../lib/time';
@@ -76,12 +77,15 @@ export default function Sidebar() {
 			</div>
 
 			{NAV_ITEMS.map((item) => (
-				<div key={item.id}
-					className={`nav-item${h.screen === item.id ? ' nav-item--active' : ''}`}
-					onClick={() => h.goTo(item.id)}>
-					<span style={{ width: 18, display: 'inline-block', textAlign: 'center' }}>{item.glyph}</span>
-					{item.label}
-				</div>
+				<Fragment key={item.id}>
+					{item.rule && <div className="nav-rule" aria-hidden="true" />}
+					<div
+						className={`nav-item${h.screen === item.id ? ' nav-item--active' : ''}`}
+						onClick={() => h.goTo(item.id)}>
+						<span style={{ width: 18, display: 'inline-block', textAlign: 'center' }}>{item.glyph}</span>
+						{item.label}
+					</div>
+				</Fragment>
 			))}
 
 			<div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingTop: 20 }}>

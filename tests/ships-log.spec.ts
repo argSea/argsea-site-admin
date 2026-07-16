@@ -283,10 +283,12 @@ test('at 390px the sidebar hides, the topbar chips navigate, and the deploy verb
 	const mock = await signIn(page);
 	await page.setViewportSize({ width: 390, height: 780 });
 
-	// the desktop rail is gone; the sticky topbar stands in for it
+	// the desktop rail is gone; the sticky topbar stands in for it, chips
+	// grouped by the same three upright rules as the rail
 	await expect(page.locator('.office-sidebar')).toBeHidden();
 	await expect(page.locator('.office-topbar')).toBeVisible();
 	await expect(page.locator('.topbar-chip')).toHaveCount(12);
+	await expect(page.locator('.topbar-rule')).toHaveCount(3);
 
 	// a nav chip switches screens
 	await page.locator('.topbar-chip', { hasText: 'the wandering chart' }).click();
