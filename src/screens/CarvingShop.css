@@ -213,6 +213,16 @@
 	gap: 8px;
 }
 
+.carving-tile-wrap {
+	position: relative;
+	display: flex;
+}
+
+.carving-tile-wrap > .carving-tile {
+	flex: 1;
+	min-width: 0;
+}
+
 .carving-tile {
 	display: flex;
 	flex-direction: column;
@@ -255,6 +265,31 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+}
+
+.carving-scrap {
+	position: absolute;
+	top: 3px;
+	right: 3px;
+	width: 18px;
+	height: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	cursor: pointer;
+	background: rgba(19, 23, 40, .78);
+	border: 1px solid rgba(150, 160, 220, .22);
+	border-radius: 6px;
+	color: var(--periwinkle-deep);
+	font-family: var(--font-mono);
+	font-size: 10px;
+	transition: color .2s, border-color .2s;
+}
+
+.carving-scrap:hover {
+	color: var(--gold);
+	border-color: rgba(240, 217, 168, .55);
 }
 
 .carving-fresh {

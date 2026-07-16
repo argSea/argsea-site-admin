@@ -599,8 +599,9 @@ interface HarborValue {
 	renameDoodle: (d: Doodle, name: string) => Promise<void>;
 	deleteDoodle: (d: Doodle) => Promise<void>;
 
-	saveCarving: (id: string | null, fields: { name: string; svg: string }) => Promise<Carving | null>;
-	boltCarving: (c: Carving, spot: string) => Promise<void>;
+	saveCarving:   (id: string | null, fields: { name: string; svg: string }) => Promise<Carving | null>;
+	boltCarving:   (c: Carving, spot: string) => Promise<void>;
+	deleteCarving: (c: Carving) => Promise<boolean>;
 
 	printUsage:    (filename: string) => number;
 	developPrints: (files: Iterable<File>) => Promise<void>;
@@ -1642,6 +1643,39 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
+	// Scrapping honors the API's two 409 guards before the wire: a builtin is
+	// never deletable, and DELETE refuses a still-bolted carving outright, so a
+	// dangling bolt cannot happen server-side. The wire's only unbolt is bolting
+	// another carving onto the spot, so every spot this one holds is handed back
+	// to its v1 seed (matched by frozen seed name) ahead of the delete.
+	const deleteCarving = useCallback(async (c: Carving): Promise<boolean> => {
+		if (c.builtin) {
+			showToast('⚠ v1 is carved, it stays');
+			return false;
+		}
+		try {
+			for (const spot of c.boltedTo) {
+				const seedName = CARVING_CATALOG.find((entry) => entry.id === spot)?.name;
+				const seed = carvings.find((x) => x.builtin && x.name === seedName);
+				if (!seed) {
+					showToast('⚠ no v1 to hand the spot back to, the bolt stays');
+					return false;
+				}
+				const saved = await api.carvings.bolt(seed.id, spot);
+				setCarvings((cur) => cur.map((x) =>
+					x.id === saved.id ? saved : { ...x, boltedTo: x.boltedTo.filter((s) => s !== spot) }));
+			}
+			await api.carvings.remove(c.id);
+			setCarvings((cur) => cur.filter((x) => x.id !== c.id));
+			showToast(c.boltedTo.length ? '🪓 scrapped. what it held falls back to the v1.' : '🪓 scrapped. the bench is lighter.');
+			refreshActivity();
+			return true;
+		} catch (error) {
+			oops(error);
+			return false;
+		}
+	}, [carvings, showToast, oops, refreshActivity]);
+
 	// ---- the darkroom ----
 
 	// notes carry a doodle now, not a photo print; only projects still count.
@@ -2222,7 +2256,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		setWatchQuip, addWatchQuip, removeWatchQuip, keepWatch, clearWatch,
 		saveDesign, renameDesign, deleteDesign, publishDesign,
 		saveDoodle, renameDoodle, deleteDoodle,
-		saveCarving, boltCarving,
+		saveCarving, boltCarving, deleteCarving,
 		printUsage, developPrints, tearOffPrint,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 		logs, blockSets, regNo,
