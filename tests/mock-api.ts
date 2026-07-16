@@ -962,6 +962,10 @@ export class MockApi {
 				return json(200, doc);
 			}
 			if (method === 'DELETE') {
+				// the real API's two 409 guards, in its order: builtin first, bolt second
+				if (doc.builtin) {
+					return json(409, { status: 'error', code: 409, message: 'the seeded v1 carvings are permanent' });
+				}
 				if (doc.boltedTo.length) {
 					return json(409, { status: 'error', code: 409, message: 'unbolt it before scrapping it' });
 				}

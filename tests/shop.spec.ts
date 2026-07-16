@@ -147,6 +147,33 @@ test('reopening a model-backed carving restores its editable shapes', async ({ p
 	await expect(reopened).toContainText('<path');
 });
 
+test('a reopened carving saves over its own id: one PUT, never a second copy', async ({ page }) => {
+	const mock = await openShop(page);
+
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await tool(page, 'pencil').click();
+	await drawOnBench(page, [.25, .5], [.75, .5]);
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+
+	await nav(page, 'the watch room').click();
+	await nav(page, 'the carving shop').click();
+
+	await page.locator('.carving-picker').click();
+	await page.locator('.carving-tile', { hasText: 'fresh carving no. 1' }).click();
+	await expect(page.locator('.carving-picker__name')).toHaveText('fresh carving no. 1');
+
+	await tool(page, 'pencil').click();
+	await drawOnBench(page, [.3, .3], [.6, .7]);
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ carving saved to the bench');
+
+	// the reopened save lands on the same document; the only POST is its birth
+	const [put] = mock.find('PUT', /^\/1\/carving\/carvings\/cv100$/);
+	expect(put.body.svg).toContain('<metadata id="argsea-carving-model">');
+	expect(mock.find('POST', /^\/1\/carving\/carvings\/?$/)).toHaveLength(1);
+});
+
 test('hand-editing the markup drops the island and steps the tools back', async ({ page }) => {
 	await openShop(page);
 
@@ -324,6 +351,92 @@ test('a displaced seed waits under the bench group; re-bolting it restores its s
 	// the fresh block is displaced in turn, back onto the bench group
 	await page.locator('.carving-picker').click();
 	await expect(benchGroup.locator('.carving-tile', { hasText: 'fresh carving no. 1' })).toBeVisible();
+});
+
+test('scrapping a carving arms on the first strike; the second removes the row from the list', async ({ page }) => {
+	const mock = await openShop(page);
+
+	// a saved keeper block, then step off it so the bench holds the seed again
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+	await nav(page, 'the watch room').click();
+	await nav(page, 'the carving shop').click();
+
+	await page.locator('.carving-picker').click();
+	const row = page.locator('.carving-tile-wrap', { hasText: 'fresh carving no. 1' });
+	await row.locator('.carving-scrap').click();
+
+	// the first strike only arms: the keeper copy shows and nothing left the wire
+	await expect(page.locator('.carving-catalog__confirm')).toHaveText('strike it again and it goes to sawdust.');
+	await expect(row).toHaveCount(1);
+	expect(mock.find('DELETE', /^\/1\/carving\/carvings\/cv100$/)).toHaveLength(0);
+
+	await row.locator('.carving-scrap').click();
+	await expect(toast(page)).toHaveText('🪓 scrapped. the bench is lighter.');
+	await expect(page.locator('.carving-tile', { hasText: 'fresh carving no. 1' })).toHaveCount(0);
+	expect(mock.find('DELETE', /^\/1\/carving\/carvings\/cv100$/)).toHaveLength(1);
+});
+
+test('scrapping a bolted carving hands its spot back to the v1 before the delete', async ({ page }) => {
+	const mock = await openShop(page);
+
+	// a fresh block takes the lighthouse spot, displacing the v1 seed
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+	await page.locator('.carving-bolt').click();
+	await expect(toast(page)).toHaveText('⚒ "fresh carving no. 1" bolted to the lighthouse. ships with the next hoist.');
+
+	// the bolted block lives on its spot row now; that row carries the strike
+	await page.locator('.carving-picker').click();
+	await page.locator('.carving-scrap').click();
+	await page.locator('.carving-scrap').click();
+	await expect(toast(page)).toHaveText('🪓 scrapped. what it held falls back to the v1.');
+
+	// the wire unbolts first (the seed re-bolts) and only then deletes
+	const [bolt] = mock.find('POST', /^\/1\/carving\/carvings\/cv-lighthouse\/bolt$/);
+	expect(bolt.body.spot).toBe('lighthouse-logo');
+	expect(mock.find('DELETE', /^\/1\/carving\/carvings\/cv100$/)).toHaveLength(1);
+
+	// scrapping the carving on the bench itself hands the bench a fresh block;
+	// its default number rides the pre-delete render, so the count skips one
+	await expect(page.locator('.carving-picker__name')).toHaveText('fresh carving no. 2');
+	await expect(page.getByText('◍ unsaved')).toBeVisible();
+
+	// and the spot opens on its v1 again
+	await page.locator('.carving-picker').click();
+	await page.locator('.carving-tile[title*="nav, top left"]').click();
+	await expect(page.locator('.carving-picker__name')).toHaveText('The lighthouse');
+});
+
+test('builtin rows offer no scrap and open locked: the v1s are permanent', async ({ page }) => {
+	await openShop(page);
+
+	// out of the box every spot row is seed-held: not one strike in sight
+	await page.locator('.carving-picker').click();
+	await expect(page.locator('.carving-tile')).toHaveCount(21);
+	await expect(page.locator('.carving-scrap')).toHaveCount(0);
+	await page.locator('.carving-picker').click();
+
+	// displace the lighthouse seed onto the bench group
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+	await page.locator('.carving-bolt').click();
+	await expect(toast(page)).toHaveText('⚒ "fresh carving no. 1" bolted to the lighthouse. ships with the next hoist.');
+
+	// the only strike in the catalog is the keeper-held spot row; the displaced
+	// seed still offers none, and its bench opens locked
+	await page.locator('.carving-picker').click();
+	await expect(page.locator('.carving-scrap')).toHaveCount(1);
+	const benchGroup = page.locator('.carving-catalog__group', { hasText: 'the bench' });
+	const seedRow = benchGroup.locator('.carving-tile-wrap', { hasText: 'The lighthouse' });
+	await expect(seedRow.locator('.carving-scrap')).toHaveCount(0);
+
+	await seedRow.locator('.carving-tile').click();
+	await expect(page.locator('.carving-picker__name')).toHaveText('The lighthouse');
+	await expect(tool(page, 'select')).toBeDisabled();
 });
 
 test('a catalog-only row shows its note and offers no bench', async ({ page }) => {

@@ -595,11 +595,14 @@ export interface Carving {
 // Standard content CRUD, admin-gated mutations, public GET like projects.
 // Bolting is its own action, mirroring the figurehead publish pattern: PUT
 // edits name/svg only and preserves boltedTo untouched, while POST .../bolt
-// performs the swap (auto-strips the spot from its previous holder).
+// performs the swap (auto-strips the spot from its previous holder). DELETE
+// 409s a builtin or a still-bolted carving, so it can never leave a spot
+// dangling; the shop unbolts first by re-bolting the spot's v1 seed.
 export const carvings = {
 	list:   ()                       => request<Carving[]>('GET', '/1/carving/carvings'),
 	create: (doc: Partial<Carving>)  => request<Carving>('POST', '/1/carving/carvings', doc),
 	update: (id: string, doc: Carving) => request<Carving>('PUT', `/1/carving/carvings/${id}`, doc),
+	remove: (id: string)             => request<void>('DELETE', `/1/carving/carvings/${id}`),
 	bolt:   (id: string, spot: string) => request<Carving>('POST', `/1/carving/carvings/${id}/bolt`, { spot }),
 };
 

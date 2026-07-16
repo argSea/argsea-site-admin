@@ -865,6 +865,19 @@ function Bench(props: BenchProps) {
 		props.onSelect({ kind: 'carving', carving });
 	};
 
+	// scrapping a catalog row, two-click armed like every other delete in the
+	// office. Scrapping the very carving on the bench leaves the bench holding
+	// a dead id, so it falls back to a fresh block; the old one is gone anyway.
+	const scrapCarving = (carving: Carving) => {
+		h.askConfirm(`scrap-carving-${carving.id}`, () => {
+			void h.deleteCarving(carving).then((gone) => {
+				if (gone && savedId === carving.id) {
+					props.onFresh();
+				}
+			});
+		});
+	};
+
 	// ---- render ----
 
 	const selBox = sel ? shapeBox(sel) : null;
@@ -913,7 +926,9 @@ function Bench(props: BenchProps) {
 									<span className="carving-catalog__kicker">the catalog</span>
 									{h.confirmKey === 'bench-leave'
 										? <span className="carving-catalog__confirm">unsaved carving. pick again to toss it.</span>
-										: <span className="carving-catalog__count">{CARVING_CATALOG.length} on the books · {customCount} fresh</span>}
+										: h.confirmKey?.startsWith('scrap-carving-')
+											? <span className="carving-catalog__confirm">strike it again and it goes to sawdust.</span>
+											: <span className="carving-catalog__count">{CARVING_CATALOG.length} on the books · {customCount} fresh</span>}
 								</div>
 								{CATALOG_GROUPS.map((group) => (
 									<div key={group.page} className="carving-catalog__group">
@@ -925,12 +940,20 @@ function Bench(props: BenchProps) {
 													? Boolean(carving && savedId === carving.id)
 													: mode === 'note' && props.loaded.kind === 'note' && props.loaded.entry.id === entry.id;
 												return (
-													<button key={entry.id} type="button" title={entry.where}
-														className={`carving-tile${isSel ? ' carving-tile--sel' : ''}`}
-														onClick={() => guardedLeave(() => (entry.spot ? pickSpot(entry) : props.onSelect({ kind: 'note', entry })))}>
-														<span className="carving-tile__thumb"><Thumb svg={entry.spot ? (carving?.svg ?? null) : null} /></span>
-														<span className="carving-tile__name">{entry.name}</span>
-													</button>
+													<div key={entry.id} className="carving-tile-wrap">
+														<button type="button" title={entry.where}
+															className={`carving-tile${isSel ? ' carving-tile--sel' : ''}`}
+															onClick={() => guardedLeave(() => (entry.spot ? pickSpot(entry) : props.onSelect({ kind: 'note', entry })))}>
+															<span className="carving-tile__thumb"><Thumb svg={entry.spot ? (carving?.svg ?? null) : null} /></span>
+															<span className="carving-tile__name">{entry.name}</span>
+														</button>
+														{carving && !carving.builtin && (
+															<button type="button" className="carving-scrap" title="scrap this carving"
+																onClick={() => scrapCarving(carving)}>
+																{h.confirmKey === `scrap-carving-${carving.id}` ? '!' : '✕'}
+															</button>
+														)}
+													</div>
 												);
 											})}
 										</div>
@@ -941,12 +964,20 @@ function Bench(props: BenchProps) {
 										<span className="carving-catalog__page">the bench</span>
 										<div className="carving-tiles">
 											{onTheBench.map((carving) => (
-												<button key={carving.id} type="button" title="unassigned"
-													className={`carving-tile${savedId === carving.id ? ' carving-tile--sel' : ''}`}
-													onClick={() => guardedLeave(() => props.onSelect({ kind: 'carving', carving }))}>
-													<span className="carving-tile__thumb"><Thumb svg={carving.svg || null} /></span>
-													<span className="carving-tile__name">{carving.name}</span>
-												</button>
+												<div key={carving.id} className="carving-tile-wrap">
+													<button type="button" title="unassigned"
+														className={`carving-tile${savedId === carving.id ? ' carving-tile--sel' : ''}`}
+														onClick={() => guardedLeave(() => props.onSelect({ kind: 'carving', carving }))}>
+														<span className="carving-tile__thumb"><Thumb svg={carving.svg || null} /></span>
+														<span className="carving-tile__name">{carving.name}</span>
+													</button>
+													{!carving.builtin && (
+														<button type="button" className="carving-scrap" title="scrap this carving"
+															onClick={() => scrapCarving(carving)}>
+															{h.confirmKey === `scrap-carving-${carving.id}` ? '!' : '✕'}
+														</button>
+													)}
+												</div>
 											))}
 										</div>
 									</div>
