@@ -638,7 +638,9 @@ export interface Watch {
 	letter:          string;         // hand-written; a blank line splits paragraphs
 	rotation:        string;         // the "out of the rotation" line
 	bearings:        WatchBearing[]; // three at most
-	postcardMediaId: string;         // darkroom print id; "" = no postcard
+	// the wire name says id, but the value is the print's FILENAME: the
+	// media route serves filenames, the same key project images ride on
+	postcardMediaId: string;         // "" = no postcard
 	quips:           string[];       // the watch cat's remarks
 	keptAt:          string;         // stamped server-side on every keep
 }

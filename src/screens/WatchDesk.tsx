@@ -56,7 +56,9 @@ export default function WatchDesk() {
 	const paras = w.letter.split(/\n\s*\n/).filter(Boolean);
 	const notEmpty = Boolean(w.letter.trim()) || w.bearings.length > 0;
 	const quips = w.quips.map((q) => q.trim()).filter(Boolean);
-	const postcard = h.prints.find((p) => p.id === w.postcardMediaId);
+	// the record keys the postcard by filename: the media route serves
+	// filenames, not ids, so a stored id would 404 on the front door
+	const postcard = h.prints.find((p) => p.filename === w.postcardMediaId);
 	const keptShort = keptDate(w.keptAt, { day: 'numeric', month: 'short' });
 	const keptFull = keptDate(w.keptAt, { day: 'numeric', month: 'short', year: 'numeric' });
 	// before the first keep there is no stamp yet; the save date previews as now
@@ -145,10 +147,10 @@ export default function WatchDesk() {
 						<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
 							{h.prints.map((print) => (
 								<div key={print.id} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }}
-									onClick={() => h.patchWatch({ postcardMediaId: w.postcardMediaId === print.id ? '' : print.id })}>
+									onClick={() => h.patchWatch({ postcardMediaId: w.postcardMediaId === print.filename ? '' : print.filename })}>
 									<div style={{
 										width: '100%', height: 58, borderRadius: 7, background: `url("${mediaUrl(print.url)}") center/cover`,
-										border: w.postcardMediaId === print.id ? '2px solid var(--gold)' : '1px solid var(--border-input)',
+										border: w.postcardMediaId === print.filename ? '2px solid var(--gold)' : '1px solid var(--border-input)',
 										transition: 'border-color .18s', boxSizing: 'border-box',
 									}} />
 									<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-body)', wordBreak: 'break-all' }}>{print.filename}</span>

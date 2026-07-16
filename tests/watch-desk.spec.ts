@@ -57,7 +57,9 @@ test('keep the watch sends the whole record, never keptAt, three bearings at mos
 	await expect.poll(() => mock.find('PUT', /^\/1\/watch\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/watch\/?$/);
 	expect(put.body.letter).toBe('A fresh letter.\n\nStill true.');
-	expect(put.body.postcardMediaId).toBe('m2');
+	// the filename rides the wire, never the mongo id: the media route serves
+	// filenames, and a stored id 404s on the front door
+	expect(put.body.postcardMediaId).toBe('homelab-rack.jpg');
 	// keptAt is the server's to stamp; it never rides the wire
 	expect('keptAt' in put.body).toBe(false);
 	expect(put.body.bearings).toHaveLength(3);
