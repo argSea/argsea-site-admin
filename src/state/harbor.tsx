@@ -105,9 +105,13 @@ const CAT_SPOTS_ON: Record<string, boolean> = Object.fromEntries(
 
 // The carving shop's catalog: every hand-carved SVG on the site and where it
 // hangs, admin-side display data from the design mock's svgCatalog plus the
-// 2026-07-15 site sweep. The seven `spot: true` rows are the frozen bolt
-// targets (a carving's own boltedTo names them); the rest are catalog-only,
-// no carving behind them, so the bench never opens for those.
+// 2026-07-15 site sweep. The `spot: true` rows are the bolt targets (a
+// carving's own boltedTo names them): the seven v1 seeds plus the 2026-07-16
+// promote wave, whose ids derive kebab-case from the row names and travel
+// verbatim to the API seed and the site. The rest are catalog-only, no
+// carving behind them, so the bench never opens for those: the line-work
+// computed from hobby coordinates is not art, and the Flannan memorial is
+// fixed on purpose.
 export interface CarvingCatalogEntry {
 	id:    string;
 	name:  string;
@@ -118,61 +122,39 @@ export interface CarvingCatalogEntry {
 }
 
 export const CARVING_CATALOG: CarvingCatalogEntry[] = [
-	{ id: 'lighthouse-logo', name: 'The lighthouse', page: 'every page', where: 'nav, top left · also the contact band', spot: true },
+	{ id: 'lighthouse-logo', name: 'The lighthouse', page: 'every page', where: 'nav, top left · also the contact band and the tab bar', spot: true },
 	{ id: 'boat', name: 'The little boat', page: 'hello · projects', where: 'sails the hero wave and drops the mail · also passes the coast offshore', spot: true },
 	{ id: 'bottle', name: 'Message in a bottle', page: 'hello', where: 'bobs on the wave after the boat drops it', spot: true },
 	{ id: 'tower-stub', name: 'Tower on the horizon', page: 'projects', where: 'every beacon on the coast · the entry overlay lamp', spot: true },
 	{ id: 'paw', name: 'Paw print', page: 'hello · notes', where: 'walks across journal rows the cat has read', spot: true },
 	{ id: 'wave-line', name: 'The wave line', page: 'hello', where: 'the shoreline strip under the hero (repeating pattern)', spot: true },
 	{ id: 'boat-wake', name: 'The boat wake', page: 'hello', where: 'ripples trailing the boat (repeating pattern)', spot: true },
-	{
-		id: 'morse-seal', name: 'The morse seal', page: 'hello', where: 'the postmark over the hero, blinking hi in morse (index.astro:160)', spot: false,
-		note: 'it blinks hi in morse and expects no answer. carved straight into the hero markup.',
-	},
-	{
-		id: 'panel-rose', name: 'The panel rose', page: 'hello', where: 'the compass rose in the ship\'s log panel corner (index.astro:256)', spot: false,
-		note: 'a rose for a chart that never leaves the harbor. inked into the panel corner by hand.',
-	},
-	{
-		id: 'fleet-wake', name: 'The fleet wake', page: 'hello', where: 'the dotted wake plotted behind the hobby pills (index.astro:268)', spot: false,
-		note: 'every hobby trails the same wake. plotted inline behind the pills.',
-	},
+	{ id: 'morse-seal', name: 'The morse seal', page: 'hello', where: 'the postmark over the hero, blinking hi in morse', spot: true },
+	{ id: 'panel-rose', name: 'The panel rose', page: 'hello', where: 'the compass rose in the ship\'s log panel corner', spot: true },
+	{ id: 'fleet-wake', name: 'The fleet wake', page: 'hello', where: 'the dotted wake plotted behind the hobby pills', spot: true },
 	{
 		id: 'rhumb-lines', name: 'The rhumb lines', page: 'hobbies', where: 'the diorama chart linework: portolan spokes and each hobby\'s drift trail (ShipsLog.tsx:204, :214)', spot: false,
 		note: 'lines a sailor pretends to navigate by. redraw them in the diorama markup.',
 	},
-	{
-		id: 'chart-rose', name: 'The chart rose', page: 'hobbies', where: 'the big compass rose inked on the diorama chart (ShipsLog.tsx:226)', spot: false,
-		note: 'north is decorative here. re-cut it in the diorama markup.',
-	},
-	{
-		id: 'sea-serpent', name: 'The sea serpent', page: 'hobbies', where: 'the here-be-dragons corner of the diorama (ShipsLog.tsx:250)', spot: false,
-		note: 'guards the unfinished hobbies. do not feed it. edits happen in the diorama markup.',
-	},
+	{ id: 'chart-rose', name: 'The chart rose', page: 'hobbies', where: 'the big compass rose inked on the wandering chart', spot: true },
+	{ id: 'sea-serpent', name: 'The sea serpent', page: 'hobbies', where: 'the here-be-dragons corner of the wandering chart', spot: true },
 	{
 		id: 'flannan-lights', name: 'The Flannan lights', page: 'hobbies', where: 'the memorial trio: the cartouche tower, the Eilean Mòr mark, the modal lamp (ShipsLog.tsx:279, :321, :446)', spot: false,
-		note: 'three lights for three keepers. tend them together, in the diorama markup, with respect.',
+		note: 'three lights for three keepers, fixed on purpose. the rest of the shop swaps; these never do. tend them together, in the diorama markup, with respect.',
 	},
-	{
-		id: 'hobby-marks', name: 'The hobby marks', page: 'hobbies', where: 'one glyph per state: the moored lamp, the adrift boat and its wake, the marooned palm, the port anchor (ShipsLog.tsx:471, :479, :480, :486, :496)', spot: false,
-		note: 'a fleet of small fates. carve them in markGlyph, one state at a time.',
-	},
-	{
-		id: 'signal-flare', name: 'The signal flare', page: 'hobbies', where: 'the flare button and the bloom it fires overhead (ShipsLog.tsx:412, :433, :434)', spot: false,
-		note: 'fires, blooms, changes nothing. edit both halves or the bloom drifts from the button.',
-	},
-	{
-		id: 'gull', name: 'The gull', page: '404', where: 'wheeling over the shallows (404.astro:23)', spot: false,
-		note: 'it saw the wreck coming and said nothing. edit it in the shallows markup.',
-	},
-	{
-		id: 'aground-scene', name: 'The grounded scene', page: '404', where: 'the route line that dies at the sand, and the buoy marking the shoals (404.astro:54, :76)', spot: false,
-		note: 'the course ends where the chart said it would. edits where it lies, next to the wreck.',
-	},
-	{
-		id: 'tab-icons', name: 'The tab bar icons', page: 'every page', where: 'the phone-line tabs: the lighthouse copy, the hobbies compass, the notes letter (TabBar.astro)', spot: false,
-		note: 'the pocket set. the lighthouse copy is being rewired to the lighthouse-logo spot; the rest are carved in place.',
-	},
+	{ id: 'moored-lamp', name: 'The moored lamp', page: 'hobbies', where: 'the moored mark\'s lighthouse on the wandering chart', spot: true },
+	{ id: 'adrift-boat', name: 'The adrift boat', page: 'hobbies', where: 'the adrift mark\'s boat, drifting the wandering chart', spot: true },
+	{ id: 'adrift-wake', name: 'The adrift wake', page: 'hobbies', where: 'the dashes trailing the adrift boat', spot: true },
+	{ id: 'marooned-palm', name: 'The marooned palm', page: 'hobbies', where: 'the marooned mark\'s palm on its sandbar', spot: true },
+	{ id: 'port-anchor', name: 'The port anchor', page: 'hobbies', where: 'the made-port mark\'s anchor, pennants flying', spot: true },
+	{ id: 'signal-flare', name: 'The signal flare', page: 'hobbies', where: 'the flare button on the bearing card', spot: true },
+	{ id: 'compass-rose-star', name: 'The compass-rose star', page: 'hobbies', where: 'the star a flare blooms overhead', spot: true },
+	{ id: 'sail-tent', name: 'The sail tent', page: 'hobbies', where: 'the little sail over the blooming flare', spot: true },
+	{ id: 'gull', name: 'The gull', page: '404', where: 'wheeling over the shallows', spot: true },
+	{ id: 'route-line', name: 'The route line', page: '404', where: 'the course that dies at the sand', spot: true },
+	{ id: 'buoy', name: 'The buoy', page: '404', where: 'marking the shoals, next to the wreck', spot: true },
+	{ id: 'compass', name: 'The compass', page: 'every page', where: 'the hobbies tab on the phone-line tab bar', spot: true },
+	{ id: 'notes-letter', name: 'The notes letter', page: 'every page', where: 'the notes tab on the phone-line tab bar', spot: true },
 	{
 		id: 'wreck', name: 'The wreck', page: '404', where: 'run aground on the shoals, cat heckling from the placard', spot: false,
 		note: 'salvage rights unresolved. edit it where it lies (404.dc.html).',

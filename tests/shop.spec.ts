@@ -44,25 +44,31 @@ async function drawnPathD(page: Page): Promise<string> {
 	return /<path d="([^"]+)"/.exec(svg)![1];
 }
 
-test('the catalog groups every carving by page: seven spots plus fourteen catalog-only rows, stamp off the books', async ({ page }) => {
+test('the catalog groups every carving by page: twenty-five spots plus four catalog-only rows, stamp off the books', async ({ page }) => {
 	await openShop(page);
 	await page.locator('.carving-picker').click();
 
 	const catalog = page.locator('.carving-catalog');
-	await expect(catalog.locator('.carving-catalog__count')).toHaveText('21 on the books · 0 fresh');
-	await expect(catalog.locator('.carving-tile')).toHaveCount(21);
+	await expect(catalog.locator('.carving-catalog__count')).toHaveText('29 on the books · 0 fresh');
+	await expect(catalog.locator('.carving-tile')).toHaveCount(29);
 
 	for (const name of [
 		'The lighthouse', 'The little boat', 'Message in a bottle', 'Tower on the horizon', 'Paw print',
 		'The wave line', 'The boat wake', 'The morse seal', 'The panel rose', 'The fleet wake',
-		'The rhumb lines', 'The chart rose', 'The sea serpent', 'The Flannan lights', 'The hobby marks',
-		'The signal flare', 'The gull', 'The grounded scene', 'The tab bar icons', 'The wreck', 'The harbor cat',
+		'The rhumb lines', 'The chart rose', 'The sea serpent', 'The Flannan lights', 'The moored lamp',
+		'The adrift boat', 'The adrift wake', 'The marooned palm', 'The port anchor', 'The signal flare',
+		'The compass-rose star', 'The sail tent', 'The gull', 'The route line', 'The buoy',
+		'The compass', 'The notes letter', 'The wreck', 'The harbor cat',
 	]) {
 		await expect(catalog.getByText(name, { exact: true })).toBeVisible();
 	}
 
-	// the postcard-era stamp entry is retired: its render target no longer exists
+	// the postcard-era stamp entry is retired, and the promote wave dissolved
+	// the swept multi-glyph rows into their per-art spots
 	await expect(catalog.getByText('Postage lighthouse')).toHaveCount(0);
+	await expect(catalog.getByText('The hobby marks')).toHaveCount(0);
+	await expect(catalog.getByText('The grounded scene')).toHaveCount(0);
+	await expect(catalog.getByText('The tab bar icons')).toHaveCount(0);
 });
 
 test('the default bench holds the lighthouse; the catalog popover swaps the selection', async ({ page }) => {
@@ -413,9 +419,10 @@ test('scrapping a bolted carving hands its spot back to the v1 before the delete
 test('builtin rows offer no scrap and open locked: the v1s are permanent', async ({ page }) => {
 	await openShop(page);
 
-	// out of the box every spot row is seed-held: not one strike in sight
+	// out of the box the seed-held rows offer no strike, and the promoted spots
+	// hold nothing yet (their seeds ride the API wave), so none either
 	await page.locator('.carving-picker').click();
-	await expect(page.locator('.carving-tile')).toHaveCount(21);
+	await expect(page.locator('.carving-tile')).toHaveCount(29);
 	await expect(page.locator('.carving-scrap')).toHaveCount(0);
 	await page.locator('.carving-picker').click();
 
@@ -581,17 +588,44 @@ test('carve it loose from raw markup: the copy opens under the tools and names w
 	expect(post.body.svg).toContain('M2 2 L18 2');
 });
 
-test('the shop takes stock: a swept catalog row shows its note and offers no bench', async ({ page }) => {
+test('the memorial stays a note, fixed on purpose: it shows its wording and offers no bench', async ({ page }) => {
 	await openShop(page);
 
 	await page.locator('.carving-picker').click();
-	await page.locator('.carving-tile', { hasText: 'The tab bar icons' }).click();
+	await page.locator('.carving-tile', { hasText: 'The Flannan lights' }).click();
 
-	await expect(page.locator('.carving-picker__name')).toHaveText('The tab bar icons');
+	await expect(page.locator('.carving-picker__name')).toHaveText('The Flannan lights');
 	await expect(page.getByText('· not on this bench · see the note below ·')).toBeVisible();
-	await expect(page.getByText('the pocket set. the lighthouse copy is being rewired to the lighthouse-logo spot; the rest are carved in place.')).toBeVisible();
+	await expect(page.getByText('three lights for three keepers, fixed on purpose. the rest of the shop swaps; these never do. tend them together, in the diorama markup, with respect.')).toBeVisible();
 	await expect(page.locator('.carving-canvas')).toHaveCount(0);
 	await expect(page.locator('.carving-bolt')).toHaveCount(0);
+});
+
+test('the bolt flow reaches a promoted spot; an unheld spot row stays put until a carving holds it', async ({ page }) => {
+	const mock = await openShop(page);
+
+	// an unheld promoted spot has no carving to open: the tile is a listing, not a bench
+	await page.locator('.carving-picker').click();
+	await page.locator('.carving-tile[title*="wheeling over the shallows"]').click();
+	await expect(page.locator('.carving-catalog')).toBeVisible();
+	await expect(page.locator('.carving-picker__name')).toHaveText('The lighthouse');
+	await page.locator('.carving-picker').click();
+
+	// a saved keeper block bolts onto a promoted spot like onto any v1 spot
+	await page.getByRole('button', { name: '+ a fresh block' }).click();
+	await page.locator('.carving-save').click();
+	await expect(toast(page)).toHaveText('⚒ a fresh block joins the catalog');
+
+	await page.getByLabel('bolt it to').selectOption('moored-lamp');
+	await page.locator('.carving-bolt').click();
+	await expect(toast(page)).toHaveText('⚒ "fresh carving no. 1" bolted to the moored lamp. ships with the next hoist.');
+	const [bolt] = mock.find('POST', /^\/1\/carving\/carvings\/cv100\/bolt$/);
+	expect(bolt.body.spot).toBe('moored-lamp');
+
+	// the held spot row opens its carving now
+	await page.locator('.carving-picker').click();
+	await page.locator('.carving-tile[title*="moored mark"]').click();
+	await expect(page.locator('.carving-picker__name')).toHaveText('fresh carving no. 1');
 });
 
 test("the figurehead entity keeps its frozen glyph in the keeper's log; the carving shop no longer edits it", async ({ page }) => {
