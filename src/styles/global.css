@@ -564,6 +564,15 @@ textarea::placeholder {
 	transform: none;
 }
 
+/* group divider in the rail; .14 is the mock's own alpha, between the border
+   tokens, so it stays literal rather than borrowing --border-faint */
+.nav-rule {
+	flex: none;
+	height: 1px;
+	margin: 6px 12px;
+	background: rgba(150, 160, 220, .14);
+}
+
 .errand {
 	font-family: var(--font-mono);
 	font-size: 13px;

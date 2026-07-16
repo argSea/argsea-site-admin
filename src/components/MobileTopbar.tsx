@@ -2,6 +2,7 @@
 // same nav data. It carries the deploy verb and the way ashore; the lantern's
 // status gauge and rollback stay desktop-only (ratified), so the phone gets the
 // button, not the panel. CSS-hidden above the phone line (App.css).
+import { Fragment } from 'react';
 import { useHarbor } from '../state/harbor';
 import { NAV_ITEMS } from '../lib/nav';
 import { LighthouseMark } from './art';
@@ -26,11 +27,15 @@ export default function MobileTopbar() {
 			</div>
 			<div className="office-topbar__nav">
 				{NAV_ITEMS.map((item) => (
-					<button key={item.id}
-						className={`topbar-chip${h.screen === item.id ? ' topbar-chip--active' : ''}`}
-						onClick={() => h.goTo(item.id)}>
-						<span aria-hidden="true">{item.glyph}</span> {item.label}
-					</button>
+					<Fragment key={item.id}>
+						{/* the rail's horizontal rule turned upright for the chip strip */}
+						{item.rule && <span className="topbar-rule" aria-hidden="true" />}
+						<button
+							className={`topbar-chip${h.screen === item.id ? ' topbar-chip--active' : ''}`}
+							onClick={() => h.goTo(item.id)}>
+							<span aria-hidden="true">{item.glyph}</span> {item.label}
+						</button>
+					</Fragment>
 				))}
 			</div>
 		</header>
