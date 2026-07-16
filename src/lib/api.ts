@@ -572,10 +572,19 @@ export const doodle = {
 
 // ---- carvings (the carving shop's catalog + bench, pinned 2026-07-11) ----
 
-// The seven spots a carving can bolt onto: a frozen enum, code-side on both
-// this admin and the site. The catalog carries three more display-only rows
-// (stamp/wreck/harbor-cat) that are not spots and never back a carving.
-export type CarvingSpot = 'lighthouse-logo' | 'boat' | 'bottle' | 'tower-stub' | 'paw' | 'wave-line' | 'boat-wake';
+// The spots a carving can bolt onto: a frozen enum, code-side on both this
+// admin and the site. The seven v1 spots came first; the 2026-07-16 promote
+// wave flipped the static-art catalog rows into spots, ids kebab-case from
+// the catalog row names and identical across this admin, the API seed, and
+// the site. The catalog's remaining display-only rows (computed line-work,
+// the memorial, wreck/harbor-cat) are not spots and never back a carving.
+export type CarvingSpot =
+	| 'lighthouse-logo' | 'boat' | 'bottle' | 'tower-stub' | 'paw' | 'wave-line' | 'boat-wake'
+	| 'morse-seal' | 'panel-rose' | 'fleet-wake'
+	| 'chart-rose' | 'sea-serpent' | 'moored-lamp' | 'adrift-boat' | 'adrift-wake'
+	| 'marooned-palm' | 'port-anchor' | 'signal-flare' | 'compass-rose-star' | 'sail-tent'
+	| 'gull' | 'route-line' | 'buoy'
+	| 'compass' | 'notes-letter';
 
 // Raw SVG markup, unlike figurehead/doodle's structured Shape[] (a deliberate
 // contract choice, not an oversight: bolting a carving is a straight SVG
