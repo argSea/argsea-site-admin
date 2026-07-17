@@ -215,6 +215,7 @@ export interface HobbyDraft {
 	floats:    string;
 	offCourse: string;
 	odds:      string;
+	noteIds:   string[];   // tied notes, by stable id
 }
 
 interface EditBase {
@@ -336,11 +337,13 @@ function hobbyDraft(h?: Hobby): HobbyDraft {
 			fromLat: coordText(h.from?.lat), fromLon: coordText(h.from?.lon),
 			seasons: h.seasons, bearing: h.bearing, lastLog: h.lastLog,
 			floats: h.floats, offCourse: h.offCourse, odds: h.odds,
+			noteIds: [...(h.noteIds ?? [])],
 		}
 		: {
 			name: '', service: `${new Date().getFullYear()} · present`, state: 'moored',
 			coordLat: '58.20', coordLon: '-7.40', fromLat: '', fromLon: '',
 			seasons: '1', bearing: '', lastLog: '', floats: '', offCourse: '', odds: '',
+			noteIds: [],
 		};
 }
 
@@ -533,9 +536,10 @@ interface HarborValue {
 	burnNote:            (n: Note) => Promise<void>;
 	toggleNoteTie:       (p: Project, noteId: string) => Promise<void>;
 
-	moveHobby:       (h: Hobby, dir: -1 | 1) => Promise<void>;
-	setAdriftOrPort: (h: Hobby) => Promise<void>;
-	pinBearings:     (updated: Hobby[]) => Promise<void>;
+	moveHobby:           (h: Hobby, dir: -1 | 1) => Promise<void>;
+	setAdriftOrPort:     (h: Hobby) => Promise<void>;
+	pinBearings:         (updated: Hobby[]) => Promise<void>;
+	toggleHobbyNoteTie:  (h: Hobby, noteId: string) => Promise<void>;
 	addSuggestion:    (value: string) => Promise<void>;
 	removeSuggestion: (s: Suggestion) => Promise<void>;
 
@@ -1010,7 +1014,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				const fields = {
 					name: d.name, service: d.service, state: d.state, coord, from,
 					seasons: d.seasons, bearing: d.bearing, lastLog: d.lastLog,
-					floats: d.floats, offCourse: d.offCourse, odds: d.odds,
+					floats: d.floats, offCourse: d.offCourse, odds: d.odds, noteIds: d.noteIds,
 				};
 				if (edit.id === null) {
 					replaceHobby(await api.hobbies.create(fields));
@@ -1149,6 +1153,19 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			oops(error);
 		}
 	}, [replaceProject, oops]);
+
+	// the wandering chart's half of the same tie: mirrors toggleNoteTie, the
+	// mark's noteIds is the OTHER document, written immediately rather than
+	// riding the note's own draft save
+	const toggleHobbyNoteTie = useCallback(async (h: Hobby, noteId: string) => {
+		const tied = (h.noteIds ?? []).includes(noteId);
+		const noteIds = tied ? (h.noteIds ?? []).filter((id) => id !== noteId) : [...(h.noteIds ?? []), noteId];
+		try {
+			replaceHobby(await api.hobbies.update(h.id, { ...h, noteIds }));
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceHobby, oops]);
 
 	const moveHobby = useCallback(async (h: Hobby, dir: -1 | 1) => {
 		// reorder stays inside the hobby's own group (on watch vs off the fairway)
@@ -2230,7 +2247,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		flareRoll, openFlareRoll, closeFlareRoll,
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, toggleFlagship, moveProject, arrangeProjects, strikeProject, burnNote,
 		toggleNoteTie,
-		moveHobby, setAdriftOrPort, pinBearings, addSuggestion, removeSuggestion,
+		moveHobby, setAdriftOrPort, pinBearings, toggleHobbyNoteTie, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		setDrawer, addDrawer, removeDrawer,

@@ -298,3 +298,72 @@ test('at 390px the sidebar hides, the topbar chips navigate, and the deploy verb
 	await page.locator('.topbar-deploy').click();
 	await expect.poll(() => mock.find('POST', /^\/1\/lantern\/hoist$/).length).toBeGreaterThan(0);
 });
+
+test('the notes-found-here tie picker writes noteIds on a chart mark, both ways', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	// CachyOS tinkering has no noteIds on the wire yet: mirrors the light's
+	// notes-found-here box, keyed by the note's stable id
+	await row(page, 'CachyOS tinkering').getByText('edit', { exact: true }).click();
+	const overlay = page.locator('.overlay-card');
+	await overlay.locator('.fieldset-dashed', { hasText: 'notes found here' }).getByPlaceholder('search the book...').fill('weekend');
+	await overlay.getByText('+ The home lab ate my weekend').click();
+	await expect(overlay.getByText('✓ The home lab ate my weekend · ✕')).toBeVisible();
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
+	const [put] = mock.find('PUT', /^\/1\/hobby\/h2$/);
+	expect(put.body.noteIds).toEqual(['n2']);
+
+	// the other direction: the writing desk's "kept in" box reflects the tie,
+	// keyed by the note's stable id, and untying there writes the mark back
+	await nav(page, 'writing desk').click();
+	await page.locator('.note-row', { hasText: 'The home lab ate my weekend' }).getByText('edit', { exact: true }).click();
+	const noteOverlay = page.locator('.overlay-card');
+	const keptIn = noteOverlay.getByRole('button', { name: 'CachyOS tinkering' });
+	await expect(keptIn).toHaveAttribute('aria-pressed', 'true');
+	await keptIn.click();
+	await expect.poll(() => mock.find('PUT', /^\/1\/hobby\/h2$/).length).toBe(2);
+	const [, untie] = mock.find('PUT', /^\/1\/hobby\/h2$/);
+	expect(untie.body.noteIds).toEqual([]);
+});
+
+test('a tied note survives a reload, read straight off the mock api', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	await row(page, 'CachyOS tinkering').getByText('edit', { exact: true }).click();
+	const overlay = page.locator('.overlay-card');
+	await overlay.locator('.fieldset-dashed', { hasText: 'notes found here' }).getByPlaceholder('search the book...').fill('weekend');
+	await overlay.getByText('+ The home lab ate my weekend').click();
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
+	expect(mock.find('PUT', /^\/1\/hobby\/h2$/)[0].body.noteIds).toEqual(['n2']);
+
+	// the PUT lands in the mock's own store, so a fresh GET on reload reflects it
+	await page.reload();
+	await nav(page, 'the wandering chart').click();
+	await row(page, 'CachyOS tinkering').getByText('edit', { exact: true }).click();
+	await expect(page.locator('.overlay-card').getByText('✓ The home lab ate my weekend · ✕')).toBeVisible();
+});
+
+test('a mark with no noteIds on the wire opens with an empty tie box and degrades cleanly', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	// The home lab (h1) has no noteIds field at all in the fixture: the same
+	// null-like-tags fallback the light side already leans on
+	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
+	const overlay = page.locator('.overlay-card');
+	const ties = overlay.locator('.fieldset-dashed', { hasText: 'notes found here' });
+	await expect(ties).toBeVisible();
+	await expect(ties.getByText('✕')).toHaveCount(0);
+	await expect(ties.getByText('2 entries in the book · search to tuck one in.')).toBeVisible();
+
+	await ties.getByPlaceholder('search the book...').fill('queue');
+	await ties.getByText('+ The queue is the product').click();
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
+	expect(mock.find('PUT', /^\/1\/hobby\/h1$/)[0].body.noteIds).toEqual(['n1']);
+});
