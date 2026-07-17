@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useHarbor } from '../state/harbor';
 import type { EditState, HobbyDraft, NoteDraft, ProjectDraft } from '../state/harbor';
-import type { Category, Fact, LightColor, LightKind, Note, Project } from '../lib/api';
+import type { Category, Fact, Hobby, LightColor, LightKind, Note, Project } from '../lib/api';
 import { HOBBY_STATES } from '../lib/api';
 import { codeFor, LETTERS, randomLight, RHYTHM_KINDS, wordsFor } from '../lib/lightChar';
 import { printBackground } from '../lib/prints';
@@ -325,26 +325,23 @@ function FullLogBox({ draft, id }: { draft: ProjectDraft; id: string | null }) {
 // The tie both directions write: this box is the project's half (search the
 // book, tap to tie); the note editor's "kept in" box is the other half.
 // Ties key by stable note ids (ruling 6), never titles.
-function NoteTiesBox({ draft }: { draft: ProjectDraft }) {
+function NoteTiesBox({ noteIds, onToggle, nudge }: { noteIds: string[]; onToggle: (id: string) => void; nudge?: string }) {
 	const h = useHarbor();
 	const [q, setQ] = useState('');
 	const query = q.trim().toLowerCase();
 
-	const tied = draft.noteIds
+	const tied = noteIds
 		.map((id) => h.notes.find((n) => n.id === id))
 		.filter((n): n is Note => !!n);
-	const pool = h.notes.filter((n) => !draft.noteIds.includes(n.id));
+	const pool = h.notes.filter((n) => !noteIds.includes(n.id));
 	const found = query ? pool.filter((n) => n.title.toLowerCase().includes(query)) : null;
 	const hint = query
 		? 'tap a match to tuck it in.'
 		: pool.length
 			? `${pool.length} entr${pool.length === 1 ? 'y' : 'ies'} in the book · search to tuck one in.`
 			: 'the whole book is in this light already.';
-	const nudge = !draft.noteIds.length && !draft.caseStudy.trim();
 
-	const toggle = (id: string) => h.patchDraft({
-		noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
-	});
+	const toggle = onToggle;
 
 	return (
 		<div className="fieldset-dashed">
@@ -378,7 +375,7 @@ function NoteTiesBox({ draft }: { draft: ProjectDraft }) {
 			)}
 			{nudge && (
 				<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--amber-nudge)', fontStyle: 'italic' }}>
-					⚑ no note, no full log. even a short page keeps the record honest.
+					{nudge}
 				</span>
 			)}
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
@@ -388,9 +385,9 @@ function NoteTiesBox({ draft }: { draft: ProjectDraft }) {
 	);
 }
 
-// The writing desk's half of the tie: tapping a light toggles this note's id
-// in that project's noteIds. A note with no id yet (unsaved) has nothing to
-// tie; the office says so instead of silently doing nothing.
+// The writing desk's half of the tie: tapping a light or a mark toggles this
+// note's id in that document's noteIds. A note with no id yet (unsaved) has
+// nothing to tie; the office says so instead of silently doing nothing.
 function KeptInBox({ noteId }: { noteId: string | null }) {
 	const h = useHarbor();
 
@@ -415,9 +412,26 @@ function KeptInBox({ noteId }: { noteId: string | null }) {
 						</button>
 					);
 				})}
+				{h.hobbies.map((hobby: Hobby) => {
+					const on = !!noteId && (hobby.noteIds ?? []).includes(noteId);
+					return (
+						<button key={hobby.id} type="button" aria-pressed={on}
+							className={`pill ${on ? 'pill--on' : 'pill--quiet'}`}
+							style={{ cursor: noteId ? 'pointer' : 'not-allowed', opacity: noteId ? 1 : .5 }}
+							onClick={() => {
+								if (!noteId) {
+									h.showToast('⚑ file the entry first; a tie needs an id.');
+									return;
+								}
+								void h.toggleHobbyNoteTie(hobby, noteId);
+							}}>
+							{on ? '✓ ' : '○ '}{hobby.name}
+						</button>
+					);
+				})}
 			</div>
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)', lineHeight: 1.7 }}>
-				// tap a light. visitors find the note in its entry.
+				// tap a light or a mark. visitors find the note in its entry.
 			</span>
 		</div>
 	);
@@ -508,7 +522,12 @@ function ProjectFields({ draft, id }: { draft: ProjectDraft; id: string | null }
 				<input type="text" className="input input--serif-italic" value={draft.moral}
 					onChange={(e) => h.patchDraft({ moral: e.target.value })} />
 			</label>
-			<NoteTiesBox draft={draft} />
+			<NoteTiesBox noteIds={draft.noteIds}
+				onToggle={(id) => h.patchDraft({
+					noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
+				})}
+				nudge={!draft.noteIds.length && !draft.caseStudy.trim()
+					? '⚑ no note, no full log. even a short page keeps the record honest.' : undefined} />
 			<FactsBox facts={draft.facts} />
 			<FullLogBox draft={draft} id={id} />
 			<LightEditor draft={draft} />
@@ -643,6 +662,10 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 				<input type="text" className="input input--serif" placeholder="spring makes promises it won't keep"
 					value={draft.odds} onChange={(e) => h.patchDraft({ odds: e.target.value })} />
 			</label>
+			<NoteTiesBox noteIds={draft.noteIds}
+				onToggle={(id) => h.patchDraft({
+					noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
+				})} />
 		</div>
 	);
 }

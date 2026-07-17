@@ -200,6 +200,7 @@ export interface Hobby {
 	odds:      string;    // odds of return
 	tags?:     string[];  // the site's home page renders these; the admin has no
 	                      // editor for them, so it passes them through untouched
+	noteIds:   string[] | null;   // tied notes, by stable id; the tie also renders on the note; null like tags
 	order:     number;
 	createdAt: string;
 	updatedAt: string;
