@@ -71,7 +71,7 @@ export default function Sidebar() {
 			<div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '0 6px 18px' }}>
 				<LighthouseMark style={{ transform: 'rotate(-4deg)' }} />
 				<div style={{ display: 'flex', flexDirection: 'column' }}>
-					<span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--text-nav)' }}>argsea</span>
+					<span style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--text-nav)' }}>{h.keeperName}</span>
 					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '.12em', color: 'var(--periwinkle-deep)', textTransform: 'uppercase' }}>lighthouse keeper</span>
 				</div>
 			</div>

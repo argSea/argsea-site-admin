@@ -33,8 +33,8 @@ export interface DoodleFields {
 	shapes:  Shape[];
 }
 
-// The three live eggs and the cat's rounds: display copy shared by the cove
-// screen and the toggle toasts. The keys are the frozen cross-repo contract.
+// The live eggs and the cat's rounds: display copy shared by the cove screen
+// and the toggle toasts. The keys are the frozen cross-repo contract.
 export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where: string }[] = [
 	{
 		key: 'bottle', name: 'Message in a bottle', where: 'homepage · the drifting boat',
@@ -47,6 +47,10 @@ export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where
 	{
 		key: 'lights', name: 'The light list', where: 'the 404 wreck report',
 		blurb: 'Every wreck report lists a last known position: the real coordinates of a real lighthouse. Click them and the light introduces itself.',
+	},
+	{
+		key: 'gullpost', name: 'The Gull Post', where: 'homepage · the watch cat, poked ten times',
+		blurb: 'Poke the watch cat ten times and it hollers EXTRA! EXTRA! · the whole site phases into the morning edition, delivered by seabird, payment expected on the spot.',
 	},
 ];
 
@@ -163,6 +167,7 @@ export const CARVING_CATALOG: CarvingCatalogEntry[] = [
 		id: 'harbor-cat', name: 'The harbor cat', page: 'everywhere', where: 'postcards, notes, the wreck placard, this shop', spot: false,
 		note: 'the cat sits for no editor. adjustments by appointment (HarborCat.dc.html), approval unlikely.',
 	},
+	{ id: 'delivery-gull', name: 'The delivery gull', page: 'gazette', where: 'the masthead, delivering the folio · payment expected on the spot', spot: true },
 ];
 
 export interface Session {
@@ -241,7 +246,7 @@ export interface PeekState {
 const EMPTY_COPY: SiteCopy = {
 	id: '', quipHello: '', quipProjects: '', quipHobbies: '', quipNotes: '', quip404: '',
 	heroKicker: '', heroHeadline: '', heroBody: '', dict: '',
-	eggs: { bottle: true, cat: true, lights: true },
+	eggs: { bottle: true, cat: true, lights: true, gullpost: true },
 	catPages: CAT_PAGES_ON, catSpots: CAT_SPOTS_ON,
 	bottleProverbs: [], lighthouses: [], stores: [], wallGhost: null, updatedAt: '',
 };
@@ -265,7 +270,7 @@ function seedCove(doc: SiteCopy): SiteCopy {
 // A never-kept watch is just the empty default; the same shape a deploy-skewed
 // API (no /1/watch yet) falls back to.
 const EMPTY_WATCH: Watch = {
-	id: '', letter: '', rotation: '', bearings: [], postcardMediaId: '', quips: [], keptAt: '',
+	id: '', letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '', quips: [], keptAt: '',
 };
 
 // The bench holds four drawers at most (a bench with more is a shed): the
@@ -1399,7 +1404,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	// cat's remarks stay aboard: they belong to the watch cat, not the letter.
 	const clearWatch = useCallback(async () => {
 		try {
-			setWatch(await api.saveWatch({ ...watchRef.current, letter: '', rotation: '', bearings: [], postcardMediaId: '' }));
+			setWatch(await api.saveWatch({ ...watchRef.current, letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '' }));
 			refreshActivity();
 		} catch (error) {
 			oops(error);

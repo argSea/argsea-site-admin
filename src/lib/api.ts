@@ -217,9 +217,10 @@ export interface Suggestion {
 // harbor seeds absent fields enabled on load (absent = on, agreed ruling) so
 // the first autosave persists them explicitly.
 export interface EggFlags {
-	bottle: boolean;
-	cat:    boolean;
-	lights: boolean;
+	bottle:   boolean;
+	cat:      boolean;
+	lights:   boolean;
+	gullpost: boolean;
 }
 
 export interface Lighthouse {
@@ -578,13 +579,15 @@ export const doodle = {
 // the catalog row names and identical across this admin, the API seed, and
 // the site. The catalog's remaining display-only rows (computed line-work,
 // the memorial, wreck/harbor-cat) are not spots and never back a carving.
+// The Gull Post slice (2026-07-17) added delivery-gull for the gazette page.
 export type CarvingSpot =
 	| 'lighthouse-logo' | 'boat' | 'bottle' | 'tower-stub' | 'paw' | 'wave-line' | 'boat-wake'
 	| 'morse-seal' | 'panel-rose' | 'fleet-wake'
 	| 'chart-rose' | 'sea-serpent' | 'moored-lamp' | 'adrift-boat' | 'adrift-wake'
 	| 'marooned-palm' | 'port-anchor' | 'signal-flare' | 'compass-rose-star' | 'sail-tent'
 	| 'gull' | 'route-line' | 'buoy'
-	| 'compass' | 'notes-letter';
+	| 'compass' | 'notes-letter'
+	| 'delivery-gull';
 
 // Raw SVG markup, unlike figurehead/doodle's structured Shape[] (a deliberate
 // contract choice, not an oversight: bolting a carving is a straight SVG
@@ -643,15 +646,17 @@ export interface WatchBearing {
 // singleton, never a list, no delete route (clearing is a keep of an empty
 // record). Empty watch = letter === ""; the site folds the section away.
 export interface Watch {
-	id:              string;
-	letter:          string;         // hand-written; a blank line splits paragraphs
-	rotation:        string;         // the "out of the rotation" line
-	bearings:        WatchBearing[]; // three at most
+	id:                string;
+	letter:            string;         // hand-written; a blank line splits paragraphs
+	rotation:          string;         // the "out of the rotation" line
+	bearings:          WatchBearing[]; // three at most
 	// the wire name says id, but the value is the print's FILENAME: the
 	// media route serves filenames, the same key project images ride on
-	postcardMediaId: string;         // "" = no postcard
-	quips:           string[];       // the watch cat's remarks
-	keptAt:          string;         // stamped server-side on every keep
+	postcardMediaId:   string;         // "" = first hook bare
+	// two hooks on the rack: the first hangs big, the second tucks below it
+	postcard2MediaId:  string;         // "" = second hook bare
+	quips:             string[];       // the watch cat's remarks
+	keptAt:            string;         // stamped server-side on every keep
 }
 
 // An API from before the empty-holds fix marshals a never-kept watch's nil

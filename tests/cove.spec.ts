@@ -17,23 +17,40 @@ test('stowing an egg autosaves the complete copy singleton', async ({ page }) =>
 	const mock = await signIn(page);
 	await nav(page, "smuggler's cove").click();
 
-	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
+	await expect(page.getByText('4 of 4 loose on the site right now')).toBeVisible();
 
 	const bottle = page.locator('.card', { hasText: 'Message in a bottle' });
 	await bottle.getByTitle('stow it away').click();
 	await expect(toast(page)).toHaveText('· Message in a bottle, stowed away.');
-	await expect(page.getByText('2 of 3 loose on the site right now')).toBeVisible();
+	await expect(page.getByText('3 of 4 loose on the site right now')).toBeVisible();
 
 	// "saved as you type" is the same debounced PUT the signal flags ride
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
-	expect(put.body.eggs).toEqual({ bottle: false, cat: true, lights: true });
+	expect(put.body.eggs).toEqual({ bottle: false, cat: true, lights: true, gullpost: true });
 	// the rest of the doc rode along; PUT is full-replace
 	expect(put.body.quipHello).toBe('The boats run on schedule. Ish.');
 	expect(put.body.catPages).toMatchObject({ hello: true, p404: true });
 	expect(put.body.catSpots).toMatchObject({ 'hello.hero': true, 'p404.wreck': true });
 	expect(put.body.bottleProverbs).toHaveLength(2);
 	expect(put.body.lighthouses).toHaveLength(2);
+});
+
+test('the Gull Post egg row is present, no editor of its own', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, "smuggler's cove").click();
+
+	const gullpost = page.locator('.card', { hasText: 'The Gull Post' });
+	await expect(gullpost).toBeVisible();
+	await expect(gullpost.getByText('loose', { exact: true })).toBeVisible();
+	await expect(gullpost).toContainText('Poke the watch cat ten times and it hollers EXTRA! EXTRA!');
+	await expect(gullpost).toContainText('homepage · the watch cat, poked ten times');
+
+	await gullpost.getByTitle('stow it away').click();
+	await expect(toast(page)).toHaveText('· The Gull Post, stowed away.');
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
+	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
+	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: true, gullpost: false });
 });
 
 test('a page master dims and disables its nested spots', async ({ page }) => {
@@ -75,7 +92,7 @@ test('a spot toggle persists an explicit false through the PUT', async ({ page }
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
 	expect(put.body.catSpots['p404.wreck']).toBe(false);
 	expect(put.body.catPages.p404).toBe(true);
-	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: true });
+	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: true, gullpost: true });
 });
 
 test('the light list edits in place', async ({ page }) => {
@@ -139,7 +156,7 @@ test('a copy doc from before the cove comes up with everything loose', async ({ 
 	await nav(page, "smuggler's cove").click();
 
 	// absent = on: the missing fields are seeded enabled
-	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
+	await expect(page.getByText('4 of 4 loose on the site right now')).toBeVisible();
 	const cat = page.locator('.card', { hasText: 'The harbor cat' });
 	await expect(cat.getByText('17 spots loose across 5 pages')).toBeVisible();
 
@@ -148,7 +165,7 @@ test('a copy doc from before the cove comes up with everything loose', async ({ 
 	await lights.getByTitle('stow it away').click();
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
-	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false });
+	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false, gullpost: true });
 	expect(put.body.catPages).toMatchObject({ hello: true, projects: true, hobbies: true, notes: true, p404: true });
 	expect(put.body.catSpots).toEqual(allSpotsOn);
 	expect(put.body.bottleProverbs).toEqual([]);
@@ -163,13 +180,13 @@ test('null cove fields from a legacy API are seeded, on load and on the PUT echo
 	await signIn(page, mock);
 	await nav(page, "smuggler's cove").click();
 
-	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
+	await expect(page.getByText('4 of 4 loose on the site right now')).toBeVisible();
 
 	const lights = page.locator('.card', { hasText: 'The light list' });
 	await lights.getByTitle('stow it away').click();
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
-	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false });
+	expect(put.body.eggs).toEqual({ bottle: true, cat: true, lights: false, gullpost: true });
 	expect(put.body.catPages).toMatchObject({ hello: true, p404: true });
 	expect(put.body.catSpots).toEqual(allSpotsOn);
 	expect(put.body.bottleProverbs).toEqual([]);
@@ -178,15 +195,15 @@ test('null cove fields from a legacy API are seeded, on load and on the PUT echo
 	// the echo nulled everything again; seedCove adopts it as a fresh legacy
 	// doc (the server kept nothing), everything reads loose, and the screen
 	// is still standing instead of crashing on eggs being null
-	await expect(page.getByText('3 of 3 loose on the site right now')).toBeVisible();
+	await expect(page.getByText('4 of 4 loose on the site right now')).toBeVisible();
 
 	// and the next flip still works, sending a fully seeded doc again
 	const bottle = page.locator('.card', { hasText: 'Message in a bottle' });
 	await bottle.getByTitle('stow it away').click();
-	await expect(page.getByText('2 of 3 loose on the site right now')).toBeVisible();
+	await expect(page.getByText('3 of 4 loose on the site right now')).toBeVisible();
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(2);
 	const [echoPut] = mock.find('PUT', /^\/1\/copy\/?$/).slice(-1);
-	expect(echoPut.body.eggs).toEqual({ bottle: false, cat: true, lights: true });
+	expect(echoPut.body.eggs).toEqual({ bottle: false, cat: true, lights: true, gullpost: true });
 	expect(echoPut.body.catPages).toMatchObject({ hello: true, p404: true });
 });
 
