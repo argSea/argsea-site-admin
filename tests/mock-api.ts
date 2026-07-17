@@ -244,7 +244,7 @@ export class MockApi {
 		quip404: 'You are the first person to find this exact wrong URL. Probably.',
 		heroKicker: 'HIYA', heroHeadline: 'I help keep the lights on behind the news.',
 		heroBody: 'Backend engineering at the Post-Gazette.', dict: '1. the Argo, but for one.',
-		eggs: { bottle: true, cat: true, lights: true },
+		eggs: { bottle: true, cat: true, lights: true, gullpost: true },
 		catPages: { hello: true, projects: true, hobbies: true, notes: true, p404: true },
 		catSpots: {
 			'hello.header': true, 'hello.hero': true, 'hello.postcard': true, 'hello.manifest': true,
@@ -284,6 +284,7 @@ export class MockApi {
 			{ verb: 'tinkering', kind: 'hobby', targetId: 'h1', name: 'The home lab' },
 		],
 		postcardMediaId: '',
+		postcard2MediaId: '',
 		quips: [
 			'he says the migration is going fine. he is lying.',
 			'writing things down while they are still true. bold.',
@@ -357,8 +358,8 @@ export class MockApi {
 	];
 
 	// The seven builtin (v1 seed) carvings, one per spot, svg verbatim from the
-	// design mock's svgCatalog; each starts bolted to its own spot, the
-	// current look being the bolted default.
+	// design mock's svgCatalog, plus the Gull Post's delivery gull; each starts
+	// bolted to its own spot, the current look being the bolted default.
 	carvings: Doc[] = [
 		{
 			id: 'cv-lighthouse', name: 'The lighthouse', builtin: true, boltedTo: ['lighthouse-logo'],
@@ -394,6 +395,13 @@ export class MockApi {
 			id: 'cv-wake', name: 'The boat wake', builtin: true, boltedTo: ['boat-wake'],
 			svg: '<svg xmlns="http://www.w3.org/2000/svg" width="53" height="18"><path d="M0 9 Q 13.25 0, 26.5 9 T 53 9" stroke="rgba(240,217,168,0.5)" stroke-width="1.5" fill="none"/></svg>',
 			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+		// the delivery gull, svg verbatim from the Gull Post masthead (Hello
+		// Gazette.dc.html), bolted to its own spot the same as the v1 batch
+		{
+			id: 'cv-delivery-gull', name: 'The delivery gull', builtin: true, boltedTo: ['delivery-gull'],
+			svg: '<svg width="46" height="44" viewBox="0 0 46 44" fill="none" stroke="rgba(32,35,60,.85)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 41 v-5 M20 41 v-5" stroke-width="1.4"></path><path d="M11 36 C8 30 9 23 15 20 C22 16.5 30 19 31 26 C31.8 32 27 36 20 36 Z" fill="#f1ecdd"></path><path d="M17 24 C22 21 28 23 29 28 C26 30 19 30 16 27 Z" fill="rgba(32,35,60,.18)" stroke="none"></path><path d="M15 20 C14 14 18 10 23 10 C27 10 30 13 30 17" fill="#f1ecdd"></path><path d="M30 16.5 L36 18 L30 19.5" fill="#c9a96a" stroke="rgba(32,35,60,.85)"></path><circle cx="25.5" cy="15" r="1.1" fill="rgba(32,35,60,.85)" stroke="none"></circle><path d="M16.5 11.5 C17 7.5 21 5.5 25 6.5 C28 7.2 29.5 9.5 29.5 11.5 L31.5 11.5 C32.2 11.5 32.2 12.8 31.5 12.8 L18 12.8 Z" fill="rgba(32,35,60,.75)" stroke="none"></path></svg>',
+			createdAt: '2026-07-17T12:00:00Z', updatedAt: '2026-07-17T12:00:00Z',
 		},
 	];
 

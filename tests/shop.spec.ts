@@ -44,13 +44,13 @@ async function drawnPathD(page: Page): Promise<string> {
 	return /<path d="([^"]+)"/.exec(svg)![1];
 }
 
-test('the catalog groups every carving by page: twenty-five spots plus four catalog-only rows, stamp off the books', async ({ page }) => {
+test('the catalog groups every carving by page: twenty-six spots plus four catalog-only rows, stamp off the books', async ({ page }) => {
 	await openShop(page);
 	await page.locator('.carving-picker').click();
 
 	const catalog = page.locator('.carving-catalog');
-	await expect(catalog.locator('.carving-catalog__count')).toHaveText('29 on the books · 0 fresh');
-	await expect(catalog.locator('.carving-tile')).toHaveCount(29);
+	await expect(catalog.locator('.carving-catalog__count')).toHaveText('30 on the books · 0 fresh');
+	await expect(catalog.locator('.carving-tile')).toHaveCount(30);
 
 	for (const name of [
 		'The lighthouse', 'The little boat', 'Message in a bottle', 'Tower on the horizon', 'Paw print',
@@ -58,7 +58,7 @@ test('the catalog groups every carving by page: twenty-five spots plus four cata
 		'The rhumb lines', 'The chart rose', 'The sea serpent', 'The Flannan lights', 'The moored lamp',
 		'The adrift boat', 'The adrift wake', 'The marooned palm', 'The port anchor', 'The signal flare',
 		'The compass-rose star', 'The sail tent', 'The gull', 'The route line', 'The buoy',
-		'The compass', 'The notes letter', 'The wreck', 'The harbor cat',
+		'The compass', 'The notes letter', 'The wreck', 'The harbor cat', 'The delivery gull',
 	]) {
 		await expect(catalog.getByText(name, { exact: true })).toBeVisible();
 	}
@@ -422,7 +422,7 @@ test('builtin rows offer no scrap and open locked: the v1s are permanent', async
 	// out of the box the seed-held rows offer no strike, and the promoted spots
 	// hold nothing yet (their seeds ride the API wave), so none either
 	await page.locator('.carving-picker').click();
-	await expect(page.locator('.carving-tile')).toHaveCount(29);
+	await expect(page.locator('.carving-tile')).toHaveCount(30);
 	await expect(page.locator('.carving-scrap')).toHaveCount(0);
 	await page.locator('.carving-picker').click();
 

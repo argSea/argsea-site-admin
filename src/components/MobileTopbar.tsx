@@ -16,7 +16,7 @@ export default function MobileTopbar() {
 				<div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
 					<LighthouseMark width={20} height={24} style={{ transform: 'rotate(-4deg)' }} />
 					<div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-						<span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--text-nav)' }}>argsea</span>
+						<span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--text-nav)' }}>{h.keeperName}</span>
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.1em', color: 'var(--periwinkle-deep)', textTransform: 'uppercase' }}>lighthouse keeper</span>
 					</div>
 				</div>

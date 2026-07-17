@@ -1,6 +1,7 @@
-// Down at the cove. The three easter eggs riding the copy singleton: flip them
+// Down at the cove. The easter eggs riding the copy singleton: flip them
 // loose or stowed, tune the cat's rounds, edit the proverbs and the light
-// list. Saved as you type, the same debounced PUT as the signal flags.
+// list. The Gull Post carries no editor of its own, just the toggle. Saved
+// as you type, the same debounced PUT as the signal flags.
 import type { ReactNode } from 'react';
 import { useHarbor, EGG_DEFS, CAT_CATALOG } from '../state/harbor';
 import CatPerch from '../components/CatPerch';
@@ -17,7 +18,7 @@ function Toggle({ on, title, small, disabled, onFlip }: { on: boolean; title: st
 	);
 }
 
-function EggCard({ egg, cat, children }: { egg: (typeof EGG_DEFS)[number]; cat?: ReactNode; children: ReactNode }) {
+function EggCard({ egg, cat, children }: { egg: (typeof EGG_DEFS)[number]; cat?: ReactNode; children?: ReactNode }) {
 	const h = useHarbor();
 	const on = h.copy.eggs[egg.key];
 
@@ -38,13 +39,15 @@ function EggCard({ egg, cat, children }: { egg: (typeof EGG_DEFS)[number]; cat?:
 				<Toggle on={on} title={on ? 'stow it away' : 'let it loose'} onFlip={() => h.toggleEgg(egg.key)} />
 			</div>
 
-			<div style={{
-				display: 'flex', flexDirection: 'column', gap: 10,
-				borderTop: '1px dashed rgba(150,160,220,.22)',
-				paddingTop: 16, opacity: on ? 1 : .5, transition: 'opacity .25s',
-			}}>
-				{children}
-			</div>
+			{children && (
+				<div style={{
+					display: 'flex', flexDirection: 'column', gap: 10,
+					borderTop: '1px dashed rgba(150,160,220,.22)',
+					paddingTop: 16, opacity: on ? 1 : .5, transition: 'opacity .25s',
+				}}>
+					{children}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -63,7 +66,7 @@ const rowNum = (idx: number): string => String(idx + 1).padStart(2, '0');
 export default function SmugglersCove() {
 	const h = useHarbor();
 	const { eggs, catPages, catSpots, bottleProverbs, lighthouses } = h.copy;
-	const [bottleDef, catDef, lightsDef] = EGG_DEFS;
+	const [bottleDef, catDef, lightsDef, gullpostDef] = EGG_DEFS;
 	const looseCount = EGG_DEFS.filter((egg) => eggs[egg.key]).length;
 
 	// a spot is loose only when its page is too; count the pages carrying at
@@ -163,6 +166,8 @@ export default function SmugglersCove() {
 					))}
 					<button type="button" className="cove-add" onClick={h.addLight}>+ chart another light</button>
 				</EggCard>
+
+				<EggCard egg={gullpostDef} />
 			</div>
 
 			<span className="footnote">// flip a switch and it takes effect on the next lantern hoist.</span>

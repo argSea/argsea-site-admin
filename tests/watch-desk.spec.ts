@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { MockApi } from './mock-api';
 import { signIn, nav } from './office';
+
+// a print tile: the filename span's parent div, so a hook badge can be
+// checked against the print it actually hangs from
+const tileOf = (page: Page, filename: string) => page.getByText(filename, { exact: true }).locator('xpath=..');
 
 test('the watch desk loads the record and the preview reads it back', async ({ page }) => {
 	await signIn(page);
@@ -68,9 +73,13 @@ test('keep the watch sends the whole record, never keptAt, three bearings at mos
 	expect(put.body.quips).toHaveLength(2);
 });
 
-test('clear the watch keeps an empty record', async ({ page }) => {
+test('clear the watch keeps an empty record, resetting both hooks', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the watch desk').click();
+
+	// hang a print on each hook before clearing
+	await page.getByText('unmonolith-diagram.png', { exact: true }).click();
+	await page.getByText('meo-wave-title.png', { exact: true }).click();
 
 	await page.getByText('clear the watch').click();
 	await expect(page.getByText('The watch stands empty.')).toBeVisible();
@@ -82,7 +91,73 @@ test('clear the watch keeps an empty record', async ({ page }) => {
 	expect(put.body.rotation).toBe('');
 	expect(put.body.bearings).toEqual([]);
 	expect(put.body.postcardMediaId).toBe('');
+	expect(put.body.postcard2MediaId).toBe('');
 	expect('keptAt' in put.body).toBe(false);
 	// the cat's remarks stay aboard: they belong to the watch, not the letter
 	expect(put.body.quips).toHaveLength(2);
+});
+
+test('picking two prints hangs one on each hook, both riding the wire', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the watch desk').click();
+
+	await page.getByText('unmonolith-diagram.png', { exact: true }).click();
+	await expect(tileOf(page, 'unmonolith-diagram.png').getByText('❀ first hook')).toBeVisible();
+
+	await page.getByText('homelab-rack.jpg', { exact: true }).click();
+	await expect(tileOf(page, 'homelab-rack.jpg').getByText('❀ second hook')).toBeVisible();
+	// the first hook's print holds regardless
+	await expect(tileOf(page, 'unmonolith-diagram.png').getByText('❀ first hook')).toBeVisible();
+
+	// both polaroids ride the preview
+	await expect(page.getByText('from the season · jul 2026')).toBeVisible();
+	await expect(page.getByText('also from the season · the keeper liked it')).toBeVisible();
+
+	await page.getByRole('button', { name: 'keep the watch' }).click();
+	await expect.poll(() => mock.find('PUT', /^\/1\/watch\/?$/).length).toBe(1);
+	const [put] = mock.find('PUT', /^\/1\/watch\/?$/);
+	expect(put.body.postcardMediaId).toBe('unmonolith-diagram.png');
+	expect(put.body.postcard2MediaId).toBe('homelab-rack.jpg');
+});
+
+test('a third pick with both hooks full swaps the second hook, the first stays put', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the watch desk').click();
+
+	await page.getByText('unmonolith-diagram.png', { exact: true }).click();
+	await page.getByText('homelab-rack.jpg', { exact: true }).click();
+	await page.getByText('meo-wave-title.png', { exact: true }).click();
+
+	await expect(tileOf(page, 'unmonolith-diagram.png').getByText('❀ first hook')).toBeVisible();
+	await expect(tileOf(page, 'meo-wave-title.png').getByText('❀ second hook')).toBeVisible();
+	// homelab-rack.jpg fell off the rack entirely
+	await expect(tileOf(page, 'homelab-rack.jpg').getByText(/❀/)).toHaveCount(0);
+	await expect(page.getByText('❀ second hook')).toHaveCount(1);
+});
+
+test('taking the first hook down promotes the second hook to take its place', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the watch desk').click();
+
+	await page.getByText('unmonolith-diagram.png', { exact: true }).click();
+	await page.getByText('homelab-rack.jpg', { exact: true }).click();
+
+	// tap the hung first print again to take it down
+	await page.getByText('unmonolith-diagram.png', { exact: true }).click();
+	await expect(tileOf(page, 'unmonolith-diagram.png').getByText(/❀/)).toHaveCount(0);
+	await expect(tileOf(page, 'homelab-rack.jpg').getByText('❀ first hook')).toBeVisible();
+	await expect(page.getByText('❀ second hook')).toHaveCount(0);
+});
+
+test('taking the second hook down leaves the first exactly as it was', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the watch desk').click();
+
+	await page.getByText('unmonolith-diagram.png', { exact: true }).click();
+	await page.getByText('homelab-rack.jpg', { exact: true }).click();
+
+	// tap the hung second print again to take it down
+	await page.getByText('homelab-rack.jpg', { exact: true }).click();
+	await expect(tileOf(page, 'homelab-rack.jpg').getByText(/❀/)).toHaveCount(0);
+	await expect(tileOf(page, 'unmonolith-diagram.png').getByText('❀ first hook')).toBeVisible();
 });

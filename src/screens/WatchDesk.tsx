@@ -56,9 +56,23 @@ export default function WatchDesk() {
 	const paras = w.letter.split(/\n\s*\n/).filter(Boolean);
 	const notEmpty = Boolean(w.letter.trim()) || w.bearings.length > 0;
 	const quips = w.quips.map((q) => q.trim()).filter(Boolean);
-	// the record keys the postcard by filename: the media route serves
+	// the record keys the postcards by filename: the media route serves
 	// filenames, not ids, so a stored id would 404 on the front door
 	const postcard = h.prints.find((p) => p.filename === w.postcardMediaId);
+	const postcard2 = h.prints.find((p) => p.filename === w.postcard2MediaId);
+	// two hooks on the rack: first empty hook takes a print; picking a hung
+	// print takes it down; a new pick when both hooks are full replaces the second
+	const choosePrint = (filename: string) => {
+		if (w.postcardMediaId === filename) {
+			h.patchWatch({ postcardMediaId: w.postcard2MediaId, postcard2MediaId: '' });
+		} else if (w.postcard2MediaId === filename) {
+			h.patchWatch({ postcard2MediaId: '' });
+		} else if (!w.postcardMediaId) {
+			h.patchWatch({ postcardMediaId: filename });
+		} else {
+			h.patchWatch({ postcard2MediaId: filename });
+		}
+	};
 	const keptShort = keptDate(w.keptAt, { day: 'numeric', month: 'short' });
 	const keptFull = keptDate(w.keptAt, { day: 'numeric', month: 'short', year: 'numeric' });
 	// before the first keep there is no stamp yet; the save date previews as now
@@ -143,21 +157,27 @@ export default function WatchDesk() {
 					</div>
 
 					<div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-						<span className="card-kicker" style={{ fontSize: 11 }}>the postcard · from the darkroom</span>
+						<span className="card-kicker" style={{ fontSize: 11 }}>the postcards · from the darkroom · two hooks on the rack</span>
 						<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 10 }}>
-							{h.prints.map((print) => (
-								<div key={print.id} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }}
-									onClick={() => h.patchWatch({ postcardMediaId: w.postcardMediaId === print.filename ? '' : print.filename })}>
-									<div style={{
-										width: '100%', height: 58, borderRadius: 7, background: `url("${mediaUrl(print.url)}") center/cover`,
-										border: w.postcardMediaId === print.filename ? '2px solid var(--gold)' : '1px solid var(--border-input)',
-										transition: 'border-color .18s', boxSizing: 'border-box',
-									}} />
-									<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-body)', wordBreak: 'break-all' }}>{print.filename}</span>
-								</div>
-							))}
+							{h.prints.map((print) => {
+								const onFirst = w.postcardMediaId === print.filename;
+								const onSecond = w.postcard2MediaId === print.filename;
+								const pick = onFirst ? '❀ first hook' : onSecond ? '❀ second hook' : null;
+								return (
+									<div key={print.id} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 4 }}
+										onClick={() => choosePrint(print.filename)}>
+										<div style={{
+											width: '100%', height: 58, borderRadius: 7, background: `url("${mediaUrl(print.url)}") center/cover`,
+											border: (onFirst || onSecond) ? '2px solid var(--gold)' : '1px solid var(--border-input)',
+											transition: 'border-color .18s', boxSizing: 'border-box',
+										}} />
+										<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--text-body)', wordBreak: 'break-all' }}>{print.filename}</span>
+										{pick && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '.08em', color: 'var(--gold)', textTransform: 'uppercase' }}>{pick}</span>}
+									</div>
+								);
+							})}
 						</div>
-						<span className="footnote" style={{ fontSize: 11, lineHeight: 1.6 }}>// pick a print, tap it again to take it back down. the caption stamps itself from the save date. new prints develop in the darkroom tab.</span>
+						<span className="footnote" style={{ fontSize: 11, lineHeight: 1.6 }}>// pick up to two prints: the first hangs big, the second tucks in below it. tap one again to take it down. captions stamp themselves from the save date. new prints develop in the darkroom tab.</span>
 					</div>
 
 					<div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -221,6 +241,16 @@ export default function WatchDesk() {
 						}}>
 							<div style={{ width: '100%', height: 92, background: `url("${mediaUrl(postcard.url)}") center/cover` }} />
 							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, color: 'var(--periwinkle)', textAlign: 'center' }}>from the season · {season}</span>
+						</div>
+					)}
+					{postcard2 && (
+						<div style={{
+							alignSelf: 'flex-end', width: 156, marginTop: -2, display: 'flex', flexDirection: 'column', gap: 6,
+							background: '#252b49', border: '1px solid rgba(150,160,220,.22)', padding: '6px 6px 9px',
+							boxShadow: '0 8px 18px rgba(0,0,0,.45)', transform: 'rotate(-2deg)',
+						}}>
+							<div style={{ width: '100%', height: 70, background: `url("${mediaUrl(postcard2.url)}") center/cover` }} />
+							<span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--periwinkle-deep)', textAlign: 'center' }}>also from the season · the keeper liked it</span>
 						</div>
 					)}
 					{!notEmpty && (

@@ -81,3 +81,11 @@ test('desktop keeps the fixed sidebar and hides the topbar', async ({ page }) =>
 	await expect(sidebar(page).locator('.nav-item')).toHaveText(navOrder);
 	await expect(sidebar(page).locator('.nav-rule')).toHaveCount(3);
 });
+
+test('the brand line reads the keeper record\'s name, rail and topbar alike', async ({ page }) => {
+	await signIn(page);
+	await expect(sidebar(page)).toContainText('Justin');
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await expect(topbar(page)).toContainText('Justin');
+});

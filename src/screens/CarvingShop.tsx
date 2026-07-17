@@ -72,6 +72,7 @@ const SPOT_HINTS: Record<string, string> = {
 	buoy: 'keep the viewBox, it bobs at the shoals at a fixed size.',
 	compass: 'keep currentColor, the tab paints it; a bolted carving takes the color over.',
 	'notes-letter': 'keep currentColor, the tab paints it; a bolted carving takes the color over.',
+	'delivery-gull': 'keep it capped and unpaid, it delivers the folio at the gazette masthead.',
 };
 
 // Carvings are raw SVG by contract, so this is the one screen that renders
