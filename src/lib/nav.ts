@@ -11,10 +11,10 @@ export const NAV_ITEMS: { id: Screen; glyph: string; label: string; rule?: true 
 	{ id: 'hobbies', glyph: '✳', label: 'the wandering chart' },
 	{ id: 'notes', glyph: '✎', label: 'writing desk' },
 	{ id: 'bench', glyph: '⚒', label: 'the tool bench' },
-	{ id: 'marginalia', glyph: '✒', label: 'marginalia', rule: true },
-	{ id: 'shop', glyph: '♆', label: 'the carving shop' },
+	{ id: 'marginalia', glyph: '✐', label: 'marginalia', rule: true },
+	{ id: 'shop', glyph: '♞', label: 'the carving shop' },
 	{ id: 'media', glyph: '❏', label: 'the darkroom' },
 	{ id: 'copy', glyph: '⚑', label: 'signal flags', rule: true },
-	{ id: 'keeper', glyph: '☸', label: 'the keeper' },
+	{ id: 'keeper', glyph: '⌂', label: 'the keeper' },
 	{ id: 'eggs', glyph: '✧', label: "smuggler's cove" },
 ];

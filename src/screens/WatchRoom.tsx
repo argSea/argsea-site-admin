@@ -24,7 +24,7 @@ const CAT_QUIPS = [
 // face here.
 const LOG_GLYPHS: Record<string, string> = {
 	project: '✉', note: '✎', hobby: '✳', sitecopy: '⚑', media: '❏',
-	user: '☸', lantern: '☀', figurehead: '♆', carving: '⚒',
+	user: '⌂', lantern: '☀', figurehead: '♆', carving: '⚒',
 };
 
 // A stat with no number to show yet reads quiet, not blank.
