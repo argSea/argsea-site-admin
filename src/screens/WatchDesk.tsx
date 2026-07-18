@@ -48,7 +48,7 @@ export default function WatchDesk() {
 	};
 
 	// the link rides on targetId (what was picked), not name (what it shows);
-	// a bearing is adrift when its target no longer resolves at its source
+	// a bearing has lost its mark when its target no longer resolves at its source
 	const orphans = w.bearings
 		.filter((b) => b.kind !== 'none' && !targetsFor(b.kind).some((t) => t.id === b.targetId))
 		.map((b) => b.name);
