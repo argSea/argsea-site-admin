@@ -1154,7 +1154,7 @@ function Bench(props: BenchProps) {
 												onClick={(e) => { e.stopPropagation(); moveLayer(s.id, 1); }}>▲</button>
 											<button type="button" className="carving-mini" title="lower" disabled={i === 0}
 												onClick={(e) => { e.stopPropagation(); moveLayer(s.id, -1); }}>▼</button>
-											<button type="button" className="carving-mini" title="delete this layer"
+											<button type="button" className="carving-mini" title="scrap this layer"
 												onClick={(e) => { e.stopPropagation(); deleteLayer(s.id); }}>✕</button>
 										</div>
 									))}

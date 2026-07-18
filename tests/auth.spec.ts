@@ -33,6 +33,22 @@ test('a wrong passphrase is turned away', async ({ page }) => {
 	await expect(page.getByText('the harbor does not know that name and passphrase.')).toBeVisible();
 });
 
+test('a barred caller sees the keeper\'s own barred line verbatim', async ({ page }) => {
+	const mock = new MockApi();
+	await mock.install(page);
+	// the API's rate-limit lockout, keyed on "barred" (cross-repo marker word)
+	await page.route((url) => url.pathname === '/1/auth/login/', (route) => route.fulfill({
+		status: 400, contentType: 'application/json',
+		body: JSON.stringify({ status: 'error', code: 400, message: 'the door is barred for the night. come back with the tide.' }),
+	}));
+	await page.goto('/');
+	await page.getByPlaceholder('who goes there?').fill('meo');
+	await page.getByPlaceholder('passphrase').fill('wrong');
+	await page.getByRole('button', { name: 'unlock the office' }).click();
+	await expect(page.getByText('the door is barred for the night. come back with the tide.')).toBeVisible();
+	await expect(page.getByText('the harbor does not know that name and passphrase.')).toHaveCount(0);
+});
+
 test('login lands on the watch room; every read carries the bearer token; drafts stay visible', async ({ page }) => {
 	const mock = await signIn(page);
 	await expect(toast(page)).toHaveText('⚓ welcome back, keeper. token stowed.');

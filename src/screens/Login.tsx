@@ -28,11 +28,11 @@ export default function Login() {
 		try {
 			await h.signIn(user.trim(), pass);
 		} catch (err) {
-			// A struck light and a plain miss both come back a 400; the struck
-			// one carries the keeper's struck line, which we show as-is. Anything
+			// A barred caller and a plain miss both come back a 400; the barred
+			// one carries the keeper's barred line, which we show as-is. Anything
 			// else reads as an ordinary bad hail. Either way the door floods.
 			const message = err instanceof Error ? err.message : '';
-			setError(/struck/i.test(message) ? message : 'the harbor does not know that name and passphrase.');
+			setError(/barred/i.test(message) ? message : 'the harbor does not know that name and passphrase.');
 			setMisses((n) => n + 1);
 		} finally {
 			setCasting(false);

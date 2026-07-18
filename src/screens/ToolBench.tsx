@@ -35,6 +35,7 @@ export default function ToolBench() {
 		h.askConfirm(`drawer-${at}`, () => {
 			h.removeDrawer(at);
 			setSelIdx(0);
+			h.showToast('🪓 the drawer went overboard.');
 		});
 	};
 
@@ -97,7 +98,7 @@ export default function ToolBench() {
 								style={{ flex: '1 1 200px', borderRadius: 999, padding: '10px 16px', color: 'var(--text-soft)', fontSize: 12.5 }}
 								value={toolText}
 								onChange={(e) => setToolText(e.target.value)} />
-							<button type="submit" className="bench-add">+ add</button>
+							<button type="submit" className="bench-add">+ into the drawer</button>
 						</form>
 						<span className="footnote" style={{ fontSize: 11.5 }}>// a tool earns its drawer by paging me at least once.</span>
 					</div>

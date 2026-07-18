@@ -1422,11 +1422,12 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const clearWatch = useCallback(async () => {
 		try {
 			setWatch(await api.saveWatch({ ...watchRef.current, letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '' }));
+			showToast('○ cleared · the front door folds it away');
 			refreshActivity();
 		} catch (error) {
 			oops(error);
 		}
-	}, [oops, refreshActivity]);
+	}, [oops, refreshActivity, showToast]);
 
 	const setKeeperField = useCallback((key: keyof KeeperProfile, value: string) => {
 		setKeeper((cur) => ({ ...cur, [key]: value }));
