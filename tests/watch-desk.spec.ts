@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { MockApi } from './mock-api';
-import { signIn, nav } from './office';
+import { signIn, nav, toast } from './office';
 
 // a print tile: the filename span's parent div, so a hook badge can be
 // checked against the print it actually hangs from
@@ -20,6 +20,7 @@ test('the watch desk loads the record and the preview reads it back', async ({ p
 	await expect(page.getByText('Out of the rotation on purpose: Conference talks, one more framework, and the piano.')).toBeVisible();
 	await expect(page.locator('.watch-strip')).toContainText('The queue is the product');
 	await expect(page.getByText('// the dateline stamps itself on save · last kept 10 jul 2026')).toBeVisible();
+	await expect(page.getByText('// the dateline stamps itself on save · no watch kept yet')).toHaveCount(0);
 
 	// picking a source refills the dependent target select and the shown name
 	await page.getByLabel('the source').first().selectOption('light');
@@ -33,13 +34,22 @@ test('the watch desk loads the record and the preview reads it back', async ({ p
 	await expect(page.getByText('from the season · jul 2026')).toBeVisible();
 });
 
-test('a bearing whose target sailed shows the adrift warning', async ({ page }) => {
+test('a bearing whose target sailed shows the lost-its-mark warning', async ({ page }) => {
 	const mock = new MockApi();
 	mock.watch.bearings = [{ verb: 'logging', kind: 'note', targetId: 'n404', name: 'A note that sank' }];
 	await signIn(page, mock);
 	await nav(page, 'the watch desk').click();
 
-	await expect(page.getByText('adrift: "A note that sank" no longer matches anything at its source. the name stays; the link went with the tide.')).toBeVisible();
+	await expect(page.getByText('lost its mark: "A note that sank" no longer matches anything at its source. the name stays; the link went with the tide.')).toBeVisible();
+});
+
+test('a never-kept watch reads "no watch kept yet" in the footnote', async ({ page }) => {
+	const mock = new MockApi();
+	mock.watch = { id: '', letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '', quips: [], keptAt: '' };
+	await signIn(page, mock);
+	await nav(page, 'the watch desk').click();
+
+	await expect(page.getByText('// the dateline stamps itself on save · no watch kept yet')).toBeVisible();
 });
 
 test('keep the watch sends the whole record, never keptAt, three bearings at most', async ({ page }) => {
@@ -73,7 +83,7 @@ test('keep the watch sends the whole record, never keptAt, three bearings at mos
 	expect(put.body.quips).toHaveLength(2);
 });
 
-test('clear the watch keeps an empty record, resetting both hooks', async ({ page }) => {
+test('clear the watch is armed two-click, keeps an empty record resetting both hooks, and preserves quips', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the watch desk').click();
 
@@ -82,8 +92,15 @@ test('clear the watch keeps an empty record, resetting both hooks', async ({ pag
 	await page.getByText('meo-wave-title.png', { exact: true }).click();
 
 	await page.getByText('clear the watch').click();
+	// armed, not fired: the letter still stands
+	await expect(page.getByText('sure? the letter goes blank')).toBeVisible();
+	await expect(page.getByLabel('the letter')).not.toHaveValue('');
+	expect(mock.find('PUT', /^\/1\/watch\/?$/)).toHaveLength(0);
+
+	await page.getByText('sure? the letter goes blank').click();
 	await expect(page.getByText('The watch stands empty.')).toBeVisible();
 	await expect(page.getByText('the homepage section folds away until the next one is kept')).toBeVisible();
+	await expect(toast(page)).toHaveText('○ cleared · the front door folds it away');
 
 	await expect.poll(() => mock.find('PUT', /^\/1\/watch\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/watch\/?$/);

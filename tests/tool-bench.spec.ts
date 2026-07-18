@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { signIn, nav } from './office';
+import { signIn, nav, toast } from './office';
 
 test('a new drawer fills, autosaves into the copy singleton, and the cap holds at four', async ({ page }) => {
 	const mock = await signIn(page);
@@ -16,8 +16,10 @@ test('a new drawer fills, autosaves into the copy singleton, and the cap holds a
 	await label.fill('ceremonies');
 
 	await page.getByPlaceholder('a tool that earned the shelf...').fill('grep');
-	await page.getByRole('button', { name: '+ add' }).click();
+	await page.getByRole('button', { name: '+ into the drawer' }).click();
 	await expect(page.locator('.bench-chip', { hasText: 'grep' })).toBeVisible();
+	// adding a tool stays toastless
+	await expect(toast(page)).toHaveCount(0);
 
 	// four drawers is plenty: the add button gives way to the full note
 	await expect(page.getByRole('button', { name: '+ a new drawer' })).toHaveCount(0);
@@ -49,6 +51,7 @@ test('scrapping a drawer takes two clicks, then it all goes overboard', async ({
 	await expect(page.locator('.bench-drawer', { hasText: 'data & queues' })).toHaveCount(0);
 	// the selection falls back to the first drawer
 	await expect(page.locator('.bench-drawer--on')).toContainText('languages');
+	await expect(toast(page)).toHaveText('🪓 the drawer went overboard.');
 
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
@@ -62,6 +65,8 @@ test('a tool comes off the bench from its chip', async ({ page }) => {
 	await page.locator('.bench-chip', { hasText: 'php' }).getByTitle('off the bench').click();
 	await expect(page.locator('.bench-chip', { hasText: 'php' })).toHaveCount(0);
 	await expect(page.locator('.bench-drawer', { hasText: 'languages' })).toContainText('4 tools');
+	// removing a tool stays toastless
+	await expect(toast(page)).toHaveCount(0);
 
 	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);

@@ -73,6 +73,11 @@ export default function WatchDesk() {
 			h.patchWatch({ postcard2MediaId: filename });
 		}
 	};
+	const clearArmed = h.confirmKey === 'watch-clear';
+	const clearWatch = () => {
+		h.askConfirm('watch-clear', () => void h.clearWatch());
+	};
+
 	const keptShort = keptDate(w.keptAt, { day: 'numeric', month: 'short' });
 	const keptFull = keptDate(w.keptAt, { day: 'numeric', month: 'short', year: 'numeric' });
 	// before the first keep there is no stamp yet; the save date previews as now
@@ -112,7 +117,7 @@ export default function WatchDesk() {
 								fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--gold)', lineHeight: 1.6,
 								background: 'rgba(240,217,168,.07)', border: '1px solid rgba(240,217,168,.3)', borderRadius: 8, padding: '9px 12px',
 							}}>
-								{`adrift: "${orphans.join('", "')}" no longer matches anything at its source. the name stays; the link went with the tide.`}
+								{`lost its mark: "${orphans.join('", "')}" no longer matches anything at its source. the name stays; the link went with the tide.`}
 							</span>
 						)}
 						{w.bearings.map((b, i) => (
@@ -191,14 +196,18 @@ export default function WatchDesk() {
 							</div>
 						))}
 						<button className="dash-add" style={{ padding: '10px 16px' }} onClick={h.addWatchQuip}>+ a remark</button>
-						<span className="footnote" style={{ fontSize: 11, lineHeight: 1.6 }}>// these belong to the watch cat only. tailor them to the letter; the cat elsewhere keeps its own material. click the preview cat to hear one.</span>
+						<span className="footnote" style={{ fontSize: 11, lineHeight: 1.6 }}>// these belong to the watch cat only. tailor them to the letter; the cat elsewhere keeps its own material. the remarks ride out a clear. click the preview cat to hear one.</span>
 					</div>
 
 					<div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', borderTop: '1px solid rgba(150,160,220,.14)', paddingTop: 16 }}>
 						<button className="btn btn--gold" style={{ padding: '11px 22px' }} onClick={() => void h.keepWatch()}>keep the watch</button>
-						<span className="ghost-link ghost-link--danger" style={{ fontSize: 12 }} onClick={() => void h.clearWatch()}>clear the watch</span>
+						<span className="ghost-link ghost-link--danger" style={{ fontSize: 12 }} onClick={clearWatch}>
+							{clearArmed ? 'sure? the letter goes blank' : 'clear the watch'}
+						</span>
 						{h.watchFlash && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#6fca97' }}>{h.watchFlash}</span>}
-						<span className="footnote" style={{ fontSize: 11, flex: '1 1 100%' }}>// the dateline stamps itself on save · last kept {keptFull || 'never'}</span>
+						<span className="footnote" style={{ fontSize: 11, flex: '1 1 100%' }}>
+							{keptFull ? `// the dateline stamps itself on save · last kept ${keptFull}` : '// the dateline stamps itself on save · no watch kept yet'}
+						</span>
 					</div>
 				</div>
 
