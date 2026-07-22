@@ -49,7 +49,7 @@ export default function WatchRoom() {
 	const maxSails = t ? Math.max(1, ...t.days.map((d) => d.sails)) : 1;
 	const lightTitle = (id: string): string => h.projects.find((p) => p.id === id)?.title ?? 'an unlisted light';
 	const noteTitle = (id: string): string => h.notes.find((n) => n.id === id)?.title ?? 'a stray note';
-	const plotName = (id: string): string => h.hobbies.find((x) => x.id === id)?.name ?? 'an unmarked plot';
+	const plotName = (id: string): string => h.hobbies.find((x) => x.id === id)?.name ?? 'an uncharted hobby';
 
 	// the flare tally rides the traffic report; an API from before it omits the
 	// field, which reads quiet, distinct from a present count of zero
@@ -169,7 +169,7 @@ export default function WatchRoom() {
 								<span style={{ color: 'var(--text-body)' }}>top note · <span style={{ color: 'var(--text-soft)' }}>
 									{t.topNote ? `"${noteTitle(t.topNote.subject)}", ${t.topNote.reads} reads` : 'nothing opened yet.'}
 								</span></span>
-								<span style={{ color: 'var(--text-body)' }}>top plot · <span style={{ color: 'var(--text-soft)' }}>
+								<span style={{ color: 'var(--text-body)' }}>top bearing · <span style={{ color: 'var(--text-soft)' }}>
 									{t.topHobby ? `"${plotName(t.topHobby.subject)}", ${t.topHobby.visits} visits` : 'nobody stopped by yet.'}
 								</span></span>
 								<span style={{ color: 'var(--text-body)' }}>ports of origin · <span style={{ color: 'var(--text-soft)' }}>

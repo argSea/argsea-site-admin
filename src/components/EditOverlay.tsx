@@ -1,4 +1,4 @@
-// The edit overlay: project, headstone, and note forms, the light designer,
+// The edit overlay: project, hobby, and note forms, the light designer,
 // the pictures box, and the earlier-printings (revisions) section.
 // "File it" on a restored draft goes through the restore endpoint; that's
 // the server copy-forward that makes status travel with the printing.

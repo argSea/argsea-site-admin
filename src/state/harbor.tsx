@@ -84,7 +84,7 @@ export const CAT_CATALOG: CatPage[] = [
 	{
 		id: 'hobbies', label: 'Hobbies', spots: [
 			{ id: 'hobbies.header', label: 'The nav link', hint: 'lounging on the hobbies nav link' },
-			{ id: 'hobbies.entry', label: 'A logbook entry', hint: 'on a logbook headstone' },
+			{ id: 'hobbies.entry', label: 'A logbook entry', hint: 'on a wandering-chart card' },
 			{ id: 'hobbies.nextChip', label: 'The next chip', hint: 'on the next: ??? chip' },
 		],
 	},
@@ -1418,7 +1418,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	}, [oops, refreshActivity]);
 
 	// Clearing is a keep of the empty record (there is no delete route). The
-	// cat's remarks stay aboard: they belong to the watch cat, not the letter.
+	// cat's remarks stay with the watch: they belong to the watch cat, not the letter.
 	const clearWatch = useCallback(async () => {
 		try {
 			setWatch(await api.saveWatch({ ...watchRef.current, letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '' }));

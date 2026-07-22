@@ -89,7 +89,7 @@ export default function ShipsLog() {
 				<div className="screen-head__text">
 					<span className="kicker">chart room</span>
 					<span className="page-title">The wandering chart</span>
-					<span className="page-sub">Plot each hobby by where it drifted. Nothing sinks; some things just wander off the fairway.</span>
+					<span className="page-sub">Chart each hobby by where it drifted. Nothing sinks; some things just wander off the fairway.</span>
 				</div>
 				<button className="btn" onClick={() => h.openEdit('hobby', null)}>+ pick something up</button>
 			</div>
