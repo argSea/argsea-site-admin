@@ -27,6 +27,32 @@ test('the keeper autosaves the complete user doc, never role, never password', a
 	await expect(page.locator('text=/, Meo/').first()).toBeVisible();
 });
 
+test('the masthead card lives on the keeper screen but autosaves through the copy singleton, dropping a fully empty gazette', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the keeper').click();
+
+	const vol = page.getByLabel('volume line');
+	const presently = page.getByLabel('notices · the keeper is presently...');
+	await expect(vol).toHaveValue('');
+	await expect(presently).toHaveValue('');
+
+	// two fields, one debounced save
+	await vol.fill('vol. XXXIX · harbor edition');
+	await presently.fill('wrangling the ArcXP migration');
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(1);
+	const [put] = mock.find('PUT', /^\/1\/copy\/?$/);
+	expect(put.body.gazette).toEqual({ vol: 'vol. XXXIX · harbor edition', presently: 'wrangling the ArcXP migration' });
+	// the rest of the singleton rode along; PUT is full-replace
+	expect(put.body.quipHello).toBe('The boats run on schedule. Ish.');
+
+	// clearing both back out drops the key entirely, not {vol:"",presently:""}
+	await vol.fill('');
+	await presently.fill('');
+	await expect.poll(() => mock.find('PUT', /^\/1\/copy\/?$/).length).toBe(2);
+	const [, cleared] = mock.find('PUT', /^\/1\/copy\/?$/);
+	expect('gazette' in cleared.body).toBe(false);
+});
+
 test('signal flags autosave the complete singleton', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'signal flags').click();
