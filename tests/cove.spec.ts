@@ -43,8 +43,8 @@ test('the Gull Post egg row is present, no editor of its own', async ({ page }) 
 	const gullpost = page.locator('.card', { hasText: 'The Gull Post' });
 	await expect(gullpost).toBeVisible();
 	await expect(gullpost.getByText('loose', { exact: true })).toBeVisible();
-	await expect(gullpost).toContainText('Poke the watch cat ten times and it hollers EXTRA! EXTRA!');
-	await expect(gullpost).toContainText('homepage · the watch cat, poked ten times');
+	await expect(gullpost).toContainText('The gull lands in the page margins now and then');
+	await expect(gullpost).toContainText('homepage · the gull, roosting in the margins');
 
 	await gullpost.getByTitle('stow it away').click();
 	await expect(toast(page)).toHaveText('· The Gull Post, stowed away.');
