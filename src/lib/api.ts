@@ -67,6 +67,10 @@ export interface Project {
 	shortDesc:    string;       // "the register line"
 	body:         string;       // sanitized HTML long-form
 	moral:        string;
+	gazette?:     { headline?: string; deck?: string; dateline?: string; p1?: string; p2?: string; caption?: string };
+	                             // the gull post dressing: only non-empty keys ride the wire, a fully empty object is dropped, not stored
+	assist?:      { harness: string; model: string; only?: boolean } | null;
+	                             // provenance: absent/null = lit by hand, present = lit with the help of AI, only:true = lit by AI alone
 	postcardTo:   string;       // dormant postcard-era field, pass-through only
 	postcardFrom: string;       // dormant postcard-era field, pass-through only
 	postmarked:   string;       // dormant postcard-era field, pass-through only
@@ -198,6 +202,8 @@ export interface Hobby {
 	offCourse: string;    // how it went off course
 	floats:    string;    // what floats · what survived
 	odds:      string;    // odds of return
+	gauge?:    number;    // enthusiasm, self-assessed, 0-100. absent on an older
+	                      // hobby; empty stays empty, never coerced to 0
 	tags?:     string[];  // the site's home page renders these; the admin has no
 	                      // editor for them, so it passes them through untouched
 	noteIds:   string[] | null;   // tied notes, by stable id; the tie also renders on the note; null like tags
@@ -257,12 +263,15 @@ export interface SiteCopy {
 	// the wall's "out with the mail" placard, same coordinate model as project
 	// wallPos; null means the site falls back to its own default placement
 	wallGhost:      { x: number; y: number; rotation: number; enabled: boolean } | null;
+	// the Gull Post masthead dressing; a legacy doc has no gazette at all, and
+	// a fully empty one is dropped rather than stored (mirrors project.gazette)
+	gazette?:       { vol: string; presently: string };
 	updatedAt:      string;
 }
 
-// The copy keys the flag locker edits as plain text; the cove's egg fields
-// and the wall ghost have actions of their own.
-export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses' | 'stores' | 'wallGhost'>;
+// The copy keys the flag locker edits as plain text; the cove's egg fields,
+// the wall ghost, and the gazette have actions of their own.
+export type CopyTextField = Exclude<keyof SiteCopy, 'eggs' | 'catPages' | 'catSpots' | 'bottleProverbs' | 'lighthouses' | 'stores' | 'wallGhost' | 'gazette'>;
 
 // ---- the figurehead shop (contracts/figurehead.md, frozen 2026-07-07) ----
 

@@ -326,6 +326,79 @@ test('the notes-found-here tie picker writes noteIds both ways and the amber nud
 	expect(untie.body.noteIds).toEqual([]);
 });
 
+test('the gull post dressing round-trips a draft; a fully empty gazette is dropped, not stored as {}', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	await overlay.getByLabel('headline', { exact: true }).fill('Giant Monolith Quietly Dismantled');
+	await overlay.getByLabel('deck · the italic line under the headline').fill('a rare occurrence, keeper reports');
+	await overlay.getByLabel('dateline · reporting ...').fill('from inside the cluster');
+	await overlay.getByLabel('first paragraph · third person, the newsroom\'s voice').fill('para one.');
+	await overlay.getByLabel('second paragraph').fill('para two.');
+	await overlay.getByLabel('photo caption').fill('the ship, pictured');
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('🕯 the light was filed');
+
+	const [put] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect(put.body.gazette).toEqual({
+		headline: 'Giant Monolith Quietly Dismantled', deck: 'a rare occurrence, keeper reports',
+		dateline: 'from inside the cluster', p1: 'para one.', p2: 'para two.', caption: 'the ship, pictured',
+	});
+
+	// the six fields load back from the saved doc on re-open
+	await row.getByText('edit', { exact: true }).click();
+	await expect(overlay.getByLabel('headline', { exact: true })).toHaveValue('Giant Monolith Quietly Dismantled');
+	await expect(overlay.getByLabel('photo caption')).toHaveValue('the ship, pictured');
+
+	// clearing every field back out drops the gazette key entirely
+	await overlay.getByLabel('headline', { exact: true }).fill('');
+	await overlay.getByLabel('deck · the italic line under the headline').fill('');
+	await overlay.getByLabel('dateline · reporting ...').fill('');
+	await overlay.getByLabel('first paragraph · third person, the newsroom\'s voice').fill('');
+	await overlay.getByLabel('second paragraph').fill('');
+	await overlay.getByLabel('photo caption').fill('');
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	const [, cleared] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect('gazette' in cleared.body).toBe(false);
+});
+
+test('provenance: hand by default, AI-help needs a harness or model to stick, and only:true rides only on the solo pick', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the light list').click();
+	const row = page.locator('.content-row', { hasText: 'Meo Wave Race' });
+	await row.getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	// lit by hand is the default: no harness/model fields, save carries no assist
+	await expect(overlay.getByLabel('harness')).toHaveCount(0);
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('🕯 the light was filed');
+	expect(mock.find('PUT', /^\/1\/project\/p2$/)[0].body.assist).toBeNull();
+
+	// picking "with the help of AI" but typing nothing still doesn't stick
+	await row.getByText('edit', { exact: true }).click();
+	await overlay.getByText('lit with the help of AI', { exact: true }).click();
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	expect(mock.find('PUT', /^\/1\/project\/p2$/)[1].body.assist).toBeNull();
+
+	// a harness/model makes it stick, without only
+	await row.getByText('edit', { exact: true }).click();
+	await overlay.getByText('lit with the help of AI', { exact: true }).click();
+	await overlay.getByLabel('harness').fill('Claude Code');
+	await overlay.getByLabel('model').fill('Opus 4.8');
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	expect(mock.find('PUT', /^\/1\/project\/p2$/)[2].body.assist).toEqual({ harness: 'Claude Code', model: 'Opus 4.8' });
+
+	// the solo pick carries only:true alongside the same harness/model
+	await row.getByText('edit', { exact: true }).click();
+	await overlay.getByText('lit by AI alone', { exact: true }).click();
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	expect(mock.find('PUT', /^\/1\/project\/p2$/)[3].body.assist).toEqual({ harness: 'Claude Code', model: 'Opus 4.8', only: true });
+});
+
 test('the publish pill goes through the lifecycle endpoint, not PUT', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the light list').click();

@@ -1,5 +1,8 @@
 // The keeper's papers. Nine profile fields living on the user document,
 // saved as you type. Never sends role; the server strips it anyway.
+// The masthead card sits here too (the canon's placement), but it edits the
+// copy singleton's gazette key, not the user doc: it rides the flag locker's
+// debounced copy autosave (h.setGazette), the one place SiteCopy actually saves.
 import { useHarbor } from '../state/harbor';
 import type { KeeperProfile } from '../lib/api';
 import { greeting } from '../lib/whimsy';
@@ -67,6 +70,24 @@ export default function Keeper() {
 						<KeeperField field="github" label="github" />
 						<KeeperField field="linkedin" label="linkedin" />
 						<KeeperField field="signoff" label="sign-off · how notes end" style={{ color: 'var(--periwinkle)' }} />
+					</div>
+
+					<div className="fieldset-dashed">
+						<span className="field-label" style={{ letterSpacing: '.12em', color: 'var(--periwinkle)' }}>the gull post · masthead</span>
+						<label className="field">
+							<span className="field-label">volume line</span>
+							<input type="text" className="input" style={{ padding: '10px 12px' }} placeholder="vol. XXXIX · harbor edition"
+								value={h.copy.gazette?.vol ?? ''} onChange={(e) => h.setGazette({ vol: e.target.value })} />
+						</label>
+						<label className="field">
+							<span className="field-label">notices · the keeper is presently...</span>
+							<textarea className="input input--serif" rows={2} style={{ padding: '10px 12px' }}
+								placeholder="wrangling the ArcXP migration (in flight, no page yet)"
+								value={h.copy.gazette?.presently ?? ''} onChange={(e) => h.setGazette({ presently: e.target.value })} />
+						</label>
+						<span className="footnote" style={{ lineHeight: 1.7 }}>
+							// the paper reads its folio and notices from here. each story is dressed on its own light.
+						</span>
 					</div>
 
 					<div className="card card--gold tilt" style={{ '--tilt': '-.3deg', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 8 } as React.CSSProperties}>

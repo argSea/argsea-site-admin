@@ -191,6 +191,19 @@ export interface ProjectDraft {
 	caseStudy: string;     // the full log, markdown
 	noteIds:   string[];   // tied notes, by stable id
 	flagship:  boolean;
+	// provenance: assistOn/assistOnly are the three-way's derived state, never
+	// sent as-is; saveEdit collapses them back into Project.assist
+	assistOn:      boolean;
+	assistOnly:    boolean;
+	assistHarness: string;
+	assistModel:   string;
+	// the gull post dressing, one field per key; blank ones drop on save
+	gzHeadline: string;
+	gzDeck:     string;
+	gzDateline: string;
+	gzP1:       string;
+	gzP2:       string;
+	gzCaption:  string;
 }
 
 export interface NoteDraft {
@@ -221,6 +234,8 @@ export interface HobbyDraft {
 	offCourse: string;
 	odds:      string;
 	noteIds:   string[];   // tied notes, by stable id
+	// text, like the coord fields: blank means unset, distinct from "0"
+	gauge:     string;
 }
 
 interface EditBase {
@@ -309,11 +324,17 @@ function projectDraft(p?: Project): ProjectDraft {
 			images: p.images ?? [], light: p.light ?? DEFAULT_LIGHT, firstLit: p.firstLit,
 			slug: p.slug, facts: (p.facts ?? []).map((f) => ({ ...f })), caseStudy: p.caseStudy ?? '',
 			noteIds: [...(p.noteIds ?? [])], flagship: p.flagship,
+			assistOn: !!p.assist, assistOnly: !!p.assist?.only,
+			assistHarness: p.assist?.harness ?? '', assistModel: p.assist?.model ?? '',
+			gzHeadline: p.gazette?.headline ?? '', gzDeck: p.gazette?.deck ?? '', gzDateline: p.gazette?.dateline ?? '',
+			gzP1: p.gazette?.p1 ?? '', gzP2: p.gazette?.p2 ?? '', gzCaption: p.gazette?.caption ?? '',
 		}
 		: {
 			title: '', category: 'backend', tagsText: '', shortDesc: '', bodyText: '',
 			moral: 'Moral: ', images: [], light: DEFAULT_LIGHT, firstLit: '',
 			slug: '', facts: [], caseStudy: '', noteIds: [], flagship: false,
+			assistOn: false, assistOnly: false, assistHarness: '', assistModel: '',
+			gzHeadline: '', gzDeck: '', gzDateline: '', gzP1: '', gzP2: '', gzCaption: '',
 		};
 }
 
@@ -342,13 +363,13 @@ function hobbyDraft(h?: Hobby): HobbyDraft {
 			fromLat: coordText(h.from?.lat), fromLon: coordText(h.from?.lon),
 			seasons: h.seasons, bearing: h.bearing, lastLog: h.lastLog,
 			floats: h.floats, offCourse: h.offCourse, odds: h.odds,
-			noteIds: [...(h.noteIds ?? [])],
+			noteIds: [...(h.noteIds ?? [])], gauge: coordText(h.gauge),
 		}
 		: {
 			name: '', service: `${new Date().getFullYear()} · present`, state: 'moored',
 			coordLat: '58.20', coordLon: '-7.40', fromLat: '', fromLon: '',
 			seasons: '1', bearing: '', lastLog: '', floats: '', offCourse: '', odds: '',
-			noteIds: [],
+			noteIds: [], gauge: '',
 		};
 }
 
@@ -555,6 +576,7 @@ interface HarborValue {
 	setCopyField:   (key: CopyTextField, value: string) => void;
 	setKeeperField: (key: keyof KeeperProfile, value: string) => void;
 	setWallGhost:   (ghost: SiteCopy['wallGhost']) => void;
+	setGazette:     (patch: Partial<NonNullable<SiteCopy['gazette']>>) => void;
 
 	toggleEgg:     (key: keyof EggFlags) => void;
 	toggleCatPage: (pageId: string) => void;
@@ -953,12 +975,26 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		try {
 			if (edit.type === 'project') {
 				const d = edit.draft;
+				// absent/null = lit by hand; the three-way's derived state collapses
+				// back into one object here, only stored once harness or model says something
+				const assist = d.assistOn && (d.assistHarness.trim() || d.assistModel.trim())
+					? { harness: d.assistHarness.trim(), model: d.assistModel.trim(), ...(d.assistOnly ? { only: true } : {}) }
+					: null;
+				const gz: NonNullable<Project['gazette']> = {};
+				if (d.gzHeadline.trim()) gz.headline = d.gzHeadline.trim();
+				if (d.gzDeck.trim()) gz.deck = d.gzDeck.trim();
+				if (d.gzDateline.trim()) gz.dateline = d.gzDateline.trim();
+				if (d.gzP1.trim()) gz.p1 = d.gzP1.trim();
+				if (d.gzP2.trim()) gz.p2 = d.gzP2.trim();
+				if (d.gzCaption.trim()) gz.caption = d.gzCaption.trim();
+				const gazette = Object.keys(gz).length ? gz : undefined;
 				const fields = {
 					title: d.title, category: d.category,
 					tags: d.tagsText.split(',').map((t) => t.trim()).filter(Boolean),
 					shortDesc: d.shortDesc, body: textToHtml(d.bodyText), moral: d.moral,
 					images: d.images, light: d.light, firstLit: d.firstLit,
 					slug: d.slug, facts: d.facts, caseStudy: d.caseStudy, noteIds: d.noteIds, flagship: d.flagship,
+					gazette, assist,
 				};
 				if (edit.id === null) {
 					replaceProject(await api.projects.create({ ...fields, status: 'draft' }));
@@ -1016,10 +1052,13 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					showToast('⚠ a mark needs both bearings, or neither');
 					return;
 				}
+				// empty stays empty (never coerced to 0); a filled value clamps into [0,100]
+				const gaugeNum = parseInt(d.gauge, 10);
+				const gauge = isNaN(gaugeNum) ? undefined : Math.max(0, Math.min(100, gaugeNum));
 				const fields = {
 					name: d.name, service: d.service, state: d.state, coord, from,
 					seasons: d.seasons, bearing: d.bearing, lastLog: d.lastLog,
-					floats: d.floats, offCourse: d.offCourse, odds: d.odds, noteIds: d.noteIds,
+					floats: d.floats, offCourse: d.offCourse, odds: d.odds, noteIds: d.noteIds, gauge,
 				};
 				if (edit.id === null) {
 					replaceHobby(await api.hobbies.create(fields));
@@ -1291,6 +1330,18 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	// full-replace PUT as every other copy field
 	const setWallGhost = useCallback((ghost: SiteCopy['wallGhost']) => {
 		setCopy((cur) => ({ ...cur, wallGhost: ghost }));
+		queueCopySave();
+	}, [queueCopySave]);
+
+	// the masthead lives on the keeper's papers, but it's the copy singleton's
+	// gazette key underneath, riding the same debounced full-replace PUT as
+	// every other copy field. A fully empty gazette drops back to absent,
+	// mirroring the project gull post's own empty-object rule.
+	const setGazette = useCallback((patch: Partial<NonNullable<SiteCopy['gazette']>>) => {
+		setCopy((cur) => {
+			const next = { ...(cur.gazette ?? { vol: '', presently: '' }), ...patch };
+			return { ...cur, gazette: (next.vol.trim() || next.presently.trim()) ? next : undefined };
+		});
 		queueCopySave();
 	}, [queueCopySave]);
 
@@ -2254,7 +2305,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, toggleFlagship, moveProject, arrangeProjects, strikeProject, burnNote,
 		toggleNoteTie,
 		moveHobby, setAdriftOrPort, pinBearings, toggleHobbyNoteTie, addSuggestion, removeSuggestion,
-		setCopyField, setKeeperField, setWallGhost,
+		setCopyField, setKeeperField, setWallGhost, setGazette,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		setDrawer, addDrawer, removeDrawer,
 		watch, watchFlash, patchWatch, patchWatchBearing, addWatchBearing, removeWatchBearing,

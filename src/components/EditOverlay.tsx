@@ -481,6 +481,94 @@ function DoodlePicker({ selected }: { selected: string | null }) {
 	);
 }
 
+// The provenance three-way: hand, help, or solo. Selecting AI-assisted or
+// solo reveals harness/model and the preview line the light will show.
+function ProvenanceBox({ draft }: { draft: ProjectDraft }) {
+	const h = useHarbor();
+	const solo = draft.assistOn && draft.assistOnly;
+	const preview = [draft.assistHarness, draft.assistModel].filter((x) => x.trim()).join(', ').toLowerCase() || 'harness, model';
+
+	return (
+		<div className="fieldset-dashed">
+			<span className="field-label" style={{ letterSpacing: '.12em', color: 'var(--periwinkle)' }}>provenance · who lit this beacon</span>
+			<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+				<DesignerChip selected={!draft.assistOn} label="lit by hand"
+					onClick={() => h.patchDraft({ assistOn: false, assistOnly: false })} />
+				<DesignerChip selected={draft.assistOn && !solo} label="lit with the help of AI"
+					onClick={() => h.patchDraft({ assistOn: true, assistOnly: false })} />
+				<DesignerChip selected={solo} label="lit by AI alone"
+					onClick={() => h.patchDraft({ assistOn: true, assistOnly: true })} />
+			</div>
+			{draft.assistOn && (
+				<>
+					<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+						<label className="field">
+							<span className="field-label">harness</span>
+							<input type="text" className="input input--serif" placeholder="Claude Code" value={draft.assistHarness}
+								onChange={(e) => h.patchDraft({ assistHarness: e.target.value })} />
+						</label>
+						<label className="field">
+							<span className="field-label">model</span>
+							<input type="text" className="input input--serif" placeholder="Opus 4.8" value={draft.assistModel}
+								onChange={(e) => h.patchDraft({ assistModel: e.target.value })} />
+						</label>
+					</div>
+					<span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: '#7fd4a8', fontStyle: 'italic' }}>
+						shows on the light as: this beacon was lit with the help of AI ({preview}{solo ? ' · solo' : ''})
+					</span>
+				</>
+			)}
+		</div>
+	);
+}
+
+// The gull post dressing: six optional fields, only non-empty ones stored.
+// Leaving the whole box blank, the paper prints from the register line and
+// the entry instead.
+function GazetteBox({ draft }: { draft: ProjectDraft }) {
+	const h = useHarbor();
+
+	return (
+		<div className="fieldset-dashed">
+			<span className="field-label" style={{ letterSpacing: '.12em', color: 'var(--periwinkle)' }}>the gull post · how the paper runs this story</span>
+			<label className="field">
+				<span className="field-label">headline</span>
+				<input type="text" className="input input--display" style={{ fontSize: 16 }}
+					placeholder="Giant Monolith Quietly Dismantled; the Paper Never Misses a Day" value={draft.gzHeadline}
+					onChange={(e) => h.patchDraft({ gzHeadline: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">deck · the italic line under the headline</span>
+				<textarea className="input input--serif-italic" rows={2} value={draft.gzDeck}
+					onChange={(e) => h.patchDraft({ gzDeck: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">dateline · reporting ...</span>
+				<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="from inside the cluster"
+					value={draft.gzDateline} onChange={(e) => h.patchDraft({ gzDateline: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">first paragraph · third person, the newsroom's voice</span>
+				<textarea className="input input--serif" rows={3} value={draft.gzP1}
+					onChange={(e) => h.patchDraft({ gzP1: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">second paragraph</span>
+				<textarea className="input input--serif" rows={3} value={draft.gzP2}
+					onChange={(e) => h.patchDraft({ gzP2: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">photo caption</span>
+				<input type="text" className="input input--serif-italic" style={{ fontSize: 14 }} value={draft.gzCaption}
+					onChange={(e) => h.patchDraft({ gzCaption: e.target.value })} />
+			</label>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
+				// all optional. anything left empty, the paper prints from the register line and the entry instead.
+			</span>
+		</div>
+	);
+}
+
 function ProjectFields({ draft, id }: { draft: ProjectDraft; id: string | null }) {
 	const h = useHarbor();
 
@@ -522,6 +610,8 @@ function ProjectFields({ draft, id }: { draft: ProjectDraft; id: string | null }
 				<input type="text" className="input input--serif-italic" value={draft.moral}
 					onChange={(e) => h.patchDraft({ moral: e.target.value })} />
 			</label>
+			<ProvenanceBox draft={draft} />
+			<GazetteBox draft={draft} />
 			<NoteTiesBox noteIds={draft.noteIds}
 				onToggle={(id) => h.patchDraft({
 					noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
@@ -581,6 +671,14 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 						onChange={(e) => h.patchDraft({ service: e.target.value })} />
 				</label>
 			</div>
+			<label className="field">
+				<span className="field-label">enthusiasm gauge · 0-100 · the landing bars</span>
+				<input type="number" min={0} max={100} step={1} className="input" style={{ color: 'var(--text-soft)' }} placeholder="94"
+					value={draft.gauge} onChange={(e) => h.patchDraft({ gauge: e.target.value })} />
+			</label>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				// measured in enthusiasm, not competence. self-assessed, suspiciously precise.
+			</span>
 			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 				<label className="field">
 					<span className="field-label">charted position · latitude</span>

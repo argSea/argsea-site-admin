@@ -32,6 +32,35 @@ test('the chart editor round-trips the new shape: blank coords save null, a half
 	await expect(overlay).toBeVisible();
 });
 
+test('the enthusiasm gauge clamps into [0,100] on save, and an empty gauge stays absent, never 0', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	// h1 has no gauge seeded; the field opens blank, not "0"
+	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
+	const overlay = page.locator('.overlay-card');
+	const gauge = overlay.getByLabel('enthusiasm gauge · 0-100 · the landing bars');
+	await expect(gauge).toHaveValue('');
+	await gauge.fill('142');
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
+	expect(mock.find('PUT', /^\/1\/hobby\/h1$/)[0].body.gauge).toBe(100);
+
+	// a negative value clamps up to 0, not dropped
+	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
+	await expect(gauge).toHaveValue('100');
+	await gauge.fill('-8');
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	expect(mock.find('PUT', /^\/1\/hobby\/h1$/)[1].body.gauge).toBe(0);
+
+	// clearing it back out leaves it absent from the wire, not re-zeroed
+	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
+	await expect(gauge).toHaveValue('0');
+	await gauge.fill('');
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	expect('gauge' in mock.find('PUT', /^\/1\/hobby\/h1$/)[2].body).toBe(false);
+});
+
 test('the state chips set the hobby state on save', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the wandering chart').click();
