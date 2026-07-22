@@ -12,7 +12,7 @@ export default function FlareRoll() {
 	const total = t?.flares ?? rolls.reduce((n, r) => n + r.flares, 0);
 	const maxCount = rolls.reduce((m, r) => Math.max(m, r.flares), 1);
 
-	const plotName = (id: string): string => h.hobbies.find((x) => x.id === id)?.name ?? 'an unmarked plot';
+	const plotName = (id: string): string => h.hobbies.find((x) => x.id === id)?.name ?? 'an uncharted hobby';
 	const totalLine = rolls.length === 0
 		? 'the coast is quiet · no flares logged yet'
 		: `${total} ${total === 1 ? 'flare' : 'flares'} logged · they want ${plotName(rolls[0].subject).toLowerCase()} back most`;
