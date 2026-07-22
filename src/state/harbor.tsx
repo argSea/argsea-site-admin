@@ -49,8 +49,8 @@ export const EGG_DEFS: { key: keyof EggFlags; name: string; blurb: string; where
 		blurb: 'Every wreck report lists a last known position: the real coordinates of a real lighthouse. Click them and the light introduces itself.',
 	},
 	{
-		key: 'gullpost', name: 'The Gull Post', where: 'homepage · the watch cat, poked ten times',
-		blurb: 'Poke the watch cat ten times and it hollers EXTRA! EXTRA! · the whole site phases into the morning edition, delivered by seabird, payment expected on the spot.',
+		key: 'gullpost', name: 'The Gull Post', where: 'homepage · the gull, roosting in the margins',
+		blurb: 'The gull lands in the page margins now and then · follow it and the whole site phases into the morning edition, delivered by seabird, payment expected on the spot.',
 	},
 ];
 
