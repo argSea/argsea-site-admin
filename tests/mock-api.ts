@@ -80,6 +80,9 @@ export class MockApi {
 			light: { kind: 'flash', color: 'green', period: 4, letter: '', extinguished: '' },
 			images: [], firstLit: '2020',
 			facts: [], caseStudy: '', noteIds: [], flagship: false,
+			// p2 is berthed; p1, p3 and p4 predate the berth and carry none of
+			// the three keys, which is what an un-migrated document looks like
+			coord: { lat: 58.10, lon: -7.30 }, plate: 3, cap: 'A cat, mid-race.',
 			order: 2, featured: true, status: 'published',
 			publishedAt: '2026-06-01T12:00:00Z', createdAt: '2026-05-02T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
@@ -114,6 +117,7 @@ export class MockApi {
 			id: 'n1', title: 'The queue is the product', teaser: 'Notes on message queues.',
 			body: '<p>A decade of publishing systems.</p>\n<p>The queue was the product all along.</p>',
 			date: 'feb 2026', conditions: 'clear skies', doodleId: 'd1', doodleCaption: 'a little wave', status: 'published',
+			coord: { lat: 58.35, lon: -6.90 }, plate: 1, cap: 'The queue, at rest.',
 			publishedAt: '2026-06-01T12:00:00Z', createdAt: '2026-05-01T12:00:00Z', updatedAt: '2026-06-01T12:00:00Z',
 		},
 		{

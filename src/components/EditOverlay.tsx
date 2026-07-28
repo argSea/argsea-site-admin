@@ -612,6 +612,7 @@ function ProjectFields({ draft, id }: { draft: ProjectDraft; id: string | null }
 			</label>
 			<ProvenanceBox draft={draft} />
 			<GazetteBox draft={draft} />
+			<ChartBerthBox draft={draft} />
 			<NoteTiesBox noteIds={draft.noteIds}
 				onToggle={(id) => h.patchDraft({
 					noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
@@ -634,6 +635,15 @@ function ProjectFields({ draft, id }: { draft: ProjectDraft; id: string | null }
 const CHART_LAT = [57.82, 58.56] as const;
 const CHART_LON = [-7.94, -6.59] as const;
 
+// The Helm's extent, including the ratified southward push: the window a light's
+// or a note's berth renders in. A separate band from the ships-log's above,
+// because a berth is plotted on a different chart, and forcing the hobby window
+// on one would silently haul two migrated berths back under its ceiling. The
+// wire takes any earth-range coordinate; this band is the office being helpful,
+// not the law (contract: chart windows are presentation).
+const HELM_LAT = [57.80, 58.70] as const;
+const HELM_LON = [-8.30, -6.10] as const;
+
 // Snap a coordinate input to its band on blur: blank stays blank (unplotted),
 // an in-band value is left exactly as typed, an out-of-band number jumps to the
 // nearest bound. Non-numeric text is left for the save-time pair check to catch.
@@ -652,6 +662,67 @@ function snapCoord(text: string, [lo, hi]: readonly [number, number]): string {
 		return String(hi);
 	}
 	return text;
+}
+
+// The dressing a mark carries on the chart. It follows the entry whether or not
+// the entry is charted, so the hobby editor shows it beside its own bearings and
+// the berth box shows it under the ones it owns.
+function DressingFields({ plate, cap }: { plate: string; cap: string }) {
+	const h = useHarbor();
+
+	return (
+		<>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14 }}>
+				<label className="field">
+					<span className="field-label">plate · which photo-plate</span>
+					<input type="number" min={0} step={1} className="input" style={{ color: 'var(--text-soft)' }}
+						value={plate} onChange={(e) => h.patchDraft({ plate: e.target.value })} />
+				</label>
+				<label className="field">
+					<span className="field-label">caption · the line under the plate</span>
+					<input type="text" className="input input--serif-italic"
+						value={cap} onChange={(e) => h.patchDraft({ cap: e.target.value })} />
+				</label>
+			</div>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				// plate 0 is the plate it gets if you say nothing · the caption keeps whether it's charted or not
+			</span>
+		</>
+	);
+}
+
+// Where a light or a note sits on the Helm, and what it wears there. Both
+// bearings blank is uncharted, the same test the hobby editor's own coord pair
+// uses: charted means a coord, there is no separate charted flag.
+function ChartBerthBox({ draft }: { draft: ProjectDraft | NoteDraft }) {
+	const h = useHarbor();
+
+	return (
+		<div className="fieldset-dashed">
+			<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>chart berth · where it lies on the Helm</span>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+				<label className="field">
+					<span className="field-label">charted position · latitude</span>
+					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if uncharted"
+						value={draft.coordLat} onChange={(e) => h.patchDraft({ coordLat: e.target.value })}
+						onBlur={() => h.patchDraft({ coordLat: snapCoord(draft.coordLat, HELM_LAT) })} />
+				</label>
+				<label className="field">
+					<span className="field-label">· longitude</span>
+					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if uncharted"
+						value={draft.coordLon} onChange={(e) => h.patchDraft({ coordLon: e.target.value })}
+						onBlur={() => h.patchDraft({ coordLon: snapCoord(draft.coordLon, HELM_LON) })} />
+				</label>
+			</div>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				// leave both blank and it stays off the chart, in the log only
+			</span>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				{`// the Helm runs ${HELM_LAT[0].toFixed(2)} to ${HELM_LAT[1].toFixed(2)} north, ${(-HELM_LON[0]).toFixed(2)} to ${(-HELM_LON[1]).toFixed(2)} west · a bearing off the edge snaps back onto it`}
+			</span>
+			<DressingFields plate={draft.plate} cap={draft.cap} />
+		</div>
+	);
 }
 
 function HobbyFields({ draft }: { draft: HobbyDraft }) {
@@ -728,6 +799,7 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 					// leave both blank and it draws no wake · fill them and a dotted drift runs from here to the mark
 				</span>
 			</div>
+			<DressingFields plate={draft.plate} cap={draft.cap} />
 			<label className="field">
 				<span className="field-label">sounding · seasons afloat</span>
 				<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="2"
@@ -808,6 +880,7 @@ function NoteFields({ draft, id }: { draft: NoteDraft; id: string | null }) {
 				<input type="text" className="input input--soft" style={{ padding: '11px 13px', fontSize: 13 }}
 					value={draft.doodleCaption} onChange={(e) => h.patchDraft({ doodleCaption: e.target.value })} />
 			</label>
+			<ChartBerthBox draft={draft} />
 			<KeptInBox noteId={id} />
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 				– signs itself "{h.keeper.signoff || '– j'}" on the way out
