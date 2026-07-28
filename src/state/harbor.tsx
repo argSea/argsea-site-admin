@@ -417,9 +417,16 @@ function parseCoord(latStr: string, lonStr: string): Coord | null | 'half' {
 // default plate, not "no plate", so it saves as 0. Clamped at zero below to
 // match the wire and left uncapped above, since the site resolves an index it
 // has no plate for to its own fallback.
+// Read with Number rather than parseInt, which takes a prefix and calls it a
+// number: parseInt reads "3 plates" as 3 and "1e3" as 1. Anything that is not a
+// finite number lands on the default plate, and a fractional one truncates
+// toward zero before the clamp, so "2.9" is plate 2 and never 3.
 function parsePlate(text: string): number {
-	const n = parseInt(text, 10);
-	return isNaN(n) ? 0 : Math.max(0, n);
+	const n = Number(text);
+	if (!isFinite(n)) {
+		return 0;
+	}
+	return Math.max(0, Math.trunc(n));
 }
 
 // ---- the log desk ----
