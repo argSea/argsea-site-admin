@@ -83,6 +83,13 @@ export interface Project {
 	caseStudy:    string;              // the full log, markdown in the keeper's dialect
 	noteIds:      string[] | null;     // tied notes, by stable id; the tie also renders on the note; null like tags
 	flagship:     boolean;             // site-side convention: exactly one flagship: admin only hints, never enforces
+	// The chart berth. Charted means coord non-null; there is no separate
+	// charted flag. The API serializes all three on every document now, but one
+	// written before the berth landed carries none of them, so they stay
+	// optional here and read as uncharted and undressed.
+	coord?:       Coord | null;        // charted position; null or absent means uncharted, in the log and off the chart
+	plate?:       number;              // the chart photo-plate index, non-negative; 0 is the default plate, not an unset marker
+	cap?:         string;              // the mark's caption; empty means no caption. the dressing follows the entity, charted or not
 	firstLit:     string;
 	order:        number;
 	wallPos?:     { x: number; y: number; rotation: number } | null;
@@ -102,6 +109,9 @@ export interface Note {
 	conditions:    string;        // journal-style weather/mood line
 	doodleId:      string | null;
 	doodleCaption: string;
+	coord?:        Coord | null;  // the chart berth, Project.coord's exact semantics
+	plate?:        number;        // ditto Project.plate
+	cap?:          string;        // ditto Project.cap
 	status:        Status;
 	publishedAt:   string;
 	createdAt:     string;
@@ -204,6 +214,8 @@ export interface Hobby {
 	odds:      string;    // odds of return
 	gauge?:    number;    // enthusiasm, self-assessed, 0-100. absent on an older
 	                      // hobby; empty stays empty, never coerced to 0
+	plate?:    number;    // the chart photo-plate index, Project.plate's semantics
+	cap?:      string;    // the mark's caption, Project.cap's semantics
 	tags?:     string[];  // the site's home page renders these; the admin has no
 	                      // editor for them, so it passes them through untouched
 	noteIds:   string[] | null;   // tied notes, by stable id; the tie also renders on the note; null like tags

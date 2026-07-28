@@ -612,6 +612,7 @@ function ProjectFields({ draft, id }: { draft: ProjectDraft; id: string | null }
 			</label>
 			<ProvenanceBox draft={draft} />
 			<GazetteBox draft={draft} />
+			<ChartBerthBox draft={draft} />
 			<NoteTiesBox noteIds={draft.noteIds}
 				onToggle={(id) => h.patchDraft({
 					noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
@@ -652,6 +653,62 @@ function snapCoord(text: string, [lo, hi]: readonly [number, number]): string {
 		return String(hi);
 	}
 	return text;
+}
+
+// The dressing a mark carries on the chart. It follows the entry whether or not
+// the entry is charted, so the hobby editor shows it beside its own bearings and
+// the berth box shows it under the ones it owns.
+function DressingFields({ plate, cap }: { plate: string; cap: string }) {
+	const h = useHarbor();
+
+	return (
+		<div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 14 }}>
+			<label className="field">
+				<span className="field-label">plate · which photo-plate</span>
+				<input type="number" min={0} step={1} className="input" style={{ color: 'var(--text-soft)' }}
+					value={plate} onChange={(e) => h.patchDraft({ plate: e.target.value })} />
+			</label>
+			<label className="field">
+				<span className="field-label">caption · the line under the plate</span>
+				<input type="text" className="input input--serif-italic"
+					value={cap} onChange={(e) => h.patchDraft({ cap: e.target.value })} />
+			</label>
+		</div>
+	);
+}
+
+// Where a light or a note sits on the ships-log chart, and what it wears there.
+// Both bearings blank is uncharted, the same test the hobby editor's own coord
+// pair uses: charted means a coord, there is no separate charted flag.
+function ChartBerthBox({ draft }: { draft: ProjectDraft | NoteDraft }) {
+	const h = useHarbor();
+
+	return (
+		<div className="fieldset-dashed">
+			<span className="field-label" style={{ letterSpacing: '.13em', color: 'var(--periwinkle)' }}>chart berth · where it lies on the ships-log</span>
+			<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+				<label className="field">
+					<span className="field-label">charted position · latitude</span>
+					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if uncharted"
+						value={draft.coordLat} onChange={(e) => h.patchDraft({ coordLat: e.target.value })}
+						onBlur={() => h.patchDraft({ coordLat: snapCoord(draft.coordLat, CHART_LAT) })} />
+				</label>
+				<label className="field">
+					<span className="field-label">· longitude</span>
+					<input type="number" step={0.01} className="input" style={{ color: 'var(--text-soft)' }} placeholder="blank if uncharted"
+						value={draft.coordLon} onChange={(e) => h.patchDraft({ coordLon: e.target.value })}
+						onBlur={() => h.patchDraft({ coordLon: snapCoord(draft.coordLon, CHART_LON) })} />
+				</label>
+			</div>
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				{`// leave both blank and it stays off the chart, in the log only · ${CHART_LAT[0]} to ${CHART_LAT[1]} north, ${-CHART_LON[0]} to ${-CHART_LON[1]} west`}
+			</span>
+			<DressingFields plate={draft.plate} cap={draft.cap} />
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				// plate 0 is the plate it gets if you say nothing · the caption keeps whether it's charted or not
+			</span>
+		</div>
+	);
 }
 
 function HobbyFields({ draft }: { draft: HobbyDraft }) {
@@ -728,6 +785,10 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 					// leave both blank and it draws no wake · fill them and a dotted drift runs from here to the mark
 				</span>
 			</div>
+			<DressingFields plate={draft.plate} cap={draft.cap} />
+			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
+				// plate 0 is the plate it gets if you say nothing · the caption keeps whether it's charted or not
+			</span>
 			<label className="field">
 				<span className="field-label">sounding · seasons afloat</span>
 				<input type="text" className="input" style={{ color: 'var(--text-soft)' }} placeholder="2"
@@ -808,6 +869,7 @@ function NoteFields({ draft, id }: { draft: NoteDraft; id: string | null }) {
 				<input type="text" className="input input--soft" style={{ padding: '11px 13px', fontSize: 13 }}
 					value={draft.doodleCaption} onChange={(e) => h.patchDraft({ doodleCaption: e.target.value })} />
 			</label>
+			<ChartBerthBox draft={draft} />
 			<KeptInBox noteId={id} />
 			<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--periwinkle-deep)' }}>
 				– signs itself "{h.keeper.signoff || '– j'}" on the way out
