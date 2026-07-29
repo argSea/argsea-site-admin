@@ -290,7 +290,13 @@ export default function ChartSurface({ lens }: { lens: Lens }) {
 			const cap = berth.cap.trim();
 			const plate = Math.max(0, Math.trunc(berth.plate));
 			const sameImages = berth.images.join('+') === c.images.join('+');
-			if (sameCoord(coord, c.coord) && sameCoord(from, c.from) && plate === c.plate && cap === c.cap && sameImages) {
+			// The invariant a wake rides on: no coord, no wake, on the chart and on
+			// the wire alike. An uncharted document can still carry a stored `from`,
+			// and the baseline has to read it the same way the placement above does,
+			// or every such hobby counts as moved the moment the table loads and the
+			// next pin writes its origin away.
+			const wasFrom = c.coord ? c.from : null;
+			if (sameCoord(coord, c.coord) && sameCoord(from, wasFrom) && plate === c.plate && cap === c.cap && sameImages) {
 				return;
 			}
 			if ('project' === c.kind) {

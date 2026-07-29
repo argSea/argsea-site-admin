@@ -239,3 +239,67 @@ test('the shelf holds a hundred mixed entries: it scrolls, and one drags out ont
 	const puts = mock.find('PUT', /^\/1\/hobby\/bh7$/);
 	expect(puts[puts.length - 1].body.coord).toBeNull();
 });
+
+// A hobby can sit uncharted on the wire and still carry the origin of the wake
+// it used to trail: `from` outlives a coord that was cleared. No coord, no wake,
+// so the table has to read that document as unmoved, or the whole shelf counts
+// as moved at load and the first pin writes those origins away.
+function withStrandedOrigin(): MockApi {
+	const mock = new MockApi();
+	mock.hobbies.push({
+		id: 'h9', name: 'Bouldering', service: '2022', state: 'adrift',
+		coord: null, from: { lat: 58.31, lon: -7.20 }, images: null, seasons: '1',
+		bearing: 'Uncharted, but the chart remembers where it drifted from.',
+		lastLog: '', floats: '', offCourse: '', odds: '',
+		order: 9, createdAt: '2026-01-09T00:00:00Z', updatedAt: '2026-01-09T00:00:00Z',
+	});
+	return mock;
+}
+
+test('an uncharted mark that still carries a wake origin counts as unmoved: the pin stays dark at load', async ({ page }) => {
+	await signIn(page, withStrandedOrigin());
+	await openChartTable(page);
+
+	await expect(page.locator('[data-shelf-chip][data-key="hobby:h9"]')).toBeVisible();
+	// uncharted means no wake drawn, and nothing to save
+	await expect(page.locator('[data-from-handle][data-key="hobby:h9"]')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'pin the chart' })).toBeDisabled();
+});
+
+test('a stored wake origin survives a pin it had nothing to do with', async ({ page }) => {
+	const mock = await signIn(page, withStrandedOrigin());
+	await openChartTable(page);
+
+	// touch an entirely different mark, then pin
+	await mark(page, 'hobby:h3').locator('.chart-mark__glyph').click();
+	await sheet(page).getByLabel('caption · the line under the plate').fill('One night, both hands.');
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
+
+	// the stranded origin is not in the pin, so the stored document keeps it
+	expect(mock.find('PUT', /^\/1\/hobby\/h9$/)).toHaveLength(0);
+	expect(mock.hobbies.find((h) => h.id === 'h9')?.from).toEqual({ lat: 58.31, lon: -7.20 });
+});
+
+test('the gallery caps at six: the darkroom closes once the mark is full', async ({ page }) => {
+	const mock = new MockApi();
+	// five hung already, one short of the cap
+	mock.hobbies[2].images = [
+		'meo-wave-title.png', 'meo-wave-track1.png', 'meo-wave-track2.png',
+		'meo-wave-track3.png', 'meo-wave-track4.png',
+	];
+	await signIn(page, mock);
+	await openChartTable(page);
+
+	await mark(page, 'hobby:h3').locator('.chart-mark__glyph').click();
+	await expect(sheet(page).locator('[data-plate]')).toHaveCount(5);
+	await expect(sheet(page).locator('.chart-darkroom')).toBeVisible();
+
+	await sheet(page).locator('[data-print="homelab-rack.jpg"]').click();
+	await expect(sheet(page).locator('[data-plate]')).toHaveCount(6);
+	await expect(sheet(page).locator('.chart-darkroom')).toHaveCount(0);
+
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
+	expect(mock.find('PUT', /^\/1\/hobby\/h3$/)[0].body.images).toHaveLength(6);
+});
