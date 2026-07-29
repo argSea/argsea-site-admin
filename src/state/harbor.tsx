@@ -15,7 +15,7 @@ import { onWatch } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { DEFAULT_LIGHT } from '../lib/lightChar';
 
-export type Screen = 'dash' | 'projects' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'watch' | 'shop' | 'media' | 'keeper' | 'marginalia' | 'bench';
+export type Screen = 'dash' | 'projects' | 'chart' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'watch' | 'shop' | 'media' | 'keeper' | 'marginalia' | 'bench';
 
 // What the shop's editor hands back on save: the document fields a PUT may
 // change (plus pose, which only a POST uses; the server preserves it after).
@@ -204,12 +204,6 @@ export interface ProjectDraft {
 	gzP1:       string;
 	gzP2:       string;
 	gzCaption:  string;
-	// the chart berth, carried as the raw text of its inputs like the hobby
-	// editor's bearings: a blank pair is uncharted, a blank plate is plate 0
-	coordLat: string;
-	coordLon: string;
-	plate:    string;
-	cap:      string;
 }
 
 export interface NoteDraft {
@@ -220,24 +214,14 @@ export interface NoteDraft {
 	conditions:    string;
 	doodleId:      string | null;
 	doodleCaption: string;
-	// the chart berth, ProjectDraft's exact shape and semantics
-	coordLat:      string;
-	coordLon:      string;
-	plate:         string;
-	cap:           string;
 }
 
-// The chart editor keeps coordinates as the raw text of their number inputs:
-// blank means "not plotted" (null on the wire), and a half-filled pair is a
-// save-time validation error, not a silent zero-fill.
+// The berth fields (coord, from, plate, cap) are absent by design: the chart
+// table owns them now, so an editor save can never fight a placement.
 export interface HobbyDraft {
 	name:      string;
 	service:   string;
 	state:     HobbyState;
-	coordLat:  string;
-	coordLon:  string;
-	fromLat:   string;
-	fromLon:   string;
 	seasons:   string;
 	bearing:   string;
 	lastLog:   string;
@@ -245,11 +229,8 @@ export interface HobbyDraft {
 	offCourse: string;
 	odds:      string;
 	noteIds:   string[];   // tied notes, by stable id
-	// text, like the coord fields: blank means unset, distinct from "0"
+	// text rather than a number: blank means unset, distinct from "0"
 	gauge:     string;
-	// the chart dressing; it rides whether or not the mark is charted
-	plate:     string;
-	cap:       string;
 }
 
 interface EditBase {
@@ -342,8 +323,6 @@ function projectDraft(p?: Project): ProjectDraft {
 			assistHarness: p.assist?.harness ?? '', assistModel: p.assist?.model ?? '',
 			gzHeadline: p.gazette?.headline ?? '', gzDeck: p.gazette?.deck ?? '', gzDateline: p.gazette?.dateline ?? '',
 			gzP1: p.gazette?.p1 ?? '', gzP2: p.gazette?.p2 ?? '', gzCaption: p.gazette?.caption ?? '',
-			coordLat: coordText(p.coord?.lat), coordLon: coordText(p.coord?.lon),
-			plate: coordText(p.plate), cap: p.cap ?? '',
 		}
 		: {
 			title: '', category: 'backend', tagsText: '', shortDesc: '', bodyText: '',
@@ -351,7 +330,6 @@ function projectDraft(p?: Project): ProjectDraft {
 			slug: '', facts: [], caseStudy: '', noteIds: [], flagship: false,
 			assistOn: false, assistOnly: false, assistHarness: '', assistModel: '',
 			gzHeadline: '', gzDeck: '', gzDateline: '', gzP1: '', gzP2: '', gzCaption: '',
-			coordLat: '', coordLon: '', plate: '', cap: '',
 		};
 }
 
@@ -364,69 +342,29 @@ function noteDraft(n?: Note): NoteDraft {
 		? {
 			title: n.title, date: n.date, teaser: n.teaser, bodyText: htmlToText(n.body),
 			conditions: n.conditions, doodleId: n.doodleId, doodleCaption: n.doodleCaption,
-			coordLat: coordText(n.coord?.lat), coordLon: coordText(n.coord?.lon),
-			plate: coordText(n.plate), cap: n.cap ?? '',
 		}
 		: {
 			title: '', date: monthYear(), teaser: '', bodyText: '', conditions: '', doodleId: null, doodleCaption: '',
-			coordLat: '', coordLon: '', plate: '', cap: '',
 		};
 }
 
-// A coord loads into the two number inputs as text, or blank when unplotted;
-// the editor charts a migrated (null-coord) hobby by hand from there.
+// A number loads into its input as text, or blank when unset; the gauge tells
+// "no reading" and "zero" apart that way.
 const coordText = (c: number | undefined): string => (c === undefined ? '' : String(c));
 
 function hobbyDraft(h?: Hobby): HobbyDraft {
 	return h
 		? {
 			name: h.name, service: h.service, state: h.state,
-			coordLat: coordText(h.coord?.lat), coordLon: coordText(h.coord?.lon),
-			fromLat: coordText(h.from?.lat), fromLon: coordText(h.from?.lon),
 			seasons: h.seasons, bearing: h.bearing, lastLog: h.lastLog,
 			floats: h.floats, offCourse: h.offCourse, odds: h.odds,
 			noteIds: [...(h.noteIds ?? [])], gauge: coordText(h.gauge),
-			plate: coordText(h.plate), cap: h.cap ?? '',
 		}
 		: {
 			name: '', service: `${new Date().getFullYear()} · present`, state: 'moored',
-			coordLat: '58.20', coordLon: '-7.40', fromLat: '', fromLon: '',
 			seasons: '1', bearing: '', lastLog: '', floats: '', offCourse: '', odds: '',
-			noteIds: [], gauge: '', plate: '', cap: '',
+			noteIds: [], gauge: '',
 		};
-}
-
-// Blank both bearings and the mark draws no wake (null on the wire); fill both
-// and it charts; fill exactly one and the save bounces. A filled-but-unparseable
-// value counts as filled, so "58.2x" is rejected rather than silently dropped.
-function parseCoord(latStr: string, lonStr: string): Coord | null | 'half' {
-	const latBlank = latStr.trim() === '';
-	const lonBlank = lonStr.trim() === '';
-	if (latBlank && lonBlank) {
-		return null;
-	}
-	const lat = parseFloat(latStr);
-	const lon = parseFloat(lonStr);
-	if (latBlank || lonBlank || isNaN(lat) || isNaN(lon)) {
-		return 'half';
-	}
-	return { lat, lon };
-}
-
-// The plate is a plain index, not a nullable field: a blank input means the
-// default plate, not "no plate", so it saves as 0. Clamped at zero below to
-// match the wire and left uncapped above, since the site resolves an index it
-// has no plate for to its own fallback.
-// Read with Number rather than parseInt, which takes a prefix and calls it a
-// number: parseInt reads "3 plates" as 3 and "1e3" as 1. Anything that is not a
-// finite number lands on the default plate, and a fractional one truncates
-// toward zero before the clamp, so "2.9" is plate 2 and never 3.
-function parsePlate(text: string): number {
-	const n = Number(text);
-	if (!isFinite(n)) {
-		return 0;
-	}
-	return Math.max(0, Math.trunc(n));
 }
 
 // ---- the log desk ----
@@ -550,6 +488,15 @@ export const BLOCK_TYPE_LABEL: Record<BlockKind, string> = {
 	figure: 'figure', comparison: 'comparison', timeline: 'timeline', links: 'links', callout: 'callout',
 };
 
+// The berths a pin carries: full documents, per chartable, already dressed with
+// their new placement. Only the changed ones ride, so the toast counts what
+// actually moved.
+export interface Berths {
+	projects: Project[];
+	hobbies:  Hobby[];
+	notes:    Note[];
+}
+
 interface HarborValue {
 	session:  Session | null;
 	booting:  boolean;
@@ -603,7 +550,7 @@ interface HarborValue {
 
 	moveHobby:           (h: Hobby, dir: -1 | 1) => Promise<void>;
 	setAdriftOrPort:     (h: Hobby) => Promise<void>;
-	pinBearings:         (updated: Hobby[]) => Promise<void>;
+	pinBerths:           (berths: Berths) => Promise<void>;
 	toggleHobbyNoteTie:  (h: Hobby, noteId: string) => Promise<void>;
 	addSuggestion:    (value: string) => Promise<void>;
 	removeSuggestion: (s: Suggestion) => Promise<void>;
@@ -1027,13 +974,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				if (d.gzP2.trim()) gz.p2 = d.gzP2.trim();
 				if (d.gzCaption.trim()) gz.caption = d.gzCaption.trim();
 				const gazette = Object.keys(gz).length ? gz : undefined;
-				// blank both bearings and the light stays off the chart (null on the
-				// wire); one filled is a half-charted berth the wire won't take
-				const coord = parseCoord(d.coordLat, d.coordLon);
-				if (coord === 'half') {
-					showToast('⚠ a berth needs both bearings, or neither');
-					return;
-				}
+				// no berth fields ride here: coord, plate and cap belong to the chart
+				// table, and come through the full-replace spread untouched
 				const fields = {
 					title: d.title, category: d.category,
 					tags: d.tagsText.split(',').map((t) => t.trim()).filter(Boolean),
@@ -1041,8 +983,6 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					images: d.images, light: d.light, firstLit: d.firstLit,
 					slug: d.slug, facts: d.facts, caseStudy: d.caseStudy, noteIds: d.noteIds, flagship: d.flagship,
 					gazette, assist,
-					// the server stores the caption verbatim, so the trim is ours to do
-					coord, plate: parsePlate(d.plate), cap: d.cap.trim(),
 				};
 				if (edit.id === null) {
 					replaceProject(await api.projects.create({ ...fields, status: 'draft' }));
@@ -1068,15 +1008,9 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				}
 			} else if (edit.type === 'note') {
 				const d = edit.draft;
-				const coord = parseCoord(d.coordLat, d.coordLon);
-				if (coord === 'half') {
-					showToast('⚠ a berth needs both bearings, or neither');
-					return;
-				}
 				const fields = {
 					title: d.title, date: d.date, teaser: d.teaser, body: textToHtml(d.bodyText),
 					conditions: d.conditions, doodleId: d.doodleId, doodleCaption: d.doodleCaption,
-					coord, plate: parsePlate(d.plate), cap: d.cap.trim(),
 				};
 				if (edit.id === null) {
 					replaceNote(await api.notes.create({ ...fields, status: 'draft' }));
@@ -1098,22 +1032,13 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				}
 			} else {
 				const d = edit.draft;
-				// blank both = null (no wake); one filled = a half-charted mark the
-				// wire won't take, so bounce it here rather than zero-fill it
-				const coord = parseCoord(d.coordLat, d.coordLon);
-				const from = parseCoord(d.fromLat, d.fromLon);
-				if (coord === 'half' || from === 'half') {
-					showToast('⚠ a mark needs both bearings, or neither');
-					return;
-				}
 				// empty stays empty (never coerced to 0); a filled value clamps into [0,100]
 				const gaugeNum = parseInt(d.gauge, 10);
 				const gauge = isNaN(gaugeNum) ? undefined : Math.max(0, Math.min(100, gaugeNum));
 				const fields = {
-					name: d.name, service: d.service, state: d.state, coord, from,
+					name: d.name, service: d.service, state: d.state,
 					seasons: d.seasons, bearing: d.bearing, lastLog: d.lastLog,
 					floats: d.floats, offCourse: d.offCourse, odds: d.odds, noteIds: d.noteIds, gauge,
-					plate: parsePlate(d.plate), cap: d.cap.trim(),
 				};
 				if (edit.id === null) {
 					replaceHobby(await api.hobbies.create(fields));
@@ -1308,18 +1233,26 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [replaceHobby, showToast, oops, refreshActivity]);
 
-	// The chart's pin: each moved hobby is a full-replace PUT of its whole
-	// document with the new coord/from, the same shape the editor saves. The
-	// caller hands over only the changed docs (positions clamped to the band),
-	// so the toast counts exactly the bearings that moved.
-	const pinBearings = useCallback(async (updated: Hobby[]) => {
-		if (0 === updated.length) {
+	// The chart table's pin: each moved berth is a full-replace PUT of its whole
+	// document with the new coord/from/plate/cap/images, so the three chartables
+	// save through their own endpoints in one go. The caller hands over only the
+	// changed docs (positions clamped to the band), so the toast counts exactly
+	// the berths that moved.
+	const pinBerths = useCallback(async (berths: Berths) => {
+		const total = berths.projects.length + berths.hobbies.length + berths.notes.length;
+		if (0 === total) {
 			return;
 		}
 		try {
-			const saved = await Promise.all(updated.map((hobby) => api.hobbies.update(hobby.id, hobby)));
-			setHobbies((cur) => cur.map((h) => saved.find((s) => s.id === h.id) ?? h).sort(byOrder));
-			showToast(`⚓ pinned. ${saved.length} bearings updated.`);
+			const [savedProjects, savedHobbies, savedNotes] = await Promise.all([
+				Promise.all(berths.projects.map((p) => api.projects.update(p.id, p))),
+				Promise.all(berths.hobbies.map((h) => api.hobbies.update(h.id, h))),
+				Promise.all(berths.notes.map((n) => api.notes.update(n.id, n))),
+			]);
+			setProjects((cur) => cur.map((p) => savedProjects.find((s) => s.id === p.id) ?? p).sort(byOrder));
+			setHobbies((cur) => cur.map((h) => savedHobbies.find((s) => s.id === h.id) ?? h).sort(byOrder));
+			setNotes((cur) => cur.map((n) => savedNotes.find((s) => s.id === n.id) ?? n));
+			showToast(`⚓ pinned. ${total} berths updated.`);
 			refreshActivity();
 		} catch (error) {
 			oops(error);
@@ -2359,7 +2292,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		flareRoll, openFlareRoll, closeFlareRoll,
 		toggleProjectStatus, toggleNoteStatus, toggleFeatured, toggleFlagship, moveProject, arrangeProjects, strikeProject, burnNote,
 		toggleNoteTie,
-		moveHobby, setAdriftOrPort, pinBearings, toggleHobbyNoteTie, addSuggestion, removeSuggestion,
+		moveHobby, setAdriftOrPort, pinBerths, toggleHobbyNoteTie, addSuggestion, removeSuggestion,
 		setCopyField, setKeeperField, setWallGhost, setGazette,
 		toggleEgg, toggleCatPage, toggleCatSpot, setProverb, addProverb, removeProverb, setLight, addLight, removeLight,
 		setDrawer, addDrawer, removeDrawer,

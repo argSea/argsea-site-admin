@@ -69,8 +69,12 @@ Read narrowly. Do not wander the repo.
 - `src/state/harbor.tsx`: the harbor store: one provider owning all office
   state and every API-calling action. Screens read from it and stay thin.
 - `src/screens/`: one file per screen: `Login`, `WatchRoom`, `Projects`,
-  `Graveyard`, `WritingDesk`, `SignalFlags`, `SmugglersCove`, `CarvingShop`,
-  `Marginalia`, `Darkroom`, `Keeper`. `CarvingShop` edits raw SVG carvings
+  `Graveyard`, `ChartTable`, `WritingDesk`, `SignalFlags`, `SmugglersCove`,
+  `CarvingShop`, `Marginalia`, `Darkroom`, `Keeper`. `ChartTable` is the one
+  admin home for every berth field (coord, wake origin, plate, caption): it
+  renders `src/components/ChartSurface.tsx` over all three chartables, and the
+  wandering chart's chart tab renders the same surface narrowed to hobbies.
+  `CarvingShop` edits raw SVG carvings
   bolted onto site spots (frozen contract: `Carving{id,name,svg,builtin,
   boltedTo}`); it retired the old pose-carver UI, whose editor lived in
   `src/components/ShapeEditor.tsx` over `src/lib/shapes.ts` (path anchor

@@ -8,30 +8,6 @@ import { signIn, nav, toast } from './office';
 const row = (page: Page, name: string) =>
 	page.locator('.content-row').filter({ has: page.getByText(name, { exact: true }) });
 
-test('the chart editor round-trips the new shape: blank coords save null, a half-filled pair is rejected', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the wandering chart').click();
-
-	// clear both coordinates on a charted hobby: the wire takes null, no zero-fill
-	await row(page, 'Piano').getByText('edit', { exact: true }).click();
-	const overlay = page.locator('.overlay-card');
-	await overlay.getByLabel('charted position · latitude').fill('');
-	await overlay.getByLabel('· longitude').fill('');
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('✳ position updated');
-	expect(mock.find('PUT', /^\/1\/hobby\/h3$/)[0].body.coord).toBeNull();
-
-	// a half-filled pair (one bearing, one blank) bounces before the wire
-	await row(page, 'Piano').getByText('edit', { exact: true }).click();
-	await overlay.getByLabel('charted position · latitude').fill('58.5');
-	await overlay.getByLabel('· longitude').fill('');
-	mock.calls.length = 0;
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('⚠ a mark needs both bearings, or neither');
-	expect(mock.find('PUT', /^\/1\/hobby\//)).toHaveLength(0);
-	await expect(overlay).toBeVisible();
-});
-
 test('the enthusiasm gauge clamps into [0,100] on save, and an empty gauge stays absent, never 0', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the wandering chart').click();
@@ -51,6 +27,7 @@ test('the enthusiasm gauge clamps into [0,100] on save, and an empty gauge stays
 	await expect(gauge).toHaveValue('100');
 	await gauge.fill('-8');
 	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect.poll(() => mock.find('PUT', /^\/1\/hobby\/h1$/).length).toBe(2);
 	expect(mock.find('PUT', /^\/1\/hobby\/h1$/)[1].body.gauge).toBe(0);
 
 	// clearing it back out leaves it absent from the wire, not re-zeroed
@@ -58,6 +35,7 @@ test('the enthusiasm gauge clamps into [0,100] on save, and an empty gauge stays
 	await expect(gauge).toHaveValue('0');
 	await gauge.fill('');
 	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect.poll(() => mock.find('PUT', /^\/1\/hobby\/h1$/).length).toBe(3);
 	expect('gauge' in mock.find('PUT', /^\/1\/hobby\/h1$/)[2].body).toBe(false);
 });
 
@@ -69,6 +47,7 @@ test('the state chips set the hobby state on save', async ({ page }) => {
 	const overlay = page.locator('.overlay-card');
 	await overlay.getByText('marooned', { exact: true }).click();
 	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
 
 	const [put] = mock.find('PUT', /^\/1\/hobby\/h1$/);
 	expect(put.body.state).toBe('marooned');
@@ -111,7 +90,7 @@ test('reorder stays inside the group and swaps orders via PUT (hobbies snapshot 
 	expect(mock.calls.filter((c) => c.method === 'PUT')).toHaveLength(0);
 });
 
-test('a fresh mark starts moored with the default coordinates and files onto the chart', async ({ page }) => {
+test('a fresh mark starts moored and uncharted, waiting for the chart table', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the wandering chart').click();
 	await page.getByRole('button', { name: '+ pick something up' }).click();
@@ -125,98 +104,10 @@ test('a fresh mark starts moored with the default coordinates and files onto the
 	const [create] = mock.find('POST', /^\/1\/hobby\/$/);
 	expect(create.body.name).toBe('Sourdough');
 	expect(create.body.state).toBe('moored');
-	// the mock's starting coordinates parse to numbers on the wire
-	expect(create.body.coord).toEqual({ lat: 58.2, lon: -7.4 });
-	expect(create.body.from).toBeNull();
+	// the berth is the chart table's to give: a new mark files uncharted
+	expect(create.body.coord).toBeUndefined();
+	expect(create.body.from).toBeUndefined();
 	await expect(row(page, 'Sourdough')).toBeVisible();
-});
-
-test('a migrated hobby opens with blank coordinate inputs and saves clean', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the wandering chart').click();
-
-	// h5 came through the migration with null coords: it lists, and the editor
-	// opens with the coordinate inputs blank, ready to be charted by hand
-	await row(page, 'Chess').getByText('edit', { exact: true }).click();
-	const overlay = page.locator('.overlay-card');
-	await expect(overlay.getByLabel('charted position · latitude')).toHaveValue('');
-	await expect(overlay.getByLabel('· longitude')).toHaveValue('');
-
-	// saving without charting keeps coord null: no silent zero-fill
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('✳ position updated');
-	const [put] = mock.find('PUT', /^\/1\/hobby\/h5$/);
-	expect(put.body.coord).toBeNull();
-	expect(put.body.from).toBeNull();
-});
-
-test('every coordinate input snaps an out-of-band bearing to the chart edge on blur, at both bounds', async ({ page }) => {
-	await signIn(page);
-	await nav(page, 'the wandering chart').click();
-
-	await row(page, 'Piano').getByText('edit', { exact: true }).click();
-	const overlay = page.locator('.overlay-card');
-
-	// each of the four inputs snaps to its own band on blur: lat to
-	// [57.82, 58.56], lon to [-7.94, -6.59], and the snapped value shows at once
-	const bands = [
-		{ label: 'charted position · latitude', hi: '58.56', lo: '57.82' },
-		{ label: '· longitude', hi: '-6.59', lo: '-7.94' },
-		{ label: 'origin lat', hi: '58.56', lo: '57.82' },
-		{ label: 'origin lon', hi: '-6.59', lo: '-7.94' },
-	];
-	for (const band of bands) {
-		const input = overlay.getByLabel(band.label);
-		await input.fill('99');
-		await input.blur();
-		await expect(input).toHaveValue(band.hi);
-		await input.fill('-99');
-		await input.blur();
-		await expect(input).toHaveValue(band.lo);
-	}
-});
-
-test('an in-band bearing stays as typed, a blank origin stays blank, and the snapped values ride the PUT', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the wandering chart').click();
-
-	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
-	const overlay = page.locator('.overlay-card');
-
-	// inside the band the text is left exactly as typed, trailing zero and all
-	const lat = overlay.getByLabel('charted position · latitude');
-	await lat.fill('58.10');
-	await lat.blur();
-	await expect(lat).toHaveValue('58.10');
-
-	// west of the edge it snaps to the bound
-	const lon = overlay.getByLabel('· longitude');
-	await lon.fill('-9');
-	await lon.blur();
-	await expect(lon).toHaveValue('-7.94');
-
-	// the blank origin pair stays blank on blur, no zero-fill
-	const fromLat = overlay.getByLabel('origin lat');
-	await fromLat.fill('');
-	await fromLat.blur();
-	await expect(fromLat).toHaveValue('');
-
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('✳ position updated');
-	const [put] = mock.find('PUT', /^\/1\/hobby\/h1$/);
-	expect(put.body.coord).toEqual({ lat: 58.1, lon: -7.94 });
-	expect(put.body.from).toBeNull();
-});
-
-test('a mono hint under the coordinates names the chart band', async ({ page }) => {
-	await signIn(page);
-	await nav(page, 'the wandering chart').click();
-
-	await row(page, 'The home lab').getByText('edit', { exact: true }).click();
-	const overlay = page.locator('.overlay-card');
-	await expect(overlay.getByText(
-		'// the chart runs 57.82 to 58.56 north, 7.94 to 6.59 west · a bearing off the edge snaps back onto it',
-	)).toBeVisible();
 });
 
 test('a hobby with tags survives an edit round-trip with its tags intact', async ({ page }) => {
@@ -228,6 +119,7 @@ test('a hobby with tags survives an edit round-trip with its tags intact', async
 	const overlay = page.locator('.overlay-card');
 	await overlay.getByLabel('the bearing · how it reads on the chart').fill('Re-charted after a long drift.');
 	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
 
 	const [put] = mock.find('PUT', /^\/1\/hobby\/h3$/);
 	expect(put.body.bearing).toBe('Re-charted after a long drift.');
@@ -316,7 +208,7 @@ test('at 390px the sidebar hides, the topbar chips navigate, and the deploy verb
 	// grouped by the same three upright rules as the rail
 	await expect(page.locator('.office-sidebar')).toBeHidden();
 	await expect(page.locator('.office-topbar')).toBeVisible();
-	await expect(page.locator('.topbar-chip')).toHaveCount(12);
+	await expect(page.locator('.topbar-chip')).toHaveCount(13);
 	await expect(page.locator('.topbar-rule')).toHaveCount(3);
 
 	// a nav chip switches screens
