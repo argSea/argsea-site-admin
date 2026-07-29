@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { signIn, nav, toast } from './office';
+import { MockApi } from './mock-api';
 
 test('a new light is filed as a draft, defaulting to fixed white and no gallery', async ({ page }) => {
 	const mock = await signIn(page);
@@ -253,6 +254,29 @@ test('removing a picture via ✕ leaves it out of the saved payload', async ({ p
 
 	const [put] = mock.find('PUT', /^\/1\/project\/p1$/);
 	expect(put.body.images).toEqual([]);
+});
+
+test('a light gallery that shrinks past its leading plate walks the plate back to the first print', async ({ page }) => {
+	const mock = new MockApi();
+	// the un-monolithing hangs two prints and leads with the second
+	mock.projects[0].images = ['unmonolith-diagram.png', 'homelab-rack.jpg'];
+	mock.projects[0].plate = 1;
+	await signIn(page, mock);
+	await nav(page, 'the light list').click();
+	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
+
+	const overlay = page.locator('.overlay-card');
+	const box = overlay.locator('.fieldset-dashed', { hasText: 'the pictures' });
+	await box.locator('.print-del').nth(1).click();
+	await expect(box.locator('.print-del')).toHaveCount(1);
+
+	await overlay.getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('🕯 the light was filed');
+
+	const [put] = mock.find('PUT', /^\/1\/project\/p1$/);
+	expect(put.body.images).toEqual(['unmonolith-diagram.png']);
+	// plate 1 would now lead with a print that is gone
+	expect(put.body.plate).toBe(0);
 });
 
 test('the pictures box search filters the archive client-side', async ({ page }) => {

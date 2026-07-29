@@ -228,6 +228,7 @@ export interface HobbyDraft {
 	floats:    string;
 	offCourse: string;
 	odds:      string;
+	images:    string[];  // station archive, first print leads, max 6
 	noteIds:   string[];   // tied notes, by stable id
 	// text rather than a number: blank means unset, distinct from "0"
 	gauge:     string;
@@ -352,18 +353,30 @@ function noteDraft(n?: Note): NoteDraft {
 // "no reading" and "zero" apart that way.
 const coordText = (c: number | undefined): string => (c === undefined ? '' : String(c));
 
+// The plate is an index into the gallery, and the wire has no unset marker for
+// it (contract: chart-berths, 0 is a real plate). So a gallery that shrinks can
+// leave the plate pointing past its end, and the chart sheet would lead with a
+// print that is gone. Whoever writes a gallery walks a stranded plate back to
+// the first print; an absent plate stays absent, since it already reads as 0.
+function leadingPlate(plate: number | undefined, images: string[]): number | undefined {
+	if (undefined === plate || plate < images.length) {
+		return plate;
+	}
+	return 0;
+}
+
 function hobbyDraft(h?: Hobby): HobbyDraft {
 	return h
 		? {
 			name: h.name, service: h.service, state: h.state,
 			seasons: h.seasons, bearing: h.bearing, lastLog: h.lastLog,
-			floats: h.floats, offCourse: h.offCourse, odds: h.odds,
+			floats: h.floats, offCourse: h.offCourse, odds: h.odds, images: h.images ?? [],
 			noteIds: [...(h.noteIds ?? [])], gauge: coordText(h.gauge),
 		}
 		: {
 			name: '', service: `${new Date().getFullYear()} · present`, state: 'moored',
 			seasons: '1', bearing: '', lastLog: '', floats: '', offCourse: '', odds: '',
-			noteIds: [], gauge: '',
+			images: [], noteIds: [], gauge: '',
 		};
 }
 
@@ -990,7 +1003,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				} else if (edit.restoredRev) {
 					let saved = await api.projects.restore(edit.id, edit.restoredRev);
 					if (edit.touched) {
-						saved = await api.projects.update(edit.id, { ...saved, ...fields });
+						saved = await api.projects.update(edit.id, { ...saved, ...fields, plate: leadingPlate(saved.plate, d.images) });
 					}
 					replaceProject(saved);
 					showToast(`↺ earlier printing filed, it's now ${statusLine(saved.status)}`);
@@ -1003,7 +1016,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					// dormant, no longer edited here, so they ride through from the
 					// fetched document. Without this spread the first edit on any
 					// light would wipe them for good.
-					replaceProject(await api.projects.update(edit.id, { ...current, ...fields }));
+					replaceProject(await api.projects.update(edit.id, { ...current, ...fields, plate: leadingPlate(current.plate, d.images) }));
 					showToast('🕯 the light was filed');
 				}
 			} else if (edit.type === 'note') {
@@ -1038,7 +1051,8 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 				const fields = {
 					name: d.name, service: d.service, state: d.state,
 					seasons: d.seasons, bearing: d.bearing, lastLog: d.lastLog,
-					floats: d.floats, offCourse: d.offCourse, odds: d.odds, noteIds: d.noteIds, gauge,
+					floats: d.floats, offCourse: d.offCourse, odds: d.odds,
+					images: d.images, noteIds: d.noteIds, gauge,
 				};
 				if (edit.id === null) {
 					replaceHobby(await api.hobbies.create(fields));
@@ -1048,7 +1062,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 					if (!current) {
 						return;
 					}
-					replaceHobby(await api.hobbies.update(edit.id, { ...current, ...fields }));
+					replaceHobby(await api.hobbies.update(edit.id, { ...current, ...fields, plate: leadingPlate(current.plate, d.images) }));
 					showToast('✳ position updated');
 				}
 			}
@@ -1759,11 +1773,15 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			// Notes carry a doodle now, not a photo print, so only projects can
 			// reference one, either as the lead image or loose in the gallery.
 			const usedProjects = projects.filter((p) => p.image === m.filename || (p.images ?? []).includes(m.filename));
-			const savedProjects = await Promise.all(usedProjects.map((p) => api.projects.update(p.id, {
-				...p,
-				image: p.image === m.filename ? null : p.image,
-				images: (p.images ?? []).filter((name) => name !== m.filename),
-			})));
+			const savedProjects = await Promise.all(usedProjects.map((p) => {
+				const images = (p.images ?? []).filter((name) => name !== m.filename);
+				return api.projects.update(p.id, {
+					...p,
+					image: p.image === m.filename ? null : p.image,
+					images,
+					plate: leadingPlate(p.plate, images),
+				});
+			}));
 			savedProjects.forEach(replaceProject);
 			await api.media.remove(m.id);
 			setPrints((cur) => cur.filter((x) => x.id !== m.id));

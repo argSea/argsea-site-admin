@@ -127,6 +127,74 @@ test('a hobby with tags survives an edit round-trip with its tags intact', async
 	expect(put.body.tags).toEqual(['keys', 'practice']);
 });
 
+// The gallery has one owner now, the hobby's own editor, the way a light's
+// does. The chart table's sheet still picks which of these leads.
+
+const pictures = (page: Page) =>
+	page.locator('.overlay-card').locator('.fieldset-dashed', { hasText: 'the pictures' });
+
+test('a hobby opens its editor with its hung prints already in the box, and a save keeps them', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	// Piano hangs two prints; the draft has to load them or the first save
+	// writes an empty gallery over the top of them
+	await row(page, 'Piano').getByText('edit', { exact: true }).click();
+	const box = pictures(page);
+	await expect(box.locator('.print-del')).toHaveCount(2);
+	await expect(box.getByText('meo-wave-track1.png', { exact: true })).toBeVisible();
+	await expect(box.getByText('meo-wave-track2.png', { exact: true })).toBeVisible();
+
+	await page.locator('.overlay-card').getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
+
+	const [put] = mock.find('PUT', /^\/1\/hobby\/h3$/);
+	expect(put.body.images).toEqual(['meo-wave-track1.png', 'meo-wave-track2.png']);
+});
+
+test('a hobby hangs a print from its editor, and the archive caps at six', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the wandering chart').click();
+
+	// two hung, five of the seven seeded prints left: four fill the cap
+	await row(page, 'Piano').getByText('edit', { exact: true }).click();
+	const box = pictures(page);
+	for (const name of ['unmonolith-diagram.png', 'homelab-rack.jpg', 'meo-wave-title.png', 'meo-wave-track3.png']) {
+		await box.getByText(name, { exact: true }).click();
+	}
+	await expect(box.locator('.print-del')).toHaveCount(6);
+	// capped: the seventh print never gets an "add" thumbnail once full
+	await expect(box.getByText('meo-wave-track4.png', { exact: true })).toHaveCount(0);
+
+	await page.locator('.overlay-card').getByRole('button', { name: 'save changes' }).click();
+	const [put] = mock.find('PUT', /^\/1\/hobby\/h3$/);
+	expect(put.body.images).toEqual([
+		'meo-wave-track1.png', 'meo-wave-track2.png', 'unmonolith-diagram.png',
+		'homelab-rack.jpg', 'meo-wave-title.png', 'meo-wave-track3.png',
+	]);
+});
+
+test('a hobby gallery that shrinks past its leading plate walks the plate back to the first print', async ({ page }) => {
+	const mock = new MockApi();
+	// Piano leads with the second of its two prints
+	mock.hobbies[2].plate = 1;
+	await signIn(page, mock);
+	await nav(page, 'the wandering chart').click();
+
+	await row(page, 'Piano').getByText('edit', { exact: true }).click();
+	const box = pictures(page);
+	await box.locator('.print-del').nth(1).click();
+	await expect(box.locator('.print-del')).toHaveCount(1);
+
+	await page.locator('.overlay-card').getByRole('button', { name: 'save changes' }).click();
+	await expect(toast(page)).toHaveText('✳ position updated');
+
+	const [put] = mock.find('PUT', /^\/1\/hobby\/h3$/);
+	expect(put.body.images).toEqual(['meo-wave-track1.png']);
+	// plate 1 would now lead with a print that is gone
+	expect(put.body.plate).toBe(0);
+});
+
 test('the suggestion pool feeds and un-tempts fate', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the wandering chart').click();
