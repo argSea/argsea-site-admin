@@ -1,0 +1,290 @@
+/*
+ * The chart table: a night sea held at the Helm's own aspect, its coastline and
+ * islets ruled underneath. Marks, wake origins and the shelf sit on top, dragged
+ * by their glyph. Decoration stays minimal on purpose: the projection is the
+ * fidelity-critical part, not the furniture. Tokens come from global.css; the
+ * rest is chart-specific and lives here.
+ */
+
+.chart-table {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	animation: fadeUp .5s ease both;
+}
+
+.chart-table__bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+/* the frame is held at the chart's true aspect (set inline from the projection):
+   squash it and every mark sits off its bearing */
+.chart-band {
+	position: relative;
+	width: 100%;
+	border-radius: 12px;
+	box-sizing: border-box;
+	overflow: hidden;
+	border: 1px solid var(--border-card);
+	touch-action: none;
+	background:
+		repeating-linear-gradient(0deg, rgba(147, 160, 232, .06) 0 1px, transparent 1px 8%),
+		repeating-linear-gradient(90deg, rgba(147, 160, 232, .06) 0 1px, transparent 1px 8%),
+		radial-gradient(120% 96% at 50% -6%, #17224c 0%, #0f1533 52%, #0a0e22 100%);
+}
+
+.chart-band__paper {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.chart-memorial {
+	position: absolute;
+	transform: translate(-50%, 6px);
+	font-family: var(--font-mono);
+	font-size: 9px;
+	letter-spacing: .08em;
+	color: rgba(147, 160, 232, .62);
+	font-style: italic;
+	white-space: nowrap;
+	pointer-events: none;
+	z-index: 2;
+}
+
+.chart-handle {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	width: 9px;
+	height: 9px;
+	border-radius: 50%;
+	border: 1.5px solid var(--periwinkle);
+	background: rgba(10, 14, 28, .8);
+	cursor: grab;
+	touch-action: none;
+	z-index: 3;
+}
+
+/* the container only positions the mark; the glyph is the sole grab target, so a
+   wide name pill never covers a wake handle sitting under it */
+.chart-mark {
+	position: absolute;
+	transform: translate(-50%, -50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	pointer-events: none;
+	user-select: none;
+	z-index: 4;
+}
+
+.chart-mark--active,
+.chart-mark--chosen {
+	z-index: 20;
+}
+
+.chart-mark__glyph {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: rgba(10, 14, 28, .55);
+	pointer-events: auto;
+	cursor: grab;
+	touch-action: none;
+}
+
+.chart-mark--active .chart-mark__glyph {
+	cursor: grabbing;
+}
+
+.chart-mark--chosen .chart-mark__glyph {
+	box-shadow: 0 0 0 1.5px var(--gold), 0 0 10px 2px rgba(240, 217, 168, .35);
+}
+
+.chart-mark__ink {
+	display: block;
+	width: 11px;
+	height: 9px;
+	border-radius: 56% 44% 62% 38% / 54% 60% 40% 46%;
+	background: radial-gradient(circle at 40% 38%, #3a4380, #1a1f42);
+	--tilt: -12deg;
+	transform: rotate(var(--tilt));
+}
+
+.chart-mark__title {
+	font-family: var(--font-mono);
+	font-size: 11px;
+	line-height: 1.2;
+	white-space: nowrap;
+	max-width: 140px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	background: rgba(11, 14, 28, .78);
+	border: 1px solid var(--border-card);
+	padding: 2px 8px;
+	border-radius: 7px;
+	pointer-events: none;
+}
+
+.chart-ghost {
+	position: fixed;
+	transform: translate(-50%, -50%);
+	pointer-events: none;
+	z-index: 60;
+}
+
+.chart-ghost__dot {
+	display: block;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: var(--gold);
+	box-shadow: 0 0 10px 2px rgba(240, 217, 168, .5);
+}
+
+.chart-table__desk {
+	display: grid;
+	grid-template-columns: 1fr minmax(240px, 320px);
+	gap: 12px;
+	align-items: start;
+}
+
+.chart-shelf {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 16px;
+	border: 1px dashed var(--border-card);
+	border-radius: 12px;
+	background: var(--card);
+}
+
+/* the shelf carries every uncharted entry across all three kinds, so it scrolls
+   rather than pushing the chart off the screen */
+.chart-shelf__chips {
+	display: flex;
+	gap: 9px;
+	flex-wrap: wrap;
+	align-items: center;
+	max-height: 190px;
+	overflow-y: auto;
+}
+
+.chart-shelf__chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 13px;
+	border: 1.5px dashed var(--gold-dash-mid);
+	border-radius: 999px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--gold);
+	cursor: grab;
+	touch-action: none;
+	user-select: none;
+}
+
+.chart-shelf__chip--held {
+	opacity: .4;
+}
+
+.chart-shelf__glyph {
+	display: flex;
+	align-items: center;
+	pointer-events: none;
+}
+
+/* the sheet holds its height whether or not a mark is picked, and scrolls
+   inside itself: a desk that grows when you grab a chip drags the waters out
+   from under the drop you were aiming at */
+.chart-sheet {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 16px;
+	border: 1px solid var(--border-card);
+	border-radius: 12px;
+	background: var(--card);
+	min-height: 240px;
+	max-height: 240px;
+	overflow-y: auto;
+}
+
+.chart-sheet--empty {
+	border-style: dashed;
+}
+
+.chart-sheet__head {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.chart-sheet__name {
+	font-family: var(--font-display);
+	font-size: 17px;
+	color: var(--text-strong);
+}
+
+.chart-plates,
+.chart-darkroom__prints {
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.chart-plate {
+	display: block;
+	width: 56px;
+	height: 40px;
+	border-radius: 2px;
+	border: 1.5px solid transparent;
+	cursor: pointer;
+}
+
+.chart-plate--leading {
+	border-color: var(--gold);
+	box-shadow: 0 0 8px 1px rgba(240, 217, 168, .3);
+}
+
+.chart-darkroom {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding-top: 10px;
+	border-top: 1px dashed var(--border-card);
+}
+
+.chart-darkroom__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.chart-darkroom__search {
+	width: auto;
+	flex: 0 1 150px;
+	border-radius: 999px;
+	padding: 6px 12px;
+	font-size: 11.5px;
+}
+
+@media (max-width: 860px) {
+	.chart-table__desk {
+		grid-template-columns: 1fr;
+	}
+}

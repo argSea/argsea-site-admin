@@ -10,6 +10,7 @@ import { PROVERBS } from './lib/whimsy';
 import Login from './screens/Login';
 import WatchRoom from './screens/WatchRoom';
 import Projects from './screens/Projects';
+import ChartTable from './screens/ChartTable';
 import ShipsLog from './screens/ShipsLog';
 import WritingDesk from './screens/WritingDesk';
 import SignalFlags from './screens/SignalFlags';
@@ -34,6 +35,7 @@ import './App.css';
 const SCREENS: Record<Screen, () => React.JSX.Element> = {
 	dash:       WatchRoom,
 	projects:   Projects,
+	chart:      ChartTable,
 	hobbies:    ShipsLog,
 	notes:      WritingDesk,
 	copy:       SignalFlags,

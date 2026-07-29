@@ -7,7 +7,7 @@ import { useHarbor } from '../state/harbor';
 import type { Coord, Hobby, HobbyState } from '../lib/api';
 import { HOBBY_STATES, onWatch } from '../lib/api';
 import CatPerch from '../components/CatPerch';
-import BearingChart from './BearingChart';
+import ChartSurface from '../components/ChartSurface';
 
 const ROW_TILTS = ['-.4deg', '.35deg', '-.25deg', '.45deg', '-.5deg', '.3deg'];
 
@@ -99,7 +99,7 @@ export default function ShipsLog() {
 				<span className={`pill ${tab === 'chart' ? 'pill--on' : 'pill--quiet'}`} onClick={() => setTab('chart')}>the chart</span>
 			</div>
 
-			{tab === 'chart' && <BearingChart />}
+			{tab === 'chart' && <ChartSurface lens="hobbies" />}
 
 			{tab === 'log' && (
 				<>

@@ -9,6 +9,7 @@ export const NAV_ITEMS: { id: Screen; glyph: string; label: string; rule?: true 
 	{ id: 'watch', glyph: '☉', label: 'the watch desk', rule: true },
 	{ id: 'projects', glyph: '✺', label: 'the light list' },
 	{ id: 'hobbies', glyph: '✳', label: 'the wandering chart' },
+	{ id: 'chart', glyph: '⌖', label: 'the chart table' },
 	{ id: 'notes', glyph: '✎', label: 'writing desk' },
 	{ id: 'bench', glyph: '⚒', label: 'the tool bench' },
 	{ id: 'marginalia', glyph: '✐', label: 'marginalia', rule: true },

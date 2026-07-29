@@ -88,7 +88,7 @@ export interface Project {
 	// written before the berth landed carries none of them, so they stay
 	// optional here and read as uncharted and undressed.
 	coord?:       Coord | null;        // charted position; null or absent means uncharted, in the log and off the chart
-	plate?:       number;              // the chart photo-plate index, non-negative; 0 is the default plate, not an unset marker
+	plate?:       number;              // which print in `images` leads on the chart sheet, non-negative; 0 is the default plate, not an unset marker
 	cap?:         string;              // the mark's caption; empty means no caption. the dressing follows the entity, charted or not
 	firstLit:     string;
 	order:        number;
@@ -214,7 +214,8 @@ export interface Hobby {
 	odds:      string;    // odds of return
 	gauge?:    number;    // enthusiasm, self-assessed, 0-100. absent on an older
 	                      // hobby; empty stays empty, never coerced to 0
-	plate?:    number;    // the chart photo-plate index, Project.plate's semantics
+	images:    string[] | null;   // gallery media names, first print leads, max 6; Project.images' exact shape
+	plate?:    number;    // which of those prints leads on the chart sheet, Project.plate's semantics
 	cap?:      string;    // the mark's caption, Project.cap's semantics
 	tags?:     string[];  // the site's home page renders these; the admin has no
 	                      // editor for them, so it passes them through untouched

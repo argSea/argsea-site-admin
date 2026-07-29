@@ -1,213 +1,241 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { signIn, nav, toast } from './office';
+import { MockApi } from './mock-api';
+import { dragFromShelf, dragMark, mark, markPercent, openChartTable, proj } from './chart-window';
 
 // The chart berth on the three chartables: coord decides chart presence, plate
-// and cap are the dressing and follow the entry either way. The wire contract is
-// caravan's 2026-07-28 chart-berths document; every assertion here reads a
+// picks which of the entry's own prints leads, cap is the line under it. The
+// wire contract is caravan's 2026-07-28 chart-berths document; the admin's one
+// home for all of it is the chart table, so every assertion here reads a
 // recorded body, since the berth's whole job is what rides the PUT.
 
 const hobbyRow = (page: Page, name: string) =>
 	page.locator('.content-row').filter({ has: page.getByText(name, { exact: true }) });
 
-test('a berthed light opens with its bearings, plate and caption already in the fields', async ({ page }) => {
+const sheet = (page: Page) => page.locator('[data-sheet]');
+
+test('the chart table lays all three chartables on one window, the uncharted on the shelf', async ({ page }) => {
 	await signIn(page);
+	await openChartTable(page);
+
+	// p2 (a light), h1-h4 (hobbies) and n1 (a note) carry berths
+	await expect(mark(page, 'project:p2')).toBeVisible();
+	await expect(mark(page, 'hobby:h1')).toBeVisible();
+	await expect(mark(page, 'note:n1')).toBeVisible();
+	await expect(page.locator('.chart-mark')).toHaveCount(6);
+
+	// the light sits exactly where the public Helm would draw it
+	const want = proj({ lat: 58.10, lon: -7.30 });
+	const got = await markPercent(page, 'project:p2');
+	expect(got.x).toBeCloseTo(want.x, 0);
+	expect(got.y).toBeCloseTo(want.y, 0);
+
+	// p1, p3, p4, h5 and n2 predate the berth or lost it in the migration
+	await expect(page.locator('[data-shelf-chip]')).toHaveCount(5);
+});
+
+test('the edit overlay no longer carries a berth section on any of the three', async ({ page }) => {
+	await signIn(page);
+	const overlay = page.locator('.overlay-card');
+	const gone = [
+		'chart berth · where it lies on the Helm',
+		'charted position · latitude',
+		'plate · which photo-plate',
+		'caption · the line under the plate',
+		'slipped from · where the drift began',
+	];
+
+	await nav(page, 'the light list').click();
+	await page.locator('.content-row', { hasText: 'Meo Wave Race' }).getByText('edit', { exact: true }).click();
+	for (const label of gone) {
+		await expect(overlay.getByText(label)).toHaveCount(0);
+	}
+	await overlay.getByText('never mind').click();
+
+	await nav(page, 'writing desk').click();
+	await page.locator('.note-row', { hasText: 'The queue is the product' }).getByText('edit', { exact: true }).click();
+	for (const label of gone) {
+		await expect(overlay.getByText(label)).toHaveCount(0);
+	}
+	await overlay.getByText('never mind').click();
+
+	await nav(page, 'the wandering chart').click();
+	await hobbyRow(page, 'Piano').getByText('edit', { exact: true }).click();
+	for (const label of gone) {
+		await expect(overlay.getByText(label)).toHaveCount(0);
+	}
+});
+
+test('an editor save leaves the berth exactly as the chart table left it', async ({ page }) => {
+	const mock = await signIn(page);
 	await nav(page, 'the light list').click();
 	await page.locator('.content-row', { hasText: 'Meo Wave Race' }).getByText('edit', { exact: true }).click();
 
 	const overlay = page.locator('.overlay-card');
-	await expect(overlay.getByLabel('charted position · latitude')).toHaveValue('58.1');
-	await expect(overlay.getByLabel('· longitude')).toHaveValue('-7.3');
-	await expect(overlay.getByLabel('plate · which photo-plate')).toHaveValue('3');
-	await expect(overlay.getByLabel('caption · the line under the plate')).toHaveValue('A cat, mid-race.');
-});
-
-test('charting a light writes the pair, the plate and the trimmed caption', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the light list').click();
-	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
-
-	const overlay = page.locator('.overlay-card');
-	await overlay.getByLabel('charted position · latitude').fill('58.31');
-	await overlay.getByLabel('· longitude').fill('-7.11');
-	await overlay.getByLabel('plate · which photo-plate').fill('4');
-	await overlay.getByLabel('caption · the line under the plate').fill('  Forty services, one queue.  ');
+	await overlay.getByLabel('moral of the story').fill('Moral: still the boat.');
 	await overlay.getByRole('button', { name: 'save changes' }).click();
 	await expect(toast(page)).toHaveText('🕯 the light was filed');
 
-	const [put] = mock.find('PUT', /^\/1\/project\/p1$/);
-	expect(put.body.coord).toEqual({ lat: 58.31, lon: -7.11 });
-	expect(put.body.plate).toBe(4);
-	expect(put.body.cap).toBe('Forty services, one queue.');
+	const [put] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect(put.body.coord).toEqual({ lat: 58.10, lon: -7.30 });
+	expect(put.body.plate).toBe(3);
+	expect(put.body.cap).toBe('A cat, mid-race.');
 });
 
-test('an uncharted light with no caption sends null and empty, never a fabricated berth', async ({ page }) => {
+test('the sheet picks the leading print and writes the caption, and both ride the pin', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'the light list').click();
+	await openChartTable(page);
 
-	// p1 predates the berth: the fields open blank and saving fills nothing in
-	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
-	const overlay = page.locator('.overlay-card');
-	await expect(overlay.getByLabel('charted position · latitude')).toHaveValue('');
-	await expect(overlay.getByLabel('plate · which photo-plate')).toHaveValue('');
-	await expect(overlay.getByLabel('caption · the line under the plate')).toHaveValue('');
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('🕯 the light was filed');
+	// Piano hangs two prints and leads with the first
+	await mark(page, 'hobby:h3').locator('.chart-mark__glyph').click();
+	await expect(sheet(page).locator('[data-plate]')).toHaveCount(2);
+	await expect(sheet(page).locator('[data-plate="0"]')).toHaveClass(/chart-plate--leading/);
 
-	const [put] = mock.find('PUT', /^\/1\/project\/p1$/);
-	expect(put.body.coord).toBeNull();
-	// a blank plate is the default plate, not an unset marker
-	expect(put.body.plate).toBe(0);
-	expect(put.body.cap).toBe('');
-});
+	await sheet(page).locator('[data-plate="1"]').click();
+	await expect(sheet(page).locator('[data-plate="1"]')).toHaveClass(/chart-plate--leading/);
+	await sheet(page).getByLabel('caption · the line under the plate').fill('  The second night.  ');
 
-test('a half-charted berth bounces before the wire', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the light list').click();
-	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
-
-	const overlay = page.locator('.overlay-card');
-	await overlay.getByLabel('charted position · latitude').fill('58.31');
-	mock.calls.length = 0;
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('⚠ a berth needs both bearings, or neither');
-	expect(mock.find('PUT', /^\/1\/project\//)).toHaveLength(0);
-	await expect(overlay).toBeVisible();
-});
-
-test('a bearing typed off the Helm snaps back onto it on blur, and the copy names the chart it serves', async ({ page }) => {
-	await signIn(page);
-	await nav(page, 'the light list').click();
-	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
-
-	const overlay = page.locator('.overlay-card');
-	await expect(overlay.getByText(
-		'// the Helm runs 57.80 to 58.70 north, 8.30 to 6.10 west · a bearing off the edge snaps back onto it',
-	)).toBeVisible();
-
-	const lat = overlay.getByLabel('charted position · latitude');
-	await lat.fill('61.4');
-	await overlay.getByLabel('· longitude').click();
-	await expect(lat).toHaveValue('58.7');
-});
-
-test('the berth band is the Helm extent, not the ships-log window: a berth above the hobby ceiling stays put', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the light list').click();
-	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
-
-	// 58.65N / 8.10W sits outside the ships-log's 57.82-58.56 / 7.94-6.59 window;
-	// the migrated berths that live up there must not be hauled back on save
-	const overlay = page.locator('.overlay-card');
-	const lat = overlay.getByLabel('charted position · latitude');
-	const lon = overlay.getByLabel('· longitude');
-	await lat.fill('58.65');
-	await lon.fill('-8.10');
-	await lat.click();
-	await expect(lat).toHaveValue('58.65');
-	await expect(lon).toHaveValue('-8.10');
-
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('🕯 the light was filed');
-	expect(mock.find('PUT', /^\/1\/project\/p1$/)[0].body.coord).toEqual({ lat: 58.65, lon: -8.10 });
-});
-
-test('the hobby editor keeps its own band and its own helper line', async ({ page }) => {
-	await signIn(page);
-	await nav(page, 'the wandering chart').click();
-	await hobbyRow(page, 'Piano').getByText('edit', { exact: true }).click();
-
-	const overlay = page.locator('.overlay-card');
-	await expect(overlay.getByText(
-		'// the chart runs 57.82 to 58.56 north, 7.94 to 6.59 west · a bearing off the edge snaps back onto it',
-	)).toBeVisible();
-
-	const lat = overlay.getByLabel('charted position · latitude');
-	await lat.fill('58.65');
-	await overlay.getByLabel('· longitude').click();
-	await expect(lat).toHaveValue('58.56');
-});
-
-test('the plate helper line is written once, wherever the dressing appears', async ({ page }) => {
-	await signIn(page);
-	const line = '// plate 0 is the plate it gets if you say nothing · the caption keeps whether it\'s charted or not';
-
-	await nav(page, 'the wandering chart').click();
-	await hobbyRow(page, 'Piano').getByText('edit', { exact: true }).click();
-	await expect(page.locator('.overlay-card').getByText(line)).toHaveCount(1);
-
-	await page.locator('.overlay-card').getByText('never mind').click();
-	await nav(page, 'the light list').click();
-	await page.locator('.content-row', { hasText: 'The Great Un-monolithing' }).getByText('edit', { exact: true }).click();
-	await expect(page.locator('.overlay-card').getByText(line)).toHaveCount(1);
-});
-
-test('a plate that is not a plain index falls back or truncates, never rides the wire mangled', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the wandering chart').click();
-	const overlay = page.locator('.overlay-card');
-	const plate = () => overlay.getByLabel('plate · which photo-plate');
-
-	// a fraction truncates toward zero rather than rounding up to the next plate
-	await hobbyRow(page, 'Piano').getByText('edit', { exact: true }).click();
-	await plate().fill('2.9');
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('✳ position updated');
-	expect(mock.find('PUT', /^\/1\/hobby\/h3$/)[0].body.plate).toBe(2);
-
-	// parseInt would have read the exponent's mantissa and sent plate 1
-	await hobbyRow(page, 'Piano').getByText('edit', { exact: true }).click();
-	await plate().fill('1e3');
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	expect(mock.find('PUT', /^\/1\/hobby\/h3$/)[1].body.plate).toBe(1000);
-});
-
-test('the note desk berths a note the same way, and uncharting it clears the coord', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'writing desk').click();
-	await page.locator('.note-row', { hasText: 'The queue is the product' }).getByText('edit', { exact: true }).click();
-
-	const overlay = page.locator('.overlay-card');
-	await expect(overlay.getByLabel('plate · which photo-plate')).toHaveValue('1');
-	await expect(overlay.getByLabel('caption · the line under the plate')).toHaveValue('The queue, at rest.');
-	await overlay.getByLabel('charted position · latitude').fill('');
-	await overlay.getByLabel('· longitude').fill('');
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('✎ filed at the writing desk');
-
-	// off the chart, still dressed: the plate and the caption outlive the coord
-	const [put] = mock.find('PUT', /^\/1\/note\/n1$/);
-	expect(put.body.coord).toBeNull();
-	expect(put.body.plate).toBe(1);
-	expect(put.body.cap).toBe('The queue, at rest.');
-});
-
-test('a hobby carries the dressing without touching its own bearings', async ({ page }) => {
-	const mock = await signIn(page);
-	await nav(page, 'the wandering chart').click();
-	await hobbyRow(page, 'Piano').getByText('edit', { exact: true }).click();
-
-	const overlay = page.locator('.overlay-card');
-	await overlay.getByLabel('plate · which photo-plate').fill('2');
-	await overlay.getByLabel('caption · the line under the plate').fill('Both hands, one night.');
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('✳ position updated');
+	// nothing saves until the pin
+	expect(mock.find('PUT', /^\/1\/hobby\//)).toHaveLength(0);
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
 
 	const [put] = mock.find('PUT', /^\/1\/hobby\/h3$/);
-	expect(put.body.plate).toBe(2);
-	expect(put.body.cap).toBe('Both hands, one night.');
+	expect(put.body.plate).toBe(1);
+	// the server stores the caption verbatim, so the trim is ours to do
+	expect(put.body.cap).toBe('The second night.');
 	expect(put.body.coord).toEqual({ lat: 58.42, lon: -7.12 });
 });
 
-test('a negative plate clamps up to the default plate rather than riding the wire', async ({ page }) => {
+test('a hobby hangs a darkroom print from the sheet, without leaving the table', async ({ page }) => {
 	const mock = await signIn(page);
-	await nav(page, 'the wandering chart').click();
-	await hobbyRow(page, 'Piano').getByText('edit', { exact: true }).click();
+	await openChartTable(page);
 
-	const overlay = page.locator('.overlay-card');
-	await overlay.getByLabel('plate · which photo-plate').fill('-3');
-	await overlay.getByRole('button', { name: 'save changes' }).click();
-	await expect(toast(page)).toHaveText('✳ position updated');
+	await mark(page, 'hobby:h3').locator('.chart-mark__glyph').click();
+	await sheet(page).locator('[data-print="homelab-rack.jpg"]').click();
+	await expect(sheet(page).locator('[data-plate]')).toHaveCount(3);
 
-	expect(mock.find('PUT', /^\/1\/hobby\/h3$/)[0].body.plate).toBe(0);
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
+
+	const [put] = mock.find('PUT', /^\/1\/hobby\/h3$/);
+	expect(put.body.images).toEqual(['meo-wave-track1.png', 'meo-wave-track2.png', 'homelab-rack.jpg']);
+});
+
+test('a note keeps its doodle: its sheet offers no plate to pick', async ({ page }) => {
+	await signIn(page);
+	await openChartTable(page);
+
+	await mark(page, 'note:n1').locator('.chart-mark__glyph').click();
+	await expect(sheet(page).getByText("// a note's sheet shows its doodle · there is no plate to pick here")).toBeVisible();
+	await expect(sheet(page).locator('[data-plate]')).toHaveCount(0);
+	await expect(sheet(page).getByLabel('caption · the line under the plate')).toHaveValue('The queue, at rest.');
+});
+
+test('charting a light and a note from the shelf writes each through its own endpoint', async ({ page }) => {
+	const mock = await signIn(page);
+	await openChartTable(page);
+
+	await dragFromShelf(page, 'project:p3', { x: 25, y: 30 });
+	await dragFromShelf(page, 'note:n2', { x: 70, y: 65 });
+
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 2 berths updated.');
+
+	const [light] = mock.find('PUT', /^\/1\/project\/p3$/);
+	expect(proj(light.body.coord).x).toBeCloseTo(25, 1);
+	expect(proj(light.body.coord).y).toBeCloseTo(30, 1);
+
+	const [note] = mock.find('PUT', /^\/1\/note\/n2$/);
+	expect(proj(note.body.coord).x).toBeCloseTo(70, 1);
+	expect(proj(note.body.coord).y).toBeCloseTo(65, 1);
+});
+
+test('a mark dragged off the waters comes off the chart, dressing intact', async ({ page }) => {
+	const mock = await signIn(page);
+	await openChartTable(page);
+
+	const shelf = await page.locator('[data-shelf]').boundingBox();
+	if (!shelf) {
+		throw new Error('missing bounding box');
+	}
+	await dragMark(page, 'project:p2', { at: { x: shelf.x + shelf.width / 2, y: shelf.y + shelf.height / 2 } });
+
+	await expect(mark(page, 'project:p2')).toHaveCount(0);
+	await expect(page.locator('[data-shelf-chip][data-key="project:p2"]')).toBeVisible();
+
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
+
+	// off the chart, still dressed: the plate and the caption outlive the coord
+	const [put] = mock.find('PUT', /^\/1\/project\/p2$/);
+	expect(put.body.coord).toBeNull();
+	expect(put.body.plate).toBe(3);
+	expect(put.body.cap).toBe('A cat, mid-race.');
+});
+
+test('the shelf holds a hundred mixed entries: it scrolls, and one drags out onto the waters and back off again', async ({ page }) => {
+	const mock = new MockApi();
+	// ~100 uncharted entries across all three kinds, on top of the seeded five
+	for (let i = 0; i < 32; i++) {
+		mock.projects.push({
+			id: `bp${i}`, title: `Bulk light ${i}`, category: 'backend', tags: [], shortDesc: '', body: '',
+			moral: '', postcardTo: '', postcardFrom: '', postmarked: '', slug: `bulk-light-${i}`, image: null,
+			light: { kind: 'fixed', color: 'white', period: 0, letter: '', extinguished: '' },
+			images: [], firstLit: '', facts: [], caseStudy: '', noteIds: [], flagship: false,
+			coord: null, plate: 0, cap: '',
+			order: 100 + i, featured: false, status: 'draft',
+			publishedAt: '', createdAt: '2026-05-01T12:00:00Z', updatedAt: '2026-05-01T12:00:00Z',
+		});
+		mock.hobbies.push({
+			id: `bh${i}`, name: `Bulk hobby ${i}`, service: '', state: 'adrift', coord: null, from: null,
+			images: null, seasons: '', bearing: '', lastLog: '', floats: '', offCourse: '', odds: '',
+			order: 100 + i, createdAt: '2026-05-01T12:00:00Z', updatedAt: '2026-05-01T12:00:00Z',
+		});
+		mock.notes.push({
+			id: `bn${i}`, title: `Bulk note ${i}`, teaser: '', body: '', date: '', conditions: '',
+			doodleId: null, doodleCaption: '', coord: null, plate: 0, cap: '', status: 'draft',
+			publishedAt: '', createdAt: '2026-05-01T12:00:00Z', updatedAt: '2026-05-01T12:00:00Z',
+		});
+	}
+	await signIn(page, mock);
+	await openChartTable(page);
+
+	// 96 bulk entries plus the five seeded uncharted ones
+	await expect(page.locator('[data-shelf-chip]')).toHaveCount(101);
+	await expect(page.locator('[data-shelf-chip][data-kind="project"]').first()).toBeVisible();
+	await expect(page.locator('[data-shelf-chip][data-kind="note"]').first()).toBeVisible();
+
+	// the shelf scrolls rather than pushing the chart off the screen
+	const chips = page.locator('.chart-shelf__chips');
+	const overflow = await chips.evaluate((el) => el.scrollHeight - el.clientHeight);
+	expect(overflow).toBeGreaterThan(0);
+	await chips.evaluate((el) => { el.scrollTop = 200; });
+	expect(await chips.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+	await chips.evaluate((el) => { el.scrollTop = 0; });
+
+	// drag one off the shelf onto the waters, at that scale
+	await dragFromShelf(page, 'hobby:bh7', { x: 45, y: 55 });
+	await expect(mark(page, 'hobby:bh7')).toBeVisible();
+	await expect(page.locator('[data-shelf-chip]')).toHaveCount(100);
+
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
+	const [charted] = mock.find('PUT', /^\/1\/hobby\/bh7$/);
+	expect(proj(charted.body.coord).x).toBeCloseTo(45, 1);
+	expect(proj(charted.body.coord).y).toBeCloseTo(55, 1);
+
+	// and back off again: the shelf takes it in and the pin clears the coord
+	const shelf = await page.locator('[data-shelf]').boundingBox();
+	if (!shelf) {
+		throw new Error('missing bounding box');
+	}
+	await dragMark(page, 'hobby:bh7', { at: { x: shelf.x + shelf.width / 2, y: shelf.y + 12 } });
+	await expect(page.locator('[data-shelf-chip]')).toHaveCount(101);
+
+	await page.getByRole('button', { name: 'pin the chart' }).click();
+	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
+	const puts = mock.find('PUT', /^\/1\/hobby\/bh7$/);
+	expect(puts[puts.length - 1].body.coord).toBeNull();
 });

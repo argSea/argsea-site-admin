@@ -183,7 +183,7 @@ export class MockApi {
 	hobbies: Doc[] = [
 		{
 			id: 'h1', name: 'The home lab', service: '2021 · present', state: 'moored',
-			coord: { lat: 58.22, lon: -7.50 }, from: null, seasons: '5',
+			coord: { lat: 58.22, lon: -7.50 }, from: null, images: null, seasons: '5',
 			bearing: 'Moored in the lee of Eilean Mòr. Never left the harbor.',
 			lastLog: '"All lamps green. One tweak from perfect."', floats: 'everything. that is the whole point.',
 			offCourse: 'It never went off course.', odds: 'in port indefinitely',
@@ -191,7 +191,7 @@ export class MockApi {
 		},
 		{
 			id: 'h2', name: 'CachyOS tinkering', service: 'always', state: 'moored',
-			coord: { lat: 58.17, lon: -7.45 }, from: null, seasons: '∞',
+			coord: { lat: 58.17, lon: -7.45 }, from: null, images: null, seasons: '∞',
 			bearing: 'The day job wearing a different hat, moored beside the home lab.',
 			lastLog: '"One more systemd unit. For flavor."', floats: 'a desktop that suspiciously just works',
 			offCourse: 'Has never once drifted.', odds: 'in port permanently',
@@ -200,6 +200,7 @@ export class MockApi {
 		{
 			id: 'h3', name: 'Piano', service: '2023 · 2024', state: 'adrift',
 			coord: { lat: 58.42, lon: -7.12 }, from: { lat: 58.24, lon: -7.44 }, seasons: '2',
+			images: ['meo-wave-track1.png', 'meo-wave-track2.png'], plate: 0, cap: 'Both hands, one night.',
 			bearing: 'Last seen drifting off the north point, sails slack.',
 			lastLog: '"Got through the piece with both hands tonight."', floats: 'one shaky recording the family still requests',
 			offCourse: 'Slipped its mooring the night it was "good enough".', odds: 'likely · pending a child’s curiosity',
@@ -210,7 +211,7 @@ export class MockApi {
 		},
 		{
 			id: 'h4', name: 'Running', service: 'one summer', state: 'inkspill',
-			coord: { lat: 57.92, lon: -7.02 }, from: { lat: 58.06, lon: -7.10 }, seasons: '¼',
+			coord: { lat: 57.92, lon: -7.02 }, from: { lat: 58.06, lon: -7.10 }, images: null, seasons: '¼',
 			bearing: 'Coordinates smudged. An ink-well tipped across this one.',
 			lastLog: '"5k tomorrow, then every morning after."', floats: 'the shoes. the shoes remain.',
 			offCourse: 'An ink-well tipped over the chart and blotted the bearing.', odds: 'every January the ink threatens to run again',
@@ -218,7 +219,7 @@ export class MockApi {
 		},
 		{
 			id: 'h5', name: 'Chess', service: '2022', state: 'moored',
-			coord: null, from: null, seasons: '1',
+			coord: null, from: null, images: null, seasons: '1',
 			bearing: 'Charted position lost in the migration; awaiting a hand at the table.',
 			lastLog: '', floats: '', offCourse: '', odds: '',
 			order: 5, createdAt: '2026-01-05T00:00:00Z', updatedAt: '2026-01-05T00:00:00Z',
