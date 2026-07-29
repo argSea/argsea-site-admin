@@ -28,29 +28,29 @@ type Kind = 'project' | 'hobby' | 'note';
 // What the keeper can change here, held locally until the pin. Every chartable
 // carries all of it; `from` only ever moves on a hobby.
 interface Berth {
-	coord:  Coord | null;
-	from:   Coord | null;
-	plate:  number;
-	cap:    string;
-	images: string[];
+	coord: Coord | null;
+	from:  Coord | null;
+	plate: number;
+	cap:   string;
 }
 
 // A chartable as this screen reads it: the placement, the dressing, and enough
-// identity to draw the mark and rebuild the document the pin sends.
+// identity to draw the mark and rebuild the document the pin sends. The gallery
+// rides along read-only, to draw the plates the sheet picks from; hanging a
+// print is the entry's own editor's job.
 interface Chartable extends Berth {
-	key:  string;
-	kind: Kind;
-	id:   string;
-	name: string;
-	code: string;
-	icon: IconName;
-	tint: string;
-	doc:  Project | Hobby | Note;
+	key:    string;
+	kind:   Kind;
+	id:     string;
+	name:   string;
+	code:   string;
+	icon:   IconName;
+	tint:   string;
+	images: string[];
+	doc:    Project | Hobby | Note;
 }
 
 type IconName = 'light' | 'bottle' | HobbyState;
-
-const GALLERY_MAX = 6;
 
 // The mark glyphs, transcribed from the Helm's own rail icons: a state is drawn,
 // never chosen, so the office and the public chart can't disagree about what a
@@ -144,7 +144,7 @@ function noteMark(n: Note): Chartable {
 	};
 }
 
-const berthOf = (c: Chartable): Berth => ({ coord: c.coord, from: c.from, plate: c.plate, cap: c.cap, images: c.images });
+const berthOf = (c: Chartable): Berth => ({ coord: c.coord, from: c.from, plate: c.plate, cap: c.cap });
 
 export default function ChartSurface({ lens }: { lens: Lens }) {
 	const h = useHarbor();
@@ -289,14 +289,13 @@ export default function ChartSurface({ lens }: { lens: Lens }) {
 			const from = berth.coord && berth.from ? snapToBand(berth.from) : null;
 			const cap = berth.cap.trim();
 			const plate = Math.max(0, Math.trunc(berth.plate));
-			const sameImages = berth.images.join('+') === c.images.join('+');
 			// The invariant a wake rides on: no coord, no wake, on the chart and on
 			// the wire alike. An uncharted document can still carry a stored `from`,
 			// and the baseline has to read it the same way the placement above does,
 			// or every such hobby counts as moved the moment the table loads and the
 			// next pin writes its origin away.
 			const wasFrom = c.coord ? c.from : null;
-			if (sameCoord(coord, c.coord) && sameCoord(from, wasFrom) && plate === c.plate && cap === c.cap && sameImages) {
+			if (sameCoord(coord, c.coord) && sameCoord(from, wasFrom) && plate === c.plate && cap === c.cap) {
 				return;
 			}
 			if ('project' === c.kind) {
@@ -304,7 +303,7 @@ export default function ChartSurface({ lens }: { lens: Lens }) {
 			} else if ('note' === c.kind) {
 				out.notes.push({ ...(c.doc as Note), coord, plate, cap });
 			} else {
-				out.hobbies.push({ ...(c.doc as Hobby), coord, from, plate, cap, images: berth.images });
+				out.hobbies.push({ ...(c.doc as Hobby), coord, from, plate, cap });
 			}
 		});
 		return out;
@@ -434,24 +433,11 @@ export default function ChartSurface({ lens }: { lens: Lens }) {
 	);
 }
 
-// The mark's own sheet: which of its prints leads on the chart, the line under
-// that print, and (for a hobby, whose gallery has no other editor) the darkroom
-// itself, so a photo can be hung without leaving the table.
+// The mark's own sheet: which of its prints leads on the chart, and the line
+// under that print. The gallery itself belongs to the entry's own editor for
+// every kind, so the sheet picks from what is hung and never hangs anything.
 function Sheet({ chartable, berth, patch }: { chartable: Chartable; berth: Berth; patch: (key: string, fields: Partial<Berth>) => void }) {
 	const h = useHarbor();
-	const [q, setQ] = useState('');
-
-	const query = q.trim().toLowerCase();
-	const available = h.prints.filter((print) => !berth.images.includes(print.filename)
-		&& (!query || print.filename.toLowerCase().includes(query)));
-
-	const attach = (filename: string) => {
-		if (berth.images.length >= GALLERY_MAX) {
-			h.showToast(`a mark hangs ${GALLERY_MAX} prints at most`);
-			return;
-		}
-		patch(chartable.key, { images: [...berth.images, filename] });
-	};
 
 	return (
 		<div className="chart-sheet" data-sheet data-key={chartable.key}>
@@ -467,9 +453,9 @@ function Sheet({ chartable, berth, patch }: { chartable: Chartable; berth: Berth
 			) : (
 				<>
 					<span className="field-label">the leading print · shows on the sheet</span>
-					{berth.images.length > 0 ? (
+					{chartable.images.length > 0 ? (
 						<div className="chart-plates">
-							{berth.images.map((name, index) => (
+							{chartable.images.map((name, index) => (
 								<span key={`${name}-${index}`} data-plate={index}
 									className={`chart-plate${index === berth.plate ? ' chart-plate--leading' : ''}`}
 									title={name} onClick={() => patch(chartable.key, { plate: index })}
@@ -479,7 +465,7 @@ function Sheet({ chartable, berth, patch }: { chartable: Chartable; berth: Berth
 					) : (
 						<span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, color: 'var(--periwinkle-deep)' }}>
 							{'hobby' === chartable.kind
-								? '// nothing hung yet · pick a print from the darkroom below'
+								? '// nothing hung on this mark · hang prints in the wandering chart'
 								: "// no prints in this light's archive · hang them in the light list"}
 						</span>
 					)}
@@ -491,28 +477,6 @@ function Sheet({ chartable, berth, patch }: { chartable: Chartable; berth: Berth
 				<input type="text" className="input input--serif-italic" value={berth.cap}
 					onChange={(e) => patch(chartable.key, { cap: e.target.value })} />
 			</label>
-
-			{'hobby' === chartable.kind && berth.images.length < GALLERY_MAX && (
-				<div className="chart-darkroom">
-					<div className="chart-darkroom__head">
-						<span className="field-label">the darkroom · hang one on this mark</span>
-						<input type="text" className="input chart-darkroom__search" placeholder="search prints..."
-							value={q} onChange={(e) => setQ(e.target.value)} />
-					</div>
-					<div className="chart-darkroom__prints">
-						{available.map((print) => (
-							<span key={print.filename} data-print={print.filename} className="chart-plate"
-								title={print.filename} onClick={() => attach(print.filename)}
-								style={{ background: printBackground(h.prints, print.filename) }} />
-						))}
-						{0 === available.length && (
-							<span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--text-dim)' }}>
-								{query ? 'nothing hanging to dry matches that.' : 'every print is already on this mark.'}
-							</span>
-						)}
-					</div>
-				</div>
-			)}
 
 			{berth.coord && (
 				<span className="chip-dashed" data-unchart onClick={() => patch(chartable.key, { coord: null, from: null })}>

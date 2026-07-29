@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { signIn, nav, toast } from './office';
+import { MockApi } from './mock-api';
 
 const PNG = Buffer.from(
 	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -55,7 +56,7 @@ test('tearing off a used print warns, detaches via a PUT with image: null, then 
 	expect(mock.find('DELETE', /^\/1\/media\//)).toHaveLength(0);
 
 	await tile.locator('.print-del').click();
-	await expect(toast(page)).toHaveText('print torn off its lights and left in the sun');
+	await expect(toast(page)).toHaveText('print torn off its cards and left in the sun');
 
 	// the detach PUT carries the COMPLETE document (full-replace!) with image null
 	const projectPut = mock.find('PUT', /^\/1\/project\/p3$/)[0];
@@ -63,6 +64,34 @@ test('tearing off a used print warns, detaches via a PUT with image: null, then 
 	expect(projectPut.body.title).toBe('The home lab');
 	expect(mock.find('PUT', /^\/1\/note\/n2$/)).toHaveLength(0);
 	expect(mock.find('DELETE', /^\/1\/media\/m2$/)).toHaveLength(1);
+	await expect(tile).toHaveCount(0);
+});
+
+// A hobby holds prints in its own gallery now, so it glues a print to the
+// darkroom exactly the way a light does. Counting lights alone would call such
+// a print unused and delete the file out from under the mark still showing it.
+test('a print hung on a hobby alone counts, detaches on tear-off, and clamps that hobby plate', async ({ page }) => {
+	const mock = new MockApi();
+	// Piano leads with the second of its two prints, and no light holds it
+	mock.hobbies[2].plate = 1;
+	await signIn(page, mock);
+	await nav(page, 'the darkroom').click();
+
+	const tile = page.locator('.tilt', { hasText: 'meo-wave-track2.png' });
+	await expect(tile.getByText('on 1 card')).toBeVisible();
+
+	await tile.locator('.print-del').click();
+	await expect(toast(page)).toHaveText('⚠ still glued to 1 card, click again to tear it off');
+	await tile.locator('.print-del').click();
+	await expect(toast(page)).toHaveText('print torn off its cards and left in the sun');
+
+	// full-replace, so the whole hobby rides along with the shortened gallery
+	const [hobbyPut] = mock.find('PUT', /^\/1\/hobby\/h3$/);
+	expect(hobbyPut.body.images).toEqual(['meo-wave-track1.png']);
+	expect(hobbyPut.body.name).toBe('Piano');
+	// plate 1 would now lead with the print just torn off
+	expect(hobbyPut.body.plate).toBe(0);
+	expect(mock.find('DELETE', /^\/1\/media\/m5$/)).toHaveLength(1);
 	await expect(tile).toHaveCount(0);
 });
 

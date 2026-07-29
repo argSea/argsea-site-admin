@@ -704,6 +704,7 @@ function HobbyFields({ draft }: { draft: HobbyDraft }) {
 				onToggle={(id) => h.patchDraft({
 					noteIds: draft.noteIds.includes(id) ? draft.noteIds.filter((x) => x !== id) : [...draft.noteIds, id],
 				})} />
+			<PicturesBox images={draft.images} />
 		</div>
 	);
 }

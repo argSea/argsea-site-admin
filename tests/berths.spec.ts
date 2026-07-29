@@ -67,7 +67,7 @@ test('the edit overlay no longer carries a berth section on any of the three', a
 	}
 });
 
-test('an editor save leaves the berth exactly as the chart table left it', async ({ page }) => {
+test('an editor save leaves the placement and the caption as the chart table left them', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the light list').click();
 	await page.locator('.content-row', { hasText: 'Meo Wave Race' }).getByText('edit', { exact: true }).click();
@@ -79,8 +79,10 @@ test('an editor save leaves the berth exactly as the chart table left it', async
 
 	const [put] = mock.find('PUT', /^\/1\/project\/p2$/);
 	expect(put.body.coord).toEqual({ lat: 58.10, lon: -7.30 });
-	expect(put.body.plate).toBe(3);
 	expect(put.body.cap).toBe('A cat, mid-race.');
+	// the plate is the one berth field a save can correct: p2 is seeded leading
+	// with plate 3 over an empty archive, and the clamp walks it back
+	expect(put.body.plate).toBe(0);
 });
 
 test('the sheet picks the leading print and writes the caption, and both ride the pin', async ({ page }) => {
@@ -108,19 +110,18 @@ test('the sheet picks the leading print and writes the caption, and both ride th
 	expect(put.body.coord).toEqual({ lat: 58.42, lon: -7.12 });
 });
 
-test('a hobby hangs a darkroom print from the sheet, without leaving the table', async ({ page }) => {
-	const mock = await signIn(page);
+test('the sheet picks from what is hung and hangs nothing: no kind gets a darkroom here', async ({ page }) => {
+	await signIn(page);
 	await openChartTable(page);
 
 	await mark(page, 'hobby:h3').locator('.chart-mark__glyph').click();
-	await sheet(page).locator('[data-print="homelab-rack.jpg"]').click();
-	await expect(sheet(page).locator('[data-plate]')).toHaveCount(3);
+	await expect(sheet(page).locator('[data-plate]')).toHaveCount(2);
+	await expect(sheet(page).locator('[data-print]')).toHaveCount(0);
 
-	await page.getByRole('button', { name: 'pin the chart' }).click();
-	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
-
-	const [put] = mock.find('PUT', /^\/1\/hobby\/h3$/);
-	expect(put.body.images).toEqual(['meo-wave-track1.png', 'meo-wave-track2.png', 'homelab-rack.jpg']);
+	// an empty gallery sends the keeper to the hobby's own editor, not below
+	await mark(page, 'hobby:h1').locator('.chart-mark__glyph').click();
+	await expect(sheet(page).getByText('// nothing hung on this mark · hang prints in the wandering chart')).toBeVisible();
+	await expect(sheet(page).locator('[data-print]')).toHaveCount(0);
 });
 
 test('a note keeps its doodle: its sheet offers no plate to pick', async ({ page }) => {
@@ -279,27 +280,4 @@ test('a stored wake origin survives a pin it had nothing to do with', async ({ p
 	// the stranded origin is not in the pin, so the stored document keeps it
 	expect(mock.find('PUT', /^\/1\/hobby\/h9$/)).toHaveLength(0);
 	expect(mock.hobbies.find((h) => h.id === 'h9')?.from).toEqual({ lat: 58.31, lon: -7.20 });
-});
-
-test('the gallery caps at six: the darkroom closes once the mark is full', async ({ page }) => {
-	const mock = new MockApi();
-	// five hung already, one short of the cap
-	mock.hobbies[2].images = [
-		'meo-wave-title.png', 'meo-wave-track1.png', 'meo-wave-track2.png',
-		'meo-wave-track3.png', 'meo-wave-track4.png',
-	];
-	await signIn(page, mock);
-	await openChartTable(page);
-
-	await mark(page, 'hobby:h3').locator('.chart-mark__glyph').click();
-	await expect(sheet(page).locator('[data-plate]')).toHaveCount(5);
-	await expect(sheet(page).locator('.chart-darkroom')).toBeVisible();
-
-	await sheet(page).locator('[data-print="homelab-rack.jpg"]').click();
-	await expect(sheet(page).locator('[data-plate]')).toHaveCount(6);
-	await expect(sheet(page).locator('.chart-darkroom')).toHaveCount(0);
-
-	await page.getByRole('button', { name: 'pin the chart' }).click();
-	await expect(toast(page)).toHaveText('⚓ pinned. 1 berths updated.');
-	expect(mock.find('PUT', /^\/1\/hobby\/h3$/)[0].body.images).toHaveLength(6);
 });

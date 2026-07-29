@@ -238,8 +238,7 @@
 	color: var(--text-strong);
 }
 
-.chart-plates,
-.chart-darkroom__prints {
+.chart-plates {
 	display: flex;
 	gap: 8px;
 	flex-wrap: wrap;
@@ -257,30 +256,6 @@
 .chart-plate--leading {
 	border-color: var(--gold);
 	box-shadow: 0 0 8px 1px rgba(240, 217, 168, .3);
-}
-
-.chart-darkroom {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding-top: 10px;
-	border-top: 1px dashed var(--border-card);
-}
-
-.chart-darkroom__head {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 10px;
-	flex-wrap: wrap;
-}
-
-.chart-darkroom__search {
-	width: auto;
-	flex: 0 1 150px;
-	border-radius: 999px;
-	padding: 6px 12px;
-	font-size: 11.5px;
 }
 
 @media (max-width: 860px) {
