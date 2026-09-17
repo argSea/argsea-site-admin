@@ -65,6 +65,26 @@ test('editing a light preserves the dormant postcard-era fields (full-replace pa
 	expect(put.body.image).toBe('unmonolith-diagram.png');
 });
 
+test('a rack row\'s thumbnail is the gallery\'s first print, never the dormant image field', async ({ page }) => {
+	const mock = new MockApi();
+	const byId = (id: string) => mock.projects.find((p) => p.id === id)!;
+	byId('p1').images = ['homelab-rack.jpg', 'unmonolith-diagram.png'];
+	byId('p2').image = 'unmonolith-diagram.png';
+	byId('p3').images = null;
+	await signIn(page, mock);
+	await nav(page, 'the light list').click();
+
+	const thumbOf = (title: string) => page.locator('.content-row', { hasText: title }).locator('.photo-thumb');
+
+	// the first print leads even when the dormant field names another
+	await expect(thumbOf('The Great Un-monolithing')).toHaveClass(/photo-thumb--paper/);
+	await expect(thumbOf('The Great Un-monolithing').locator('.photo-thumb__img')).toHaveAttribute('style', /homelab-rack\.jpg/);
+	// an empty or null gallery stays blank, whatever the dormant field says
+	await expect(thumbOf('Meo Wave Race')).toHaveClass(/photo-thumb--empty/);
+	await expect(thumbOf('Meo Wave Race').locator('.photo-thumb__img')).toHaveClass(/photo-thumb__img--empty/);
+	await expect(thumbOf('The home lab')).toHaveClass(/photo-thumb--empty/);
+});
+
 test('a morse light\'s letter rides the full-replace PUT unharmed', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the light list').click();

@@ -79,14 +79,16 @@ function Row({ project, index }: { project: Project; index: number }) {
 	const confirmHot = h.confirmKey === `proj-${project.id}`;
 	const light = project.light ?? DEFAULT_LIGHT;
 	const charLine = project.firstLit ? `${codeFor(light)} · first lit ${project.firstLit}` : codeFor(light);
+	// the gallery's first print leads, as on the front door; the single image field is dormant
+	const lead = project.images?.[0];
 
 	return (
 		<div className="content-row content-row--racked tilt" style={{ '--tilt': ROW_TILTS[index % 6] } as React.CSSProperties}>
 			<div className="content-row__shelf">
 				<Lamp light={light} size={10} haloScale={3.4} />
-				<div className={`photo-thumb${project.image ? ' photo-thumb--paper' : ' photo-thumb--empty'}`}>
-					<div className={`photo-thumb__img${project.image ? '' : ' photo-thumb__img--empty'}`}
-						style={project.image ? { background: printBackground(h.prints, project.image) } : undefined} />
+				<div className={`photo-thumb${lead ? ' photo-thumb--paper' : ' photo-thumb--empty'}`}>
+					<div className={`photo-thumb__img${lead ? '' : ' photo-thumb__img--empty'}`}
+						style={lead ? { background: printBackground(h.prints, lead) } : undefined} />
 				</div>
 				<div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: 1 }}>
 					<div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>

@@ -1,7 +1,7 @@
 // The watch desk. The current-watch singleton, value-for-value from the
-// design: the letter, the rotation line, up to three bearings, the season
-// postcard, the cat's remarks, and a live preview of how the front door reads
-// it. One record, written over whole on "keep the watch"; clearing keeps an
+// design: the title, the letter, the rotation line, up to three bearings, the
+// season postcard, the cat's remarks, and a live preview of how the front door
+// reads it. One record, written over whole on "keep the watch"; clearing keeps an
 // empty one (the homepage section folds away until the next watch is kept).
 import { useHarbor } from '../state/harbor';
 import type { WatchBearingKind } from '../lib/api';
@@ -93,6 +93,16 @@ export default function WatchDesk() {
 
 			<div style={{ display: 'flex', flexWrap: 'wrap', gap: 26, alignItems: 'flex-start', animation: 'fadeUp .7s ease .15s both' }}>
 				<div style={{ flex: '1 1 400px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 18 }}>
+					<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+						<label className="field" style={{ gap: 8 }}>
+							<span className="card-kicker" style={{ fontSize: 11 }}>the title</span>
+							<input type="text" className="input input--serif-italic" style={{ borderRadius: 10, padding: '11px 16px', color: 'var(--text-body)', fontSize: 14.5 }}
+								value={w.title}
+								onChange={(e) => h.patchWatch({ title: e.target.value })} />
+						</label>
+						<span className="footnote" style={{ fontSize: 11 }}>// the helm's heading. blank reads "a note from the keeper".</span>
+					</div>
+
 					<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 						<label className="field" style={{ gap: 8 }}>
 							<span className="card-kicker" style={{ fontSize: 11 }}>the letter</span>

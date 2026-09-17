@@ -281,6 +281,7 @@ export class MockApi {
 	// as adrift until a spec strands one on purpose.
 	watch: Doc = {
 		id: 'w1',
+		title: 'Three weeks in, and the migration still has teeth',
 		letter: 'Most of my time right now goes to the ArcXP migration: moving the newsroom onto its new stack while the paper keeps publishing.\n\nI am trying to write things down while they are still true.',
 		rotation: 'Conference talks, one more framework, and the piano.',
 		bearings: [

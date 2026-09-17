@@ -282,7 +282,7 @@ function seedCove(doc: SiteCopy): SiteCopy {
 // A never-kept watch is just the empty default; the same shape a deploy-skewed
 // API (no /1/watch yet) falls back to.
 const EMPTY_WATCH: Watch = {
-	id: '', letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '', quips: [], keptAt: '',
+	id: '', title: '', letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '', quips: [], keptAt: '',
 };
 
 // The bench holds four drawers at most (a bench with more is a shed): the
@@ -1474,7 +1474,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	// cat's remarks stay with the watch: they belong to the watch cat, not the letter.
 	const clearWatch = useCallback(async () => {
 		try {
-			setWatch(await api.saveWatch({ ...watchRef.current, letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '' }));
+			setWatch(await api.saveWatch({ ...watchRef.current, title: '', letter: '', rotation: '', bearings: [], postcardMediaId: '', postcard2MediaId: '' }));
 			showToast('○ cleared · the front door folds it away');
 			refreshActivity();
 		} catch (error) {

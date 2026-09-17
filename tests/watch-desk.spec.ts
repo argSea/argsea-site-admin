@@ -12,6 +12,8 @@ test('the watch desk loads the record and the preview reads it back', async ({ p
 	await nav(page, 'the watch desk').click();
 
 	// the form reads the stubbed record
+	await expect(page.getByLabel('the title')).toHaveValue('Three weeks in, and the migration still has teeth');
+	await expect(page.getByText('// the helm\'s heading. blank reads "a note from the keeper".')).toBeVisible();
 	await expect(page.getByLabel('the letter')).toHaveValue(/ArcXP migration/);
 	await expect(page.getByLabel('out of the rotation')).toHaveValue('Conference talks, one more framework, and the piano.');
 
@@ -19,6 +21,8 @@ test('the watch desk loads the record and the preview reads it back', async ({ p
 	await expect(page.locator('.watch-preview')).toContainText('kept 10 jul');
 	await expect(page.getByText('Out of the rotation on purpose: Conference talks, one more framework, and the piano.')).toBeVisible();
 	await expect(page.locator('.watch-strip')).toContainText('The queue is the product');
+	// the preview mirrors the homepage, and the homepage never shows the title
+	await expect(page.locator('.watch-preview')).not.toContainText('the migration still has teeth');
 	await expect(page.getByText('// the dateline stamps itself on save · last kept 10 jul 2026')).toBeVisible();
 	await expect(page.getByText('// the dateline stamps itself on save · no watch kept yet')).toHaveCount(0);
 
@@ -52,6 +56,22 @@ test('a never-kept watch reads "no watch kept yet" in the footnote', async ({ pa
 	await expect(page.getByText('// the dateline stamps itself on save · no watch kept yet')).toBeVisible();
 });
 
+test('a watch from an API before the title reads a blank title and keeps one', async ({ page }) => {
+	const mock = new MockApi();
+	const { title: _title, ...untitled } = mock.watch;
+	mock.watch = untitled;
+	await signIn(page, mock);
+	await nav(page, 'the watch desk').click();
+
+	await expect(page.getByLabel('the letter')).toHaveValue(/ArcXP migration/);
+	await expect(page.getByLabel('the title')).toHaveValue('');
+
+	await page.getByRole('button', { name: 'keep the watch' }).click();
+	await expect.poll(() => mock.find('PUT', /^\/1\/watch\/?$/).length).toBe(1);
+	const [put] = mock.find('PUT', /^\/1\/watch\/?$/);
+	expect(put.body.title).toBe('');
+});
+
 test('keep the watch sends the whole record, never keptAt, three bearings at most', async ({ page }) => {
 	const mock = await signIn(page);
 	await nav(page, 'the watch desk').click();
@@ -62,6 +82,7 @@ test('keep the watch sends the whole record, never keptAt, three bearings at mos
 	await page.getByRole('button', { name: '+ a bearing' }).click();
 	await expect(page.getByRole('button', { name: '+ a bearing' })).toHaveCount(0);
 
+	await page.getByLabel('the title').fill('A fresh heading');
 	await page.getByLabel('the letter').fill('A fresh letter.\n\nStill true.');
 	await expect(page.locator('.watch-preview')).toContainText('Still true.');
 	await page.getByText('homelab-rack.jpg').click();
@@ -71,6 +92,7 @@ test('keep the watch sends the whole record, never keptAt, three bearings at mos
 
 	await expect.poll(() => mock.find('PUT', /^\/1\/watch\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/watch\/?$/);
+	expect(put.body.title).toBe('A fresh heading');
 	expect(put.body.letter).toBe('A fresh letter.\n\nStill true.');
 	// the filename rides the wire, never the mongo id: the media route serves
 	// filenames, and a stored id 404s on the front door
@@ -104,6 +126,7 @@ test('clear the watch is armed two-click, keeps an empty record resetting both h
 
 	await expect.poll(() => mock.find('PUT', /^\/1\/watch\/?$/).length).toBe(1);
 	const [put] = mock.find('PUT', /^\/1\/watch\/?$/);
+	expect(put.body.title).toBe('');
 	expect(put.body.letter).toBe('');
 	expect(put.body.rotation).toBe('');
 	expect(put.body.bearings).toEqual([]);
