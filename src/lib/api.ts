@@ -670,6 +670,7 @@ export interface WatchBearing {
 // record). Empty watch = letter === ""; the site folds the section away.
 export interface Watch {
 	id:                string;
+	title:             string;         // the helm's heading; "" reads "a note from the keeper"
 	letter:            string;         // hand-written; a blank line splits paragraphs
 	rotation:          string;         // the "out of the rotation" line
 	bearings:          WatchBearing[]; // three at most
@@ -683,10 +684,12 @@ export interface Watch {
 }
 
 // An API from before the empty-holds fix marshals a never-kept watch's nil
-// slices as null; the desk filters and maps these, so normalize on arrival.
+// slices as null, and one from before the title sends no title at all; the
+// desk filters, maps and binds these, so normalize on arrival.
 export function watch(): Promise<Watch> {
 	return request<Watch>('GET', '/1/watch').then((doc) => ({
 		...doc,
+		title:    doc.title ?? '',
 		bearings: doc.bearings ?? [],
 		quips:    doc.quips ?? [],
 	}));
