@@ -56,6 +56,28 @@ test('rollback with nothing to fall back to gets the 409 message', async ({ page
 	await expect(toast(page)).toHaveText('⚓ no previous lantern to re-hoist');
 });
 
+test('a refusal the office has never heard of reaches the keeper in the API\'s own words', async ({ page }) => {
+	const mock = new MockApi();
+	// the resume guard: 412 before anything is staged, with the reason in the body
+	mock.hoistRefusal = 'no resume is published; the site would go up without one';
+	await signIn(page, mock);
+
+	await page.getByRole('button', { name: 'hoist the lantern' }).click();
+	await expect(toast(page)).toHaveText('⚠ no resume is published; the site would go up without one');
+	// the boat never left: the panel still offers the hoist
+	await expect(page.getByRole('button', { name: 'hoist the lantern' })).toBeVisible();
+});
+
+test('a refusal with nothing readable in the body still names the status', async ({ page }) => {
+	await signIn(page);
+	// registered after the mock, so it wins the hoist route
+	await page.route(/\/1\/lantern\/hoist/, (route) =>
+		route.fulfill({ status: 503, contentType: 'text/html', headers: { 'Access-Control-Allow-Origin': '*' }, body: '<h1>503 bad gateway</h1>' }));
+
+	await page.getByRole('button', { name: 'hoist the lantern' }).click();
+	await expect(toast(page)).toHaveText('⚠ hoist failed (503)');
+});
+
 test('no lantern config, no hoist button', async ({ page }) => {
 	const mock = new MockApi();
 	mock.lanternMounted = false;

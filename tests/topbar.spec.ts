@@ -24,6 +24,7 @@ const navOrder = [
 	/the darkroom/,
 	/signal flags/,
 	/the keeper/,
+	/the papers/,
 	/smuggler's cove/,
 ];
 
@@ -38,7 +39,7 @@ test.describe('at phone width', () => {
 		// the whole nav rides along as scrollable chips in the banked group
 		// order, with an upright rule between groups, plus the deploy verb and
 		// the way ashore
-		await expect(page.locator('.topbar-chip')).toHaveCount(13);
+		await expect(page.locator('.topbar-chip')).toHaveCount(14);
 		await expect(page.locator('.topbar-chip')).toHaveText(navOrder);
 		await expect(topbar(page).locator('.topbar-rule')).toHaveCount(3);
 		await expect(topbar(page).locator('.topbar-deploy')).toBeVisible();

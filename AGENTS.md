@@ -68,9 +68,13 @@ Read narrowly. Do not wander the repo.
   `useEscapeKey.ts`.
 - `src/state/harbor.tsx`: the harbor store: one provider owning all office
   state and every API-calling action. Screens read from it and stay thin.
-- `src/screens/`: one file per screen: `Login`, `WatchRoom`, `Projects`,
-  `Graveyard`, `ChartTable`, `WritingDesk`, `SignalFlags`, `SmugglersCove`,
-  `CarvingShop`, `Marginalia`, `Darkroom`, `Keeper`. `ChartTable` is the one
+- `src/screens/`: one file per screen: `Login`, `WatchRoom`, `WatchDesk`,
+  `Projects`, `ShipsLog`, `ChartTable`, `WritingDesk`, `ToolBench`,
+  `Marginalia`, `CarvingShop`, `Darkroom`, `SignalFlags`, `Keeper`, `Papers`,
+  `SmugglersCove`. `ProjectWall` sits in the same directory but is `Projects`'
+  coast tab, not a screen of its own. `Papers` is the resume shelf: many stored
+  cuts, each carrying a title and the keeper's private notes, exactly one
+  published, and any of them openable by its own PDF. `ChartTable` is the one
   admin home for every berth field (coord, wake origin, plate, caption): it
   renders `src/components/ChartSurface.tsx` over all three chartables, and the
   wandering chart's chart tab renders the same surface narrowed to hobbies.

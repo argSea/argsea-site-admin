@@ -8,14 +8,14 @@ import * as api from '../lib/api';
 import type {
 	ActivityEntry, Block, BlockKind, BlockSet, CaseLog, CaseLogStatus, Carving, Category, Coord, CopyTextField,
 	Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose,
-	Hobby, HobbyState, KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Revision, Shape,
+	Hobby, HobbyState, KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Resume, Revision, Shape,
 	SiteCopy, StoreDrawer, Suggestion, TrafficReport, Watch, WatchBearing,
 } from '../lib/api';
 import { onWatch } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { DEFAULT_LIGHT } from '../lib/lightChar';
 
-export type Screen = 'dash' | 'projects' | 'chart' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'watch' | 'shop' | 'media' | 'keeper' | 'marginalia' | 'bench';
+export type Screen = 'dash' | 'projects' | 'chart' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'watch' | 'shop' | 'media' | 'keeper' | 'marginalia' | 'bench' | 'papers';
 
 // What the shop's editor hands back on save: the document fields a PUT may
 // change (plus pose, which only a POST uses; the server preserves it after).
@@ -619,6 +619,10 @@ interface HarborValue {
 	developPrints: (files: Iterable<File>) => Promise<void>;
 	tearOffPrint:  (m: MediaItem) => Promise<void>;
 
+	resumes:       Resume[];
+	fileResume:    (pdf: File, title: string, notes: string) => Promise<boolean>;
+	publishResume: (r: Resume) => Promise<void>;
+
 	lantern:        LanternStatus | null;
 	lanternAbsent:  boolean;
 	deploying:      boolean;
@@ -705,6 +709,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [hobbies, setHobbies] = useState<Hobby[]>([]);
 	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 	const [prints, setPrints] = useState<MediaItem[]>([]);
+	const [resumes, setResumes] = useState<Resume[]>([]);
 	const [copy, setCopy] = useState<SiteCopy>(EMPTY_COPY);
 	const [watch, setWatch] = useState<Watch>(EMPTY_WATCH);
 	const [watchFlash, setWatchFlash] = useState<string | null>(null);
@@ -822,6 +827,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.hobbies.list().then((list) => setHobbies([...list].sort(byOrder))).catch(oops);
 		api.suggestions.list().then((list) => setSuggestions([...list].sort((a, b) => a.order - b.order))).catch(oops);
 		api.media.list().then(setPrints).catch(oops);
+		api.resumes.list().then(setResumes).catch(oops);
 		api.figurehead.list().then(setDesigns).catch(oops);
 		api.doodle.list().then(setDoodles).catch(oops);
 		api.carvings.list().then(setCarvings).catch(oops);
@@ -1805,6 +1811,37 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [projects, hobbies, replaceProject, replaceHobby, showToast, oops, refreshActivity]);
 
+	// ---- the papers (the resume shelf) ----
+
+	// Answers whether the cut was filed, so the form clears itself only once the
+	// shelf actually holds the paper.
+	const fileResume = useCallback(async (pdf: File, title: string, notes: string): Promise<boolean> => {
+		try {
+			const stored = await api.resumes.upload(pdf, title, notes);
+			setResumes((cur) => [stored, ...cur]);
+			showToast('📄 filed. the cut is on the shelf.');
+			refreshActivity();
+			return true;
+		} catch (error) {
+			oops(error);
+			return false;
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const publishResume = useCallback(async (r: Resume) => {
+		try {
+			const saved = await api.resumes.publish(r.id);
+			// exactly one cut is ever published: the API clears whichever held the
+			// shelf in the same call, so mirror that here rather than re-reading
+			setResumes((cur) => cur.map((cut) =>
+				cut.id === saved.id ? saved : cut.published ? { ...cut, published: false } : cut));
+			showToast(`⚑ the papers are out: "${saved.title}" is the live cut now`);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
 	// ---- the log desk ----
 
 	const regNo = useCallback((projectId: string): string => {
@@ -2331,6 +2368,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		saveDoodle, renameDoodle, deleteDoodle,
 		saveCarving, boltCarving, deleteCarving,
 		printUsage, developPrints, tearOffPrint,
+		resumes, fileResume, publishResume,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 		logs, blockSets, regNo,
 		desk, openDesk, closeDesk,
