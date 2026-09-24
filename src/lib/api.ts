@@ -814,12 +814,20 @@ export interface Resume {
 }
 
 // The title and the notes ride the multipart body beside the file, because the
-// record and its payload are stored in one call. Publishing is its own
-// transition and the API clears whichever cut held the shelf in the same call.
+// record and its payload are stored in one call. Publish and unpublish are the
+// only two transitions a cut has: publish clears whichever held the shelf in
+// the same call, unpublish takes the live one down without putting anything up
+// in its place. PUT edits the title and notes only; the pdf is immutable, so
+// the stored file and the published flag ride through server-side. DELETE
+// refuses the published cut with a 409 naming unpublish, which the office lets
+// the API answer rather than guarding for it.
 export const resumes = {
-	list:    ()           => request<Resume[]>('GET', '/1/resume/'),
-	publish: (id: string) => request<Resume>('POST', `/1/resume/${id}/publish`),
-	upload:  (file: File, title: string, notes: string) => {
+	list:      ()                       => request<Resume[]>('GET', '/1/resume/'),
+	update:    (id: string, doc: Resume) => request<Resume>('PUT', `/1/resume/${id}`, doc),
+	remove:    (id: string)             => request<void>('DELETE', `/1/resume/${id}`),
+	publish:   (id: string)             => request<Resume>('POST', `/1/resume/${id}/publish`),
+	unpublish: (id: string)             => request<Resume>('POST', `/1/resume/${id}/unpublish`),
+	upload:    (file: File, title: string, notes: string) => {
 		const form = new FormData();
 		form.append('file', file);
 		form.append('title', title);

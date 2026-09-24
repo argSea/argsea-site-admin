@@ -1,8 +1,10 @@
 // The papers. A shelf of stored resume cuts rather than one file that gets
 // overwritten: each carries a title and the keeper's own notes, exactly one is
-// published, and any of them opens for comparison. The filing panel copies the
-// darkroom's upload shape (hidden input behind a button), with the title and
-// notes riding along because the record and its pdf are stored in one call.
+// published, and any of them opens for comparison. The pdf is immutable once
+// filed, so a row edits its title and notes and nothing else. The filing panel
+// copies the darkroom's upload shape (hidden input behind a button), with the
+// title and notes riding along because the record and its pdf are stored in one
+// call. Scrapping the live cut is left to the API to refuse, not guarded here.
 import { useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useHarbor } from '../state/harbor';
@@ -17,22 +19,68 @@ const byRecent = (a: Resume, b: Resume): number => b.createdAt.localeCompare(a.c
 
 function Cut({ cut }: { cut: Resume }) {
 	const h = useHarbor();
+	const [editing, setEditing] = useState(false);
+	const [title, setTitle] = useState(cut.title);
+	const [notes, setNotes] = useState(cut.notes);
+	const scrapKey = `scrap-cut-${cut.id}`;
+
+	const scribble = () => {
+		setTitle(cut.title);
+		setNotes(cut.notes);
+		setEditing(true);
+	};
+
+	const keep = () => {
+		void h.editResume(cut, title, notes).then((kept) => {
+			if (kept) {
+				setEditing(false);
+			}
+		});
+	};
 
 	return (
 		<div className={`content-row${cut.published ? ' content-row--gold' : ' content-row--alt'}`}>
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: '1 1 260px' }}>
-				<span className="row-title">{cut.title}</span>
-				<span className="footnote">filed {relativeTime(cut.createdAt)} · {cut.filename}</span>
-				{cut.notes
-					? <span className="row-sub" style={{ whiteSpace: 'pre-wrap' }}>{cut.notes}</span>
-					: <span className="row-sub" style={{ fontStyle: 'italic' }}>no notes on this cut.</span>}
+				{editing ? (
+					<>
+						<input type="text" className="input input--display" autoFocus aria-label="the cut's title"
+							value={title} onChange={(e) => setTitle(e.target.value)} />
+						<span className="footnote">filed {relativeTime(cut.createdAt)} · {cut.filename}</span>
+						<textarea className="input" rows={3} aria-label="the cut's notes"
+							value={notes} onChange={(e) => setNotes(e.target.value)} />
+					</>
+				) : (
+					<>
+						<span className="row-title">{cut.title}</span>
+						<span className="footnote">filed {relativeTime(cut.createdAt)} · {cut.filename}</span>
+						{cut.notes
+							? <span className="row-sub" style={{ whiteSpace: 'pre-wrap' }}>{cut.notes}</span>
+							: <span className="row-sub" style={{ fontStyle: 'italic' }}>no notes on this cut.</span>}
+					</>
+				)}
 			</div>
 
 			<div className="row-actions">
-				{cut.published
-					? <span className="pill pill--on">◍ the live cut</span>
-					: <button type="button" className="pill" onClick={() => void h.publishResume(cut)}>send this one out</button>}
-				<a className="pill pill--quiet" href={mediaUrl(cut.url)} target="_blank" rel="noreferrer">read it</a>
+				{editing ? (
+					<>
+						<button type="button" className="pill" onClick={keep}>keep the changes</button>
+						<button type="button" className="pill pill--quiet" onClick={() => setEditing(false)}>never mind</button>
+					</>
+				) : (
+					<>
+						{cut.published
+							? <button type="button" className="pill pill--on" onClick={() => void h.unpublishResume(cut)}>◍ the live cut · take it down</button>
+							: <button type="button" className="pill" onClick={() => void h.publishResume(cut)}>send this one out</button>}
+						<a className="pill pill--quiet" href={mediaUrl(cut.url)} target="_blank" rel="noreferrer">read it</a>
+						<button type="button" className="pill pill--quiet" onClick={scribble}>scribble on it</button>
+						{/* the live cut keeps its ✕: the API refuses that delete with a 409
+						    naming the remedy, and the remedy is the control beside it */}
+						<button type="button" className="cove-x" title="off the shelf"
+							onClick={() => h.askConfirm(scrapKey, () => void h.scrapResume(cut))}>
+							{h.confirmKey === scrapKey ? '!' : '✕'}
+						</button>
+					</>
+				)}
 			</div>
 		</div>
 	);

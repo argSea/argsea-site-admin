@@ -114,3 +114,89 @@ test('a filing failure reaches the keeper in the API\'s own words', async ({ pag
 	await expect(page.locator('.content-row')).toHaveCount(2);
 	await expect(page.getByPlaceholder('systems architect, long form')).toHaveValue('Systems architect, revised');
 });
+
+test('a cut is scribbled on: the title and notes change, the pdf and the flag do not', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the papers').click();
+
+	// a row being scribbled on holds its title in an input, which hasText cannot
+	// read, so these specs anchor on the filename footnote instead
+	const row = page.locator('.content-row', { hasText: 'a1b2c3.pdf' });
+	await row.getByRole('button', { name: 'scribble on it' }).click();
+	await row.getByLabel("the cut's title").fill('Senior software engineer, 2026');
+	await row.getByLabel("the cut's notes").fill('trimmed the queue section.');
+	await row.getByRole('button', { name: 'keep the changes' }).click();
+
+	await expect(toast(page)).toHaveText('⚒ the cut reads differently now');
+	await expect(row).toContainText('Senior software engineer, 2026');
+	await expect(row).toContainText('trimmed the queue section.');
+	// the pdf is immutable and the flag is the API's: neither moved
+	await expect(row).toContainText('a1b2c3.pdf');
+	await expect(row).toContainText('◍ the live cut');
+
+	const [put] = mock.find('PUT', /^\/1\/resume\/r1$/);
+	expect(put.body.title).toBe('Senior software engineer, 2026');
+	expect(put.body.notes).toBe('trimmed the queue section.');
+});
+
+test('scribbling out the title is refused, and never mind puts the row back', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the papers').click();
+
+	const row = page.locator('.content-row', { hasText: 'd4e5f6.pdf' });
+	await row.getByRole('button', { name: 'scribble on it' }).click();
+	await row.getByLabel("the cut's title").fill('   ');
+	await row.getByRole('button', { name: 'keep the changes' }).click();
+
+	await expect(toast(page)).toHaveText('give the cut a title, or you will never tell them apart');
+	// still open, so nothing typed is lost
+	await expect(row.getByLabel("the cut's title")).toHaveValue('   ');
+
+	await row.getByRole('button', { name: 'never mind' }).click();
+	await expect(row).toContainText('Systems architect');
+	expect(mock.find('PUT', /^\/1\/resume\//)).toHaveLength(0);
+});
+
+test('the live cut comes down without another going up in its place', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the papers').click();
+
+	await page.locator('.content-row', { hasText: 'Senior software engineer' })
+		.getByRole('button', { name: '◍ the live cut · take it down' }).click();
+
+	await expect(toast(page)).toHaveText('⚑ taken down. nothing is out there now.');
+	expect(mock.find('POST', /^\/1\/resume\/r1\/unpublish$/)).toHaveLength(1);
+	await expect(page.getByText('2 cuts on the shelf · nothing is out there')).toBeVisible();
+	await expect(page.locator('.pill--on')).toHaveCount(0);
+});
+
+test('a cut goes off the shelf on the second click, pdf and all', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the papers').click();
+
+	const row = page.locator('.content-row', { hasText: 'Systems architect' });
+	await row.getByTitle('off the shelf').click();
+	// armed, not fired
+	await expect(row.getByTitle('off the shelf')).toHaveText('!');
+	expect(mock.find('DELETE', /^\/1\/resume\//)).toHaveLength(0);
+
+	await row.getByTitle('off the shelf').click();
+	await expect(toast(page)).toHaveText('🪓 off the shelf. the pdf went with it.');
+	await expect(page.locator('.content-row')).toHaveCount(1);
+	expect(mock.find('DELETE', /^\/1\/resume\/r2$/)).toHaveLength(1);
+});
+
+test('scrapping the live cut is refused by the API, in its own words, and the row stays', async ({ page }) => {
+	await signIn(page);
+	await nav(page, 'the papers').click();
+
+	// the control is deliberately not hidden on the live cut: the API owns the
+	// rule, and the remedy it names is the button right beside this one
+	const row = page.locator('.content-row', { hasText: 'Senior software engineer' });
+	await row.getByTitle('off the shelf').click();
+	await row.getByTitle('off the shelf').click();
+
+	await expect(toast(page)).toHaveText('⚠ a published resume cannot be deleted; unpublish it first');
+	await expect(page.locator('.content-row')).toHaveCount(2);
+	await expect(row).toContainText('◍ the live cut');
+});

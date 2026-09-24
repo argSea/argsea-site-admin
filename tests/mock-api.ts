@@ -1087,10 +1087,16 @@ export class MockApi {
 				return json(200, doc);
 			}
 		}
-		if ((match = /^\/1\/resume\/([^/]+)\/publish\/?$/.exec(path)) && method === 'POST') {
+		if ((match = /^\/1\/resume\/([^/]+)\/(unpublish|publish)\/?$/.exec(path)) && method === 'POST') {
 			const doc = this.resumes.find((r) => r.id === match![1]);
 			if (!doc) {
 				return json(400, { status: 'error', code: 400, message: 'resume not found' });
+			}
+			if (match[2] === 'unpublish') {
+				// takes the live cut down without putting anything up in its place
+				doc.published = false;
+				doc.updatedAt = now();
+				return json(200, doc);
 			}
 			// exactly one published: whichever held the shelf is cleared by the
 			// same call, so the office never has to go and check
@@ -1098,6 +1104,34 @@ export class MockApi {
 			doc.published = true;
 			doc.updatedAt = now();
 			return json(200, doc);
+		}
+		if ((match = /^\/1\/resume\/([^/]+)$/.exec(path))) {
+			const at = this.resumes.findIndex((r) => r.id === match![1]);
+			if (at === -1) {
+				return json(400, { status: 'error', code: 400, message: 'resume not found' });
+			}
+			if (method === 'PUT') {
+				// the pdf is immutable, so the stored file and the published flag
+				// ride through server-side however full a replace the client sends
+				const existing = this.resumes[at];
+				if (!String(body?.title ?? '').trim()) {
+					return json(400, { status: 'error', code: 400, message: 'a title is required' });
+				}
+				this.resumes[at] = { ...existing, title: body.title, notes: body.notes ?? '', updatedAt: now() };
+				return json(200, this.resumes[at]);
+			}
+			if (method === 'DELETE') {
+				// the published cut is refused outright: it is what keeps a live
+				// record from outliving the pdf behind it
+				if (this.resumes[at].published) {
+					return json(409, {
+						status: 'error', code: 409,
+						message: 'a published resume cannot be deleted; unpublish it first',
+					});
+				}
+				this.resumes.splice(at, 1);
+				return json(200, { status: 'ok', code: 200 });
+			}
 		}
 
 		// ---- the lantern ----

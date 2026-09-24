@@ -619,9 +619,12 @@ interface HarborValue {
 	developPrints: (files: Iterable<File>) => Promise<void>;
 	tearOffPrint:  (m: MediaItem) => Promise<void>;
 
-	resumes:       Resume[];
-	fileResume:    (pdf: File, title: string, notes: string) => Promise<boolean>;
-	publishResume: (r: Resume) => Promise<void>;
+	resumes:         Resume[];
+	fileResume:      (pdf: File, title: string, notes: string) => Promise<boolean>;
+	editResume:      (r: Resume, title: string, notes: string) => Promise<boolean>;
+	publishResume:   (r: Resume) => Promise<void>;
+	unpublishResume: (r: Resume) => Promise<void>;
+	scrapResume:     (r: Resume) => Promise<void>;
 
 	lantern:        LanternStatus | null;
 	lanternAbsent:  boolean;
@@ -1828,6 +1831,33 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [showToast, oops, refreshActivity]);
 
+	const replaceResume = useCallback((saved: Resume) => {
+		setResumes((cur) => cur.map((cut) => (cut.id === saved.id ? saved : cut)));
+	}, []);
+
+	// Answers whether the edit stuck, so the row knows to close its inputs. The
+	// pdf is immutable and the published flag is the API's, so only the two
+	// fields the keeper writes are ever changed here.
+	const editResume = useCallback(async (r: Resume, title: string, notes: string): Promise<boolean> => {
+		const trimmed = title.trim();
+		if (!trimmed) {
+			showToast('give the cut a title, or you will never tell them apart');
+			return false;
+		}
+		if (trimmed === r.title && notes === r.notes) {
+			return true;
+		}
+		try {
+			replaceResume(await api.resumes.update(r.id, { ...r, title: trimmed, notes }));
+			showToast('⚒ the cut reads differently now');
+			refreshActivity();
+			return true;
+		} catch (error) {
+			oops(error);
+			return false;
+		}
+	}, [replaceResume, showToast, oops, refreshActivity]);
+
 	const publishResume = useCallback(async (r: Resume) => {
 		try {
 			const saved = await api.resumes.publish(r.id);
@@ -1836,6 +1866,32 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 			setResumes((cur) => cur.map((cut) =>
 				cut.id === saved.id ? saved : cut.published ? { ...cut, published: false } : cut));
 			showToast(`⚑ the papers are out: "${saved.title}" is the live cut now`);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	// Taking the live cut down puts nothing up in its place, which leaves the
+	// shelf with nothing published: the state an empty shelf is already in, and
+	// the one the hoist guard refuses on.
+	const unpublishResume = useCallback(async (r: Resume) => {
+		try {
+			replaceResume(await api.resumes.unpublish(r.id));
+			showToast('⚑ taken down. nothing is out there now.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceResume, showToast, oops, refreshActivity]);
+
+	// No guard on the live cut here: the API refuses that with a 409 naming the
+	// remedy, and duplicating the rule client-side is how the two drift apart.
+	const scrapResume = useCallback(async (r: Resume) => {
+		try {
+			await api.resumes.remove(r.id);
+			setResumes((cur) => cur.filter((cut) => cut.id !== r.id));
+			showToast('🪓 off the shelf. the pdf went with it.');
 			refreshActivity();
 		} catch (error) {
 			oops(error);
@@ -2368,7 +2424,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		saveDoodle, renameDoodle, deleteDoodle,
 		saveCarving, boltCarving, deleteCarving,
 		printUsage, developPrints, tearOffPrint,
-		resumes, fileResume, publishResume,
+		resumes, fileResume, editResume, publishResume, unpublishResume, scrapResume,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 		logs, blockSets, regNo,
 		desk, openDesk, closeDesk,
