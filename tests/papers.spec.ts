@@ -38,12 +38,16 @@ test('a fresh cut is filed with its title and notes, and lands on the shelf unpu
 	await page.getByRole('button', { name: 'file it on the shelf' }).click();
 	await expect(toast(page)).toHaveText('📄 filed. the cut is on the shelf.');
 
-	// the record and its pdf are stored in one multipart call
+	// the record and its pdf are stored in one multipart call. The three part
+	// names are the contract the API reads by, so they are pinned by name:
+	// renaming one ships a screen whose every upload fails against a green suite
 	const [filed] = mock.find('POST', /^\/1\/resume\/$/);
+	expect(filed.post).toContain('name="file"');
 	expect(filed.post).toContain('name="title"');
+	expect(filed.post).toContain('name="notes"');
+	expect(filed.post).toContain('filename="architect.pdf"');
 	expect(filed.post).toContain('Staff engineer, short');
 	expect(filed.post).toContain('two pages. sent to the harbor board.');
-	expect(filed.post).toContain('architect.pdf');
 
 	const fresh = page.locator('.content-row', { hasText: 'Staff engineer, short' });
 	await expect(fresh).toContainText('two pages. sent to the harbor board.');
@@ -199,4 +203,19 @@ test('scrapping the live cut is refused by the API, in its own words, and the ro
 	await expect(toast(page)).toHaveText('⚠ a published resume cannot be deleted; unpublish it first');
 	await expect(page.locator('.content-row')).toHaveCount(2);
 	await expect(row).toContainText('◍ the live cut');
+});
+
+test('a keep that changes nothing says so rather than closing on silence', async ({ page }) => {
+	const mock = await signIn(page);
+	await nav(page, 'the papers').click();
+
+	const row = page.locator('.content-row', { hasText: 'd4e5f6.pdf' });
+	await row.getByRole('button', { name: 'scribble on it' }).click();
+	// whitespace around a title that is otherwise untouched is not an edit
+	await row.getByLabel("the cut's title").fill('  Systems architect  ');
+	await row.getByRole('button', { name: 'keep the changes' }).click();
+
+	await expect(toast(page)).toHaveText('that cut already reads that way');
+	await expect(row).toContainText('Systems architect');
+	expect(mock.find('PUT', /^\/1\/resume\//)).toHaveLength(0);
 });

@@ -1837,18 +1837,19 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 
 	// Answers whether the edit stuck, so the row knows to close its inputs. The
 	// pdf is immutable and the published flag is the API's, so only the two
-	// fields the keeper writes are ever changed here.
+	// fields the keeper writes are ever changed here. The title arrives already
+	// trimmed, the same way the filing panel hands one over: an empty one is a
+	// form's own business and never reaches this far.
 	const editResume = useCallback(async (r: Resume, title: string, notes: string): Promise<boolean> => {
-		const trimmed = title.trim();
-		if (!trimmed) {
-			showToast('give the cut a title, or you will never tell them apart');
-			return false;
-		}
-		if (trimmed === r.title && notes === r.notes) {
+		// nothing to write, but say so rather than closing on silence: a keep
+		// that looks like an edit and is not one has to read as one, or the
+		// keeper is left guessing whether it took
+		if (title === r.title && notes === r.notes) {
+			showToast('that cut already reads that way');
 			return true;
 		}
 		try {
-			replaceResume(await api.resumes.update(r.id, { ...r, title: trimmed, notes }));
+			replaceResume(await api.resumes.update(r.id, { ...r, title, notes }));
 			showToast('⚒ the cut reads differently now');
 			refreshActivity();
 			return true;
@@ -1861,7 +1862,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const publishResume = useCallback(async (r: Resume) => {
 		try {
 			const saved = await api.resumes.publish(r.id);
-			// exactly one cut is ever published: the API clears whichever held the
+			// at most one cut is ever published: the API clears whichever held the
 			// shelf in the same call, so mirror that here rather than re-reading
 			setResumes((cur) => cur.map((cut) =>
 				cut.id === saved.id ? saved : cut.published ? { ...cut, published: false } : cut));

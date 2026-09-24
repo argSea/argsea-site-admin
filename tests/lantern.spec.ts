@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { MockApi } from './mock-api';
 import { signIn, toast } from './office';
 
@@ -84,4 +85,31 @@ test('no lantern config, no hoist button', async ({ page }) => {
 	await signIn(page, mock);
 	await expect(page.getByText('○ not rigged in this harbor')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'hoist the lantern' })).toHaveCount(0);
+});
+
+// The lantern's 403 is the one status whose wording the office keeps for
+// itself: the API answers `Forbidden`, which is worse copy than the line it
+// would replace. Both raw-fetch call sites hold that line, so both are pinned.
+const forbidden = (page: Page, route: RegExp) => page.route(route, (r) =>
+	r.fulfill({
+		status: 403, contentType: 'application/json',
+		headers: { 'Access-Control-Allow-Origin': '*' },
+		body: JSON.stringify({ status: 'error', code: 403, message: 'Forbidden' }),
+	}));
+
+test('a 403 on hoist keeps the keeper line instead of the API\'s Forbidden', async ({ page }) => {
+	await signIn(page);
+	await forbidden(page, /\/1\/lantern\/hoist/);
+
+	await page.getByRole('button', { name: 'hoist the lantern' }).click();
+	await expect(toast(page)).toHaveText('⚠ the lantern only answers to the keeper');
+});
+
+test('a 403 on rollback keeps the same line', async ({ page }) => {
+	await signIn(page);
+	await forbidden(page, /\/1\/lantern\/rollback/);
+
+	await page.getByText('↩ re-hoist the previous lantern').click();
+	await page.getByText('↩ sure? go back to the previous hoist.').click();
+	await expect(toast(page)).toHaveText('⚠ the lantern only answers to the keeper');
 });

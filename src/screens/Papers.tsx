@@ -1,5 +1,5 @@
 // The papers. A shelf of stored resume cuts rather than one file that gets
-// overwritten: each carries a title and the keeper's own notes, exactly one is
+// overwritten: each carries a title and the keeper's own notes, at most one is
 // published, and any of them opens for comparison. The pdf is immutable once
 // filed, so a row edits its title and notes and nothing else. The filing panel
 // copies the darkroom's upload shape (hidden input behind a button), with the
@@ -14,6 +14,11 @@ import { relativeTime } from '../lib/time';
 import CatPerch from '../components/CatPerch';
 
 const CAT_QUIPS = ['references available: me.', 'i have read none of these.', 'the notes are for you, not them.'];
+
+// A cut is picked off the shelf by its title, so the shelf will not take one
+// without it. The filing panel and a row's scribble hold the same line, because
+// a required field on a form is this screen's business either way.
+const NEEDS_A_TITLE = 'give the cut a title, or you will never tell them apart';
 
 const byRecent = (a: Resume, b: Resume): number => b.createdAt.localeCompare(a.createdAt);
 
@@ -31,7 +36,12 @@ function Cut({ cut }: { cut: Resume }) {
 	};
 
 	const keep = () => {
-		void h.editResume(cut, title, notes).then((kept) => {
+		const name = title.trim();
+		if (!name) {
+			h.showToast(NEEDS_A_TITLE);
+			return;
+		}
+		void h.editResume(cut, name, notes).then((kept) => {
 			if (kept) {
 				setEditing(false);
 			}
@@ -104,7 +114,7 @@ export default function Papers() {
 			return;
 		}
 		if (!name) {
-			h.showToast('give the cut a title, or you will never tell them apart');
+			h.showToast(NEEDS_A_TITLE);
 			return;
 		}
 		void h.fileResume(pdf, name, notes).then((filed) => {

@@ -798,10 +798,13 @@ export const media = {
 
 // One cut of the keeper's papers: a stored PDF plus the title and notes he
 // writes for his own use, so a senior-engineer cut sits on the shelf beside an
-// architect one. `published` is the whole lifecycle and exactly one cut carries
-// it; draft is the absence of publication, not a state of its own. Filename and
-// url are stamped server-side from the generated name the upload landed under,
-// never sent by a client, because the payload is immutable once stored.
+// architect one. `published` is the whole lifecycle and at most one cut carries
+// it; draft is the absence of publication, not a state of its own, and a shelf
+// with nothing published is a state in its own right, the one the hoist guard
+// refuses on. Filename and url are stamped server-side from the generated name
+// the upload landed under; an edit rides them back over the wire because PUT is
+// full-replace, and the API preserves its own copy either way, because the
+// payload is immutable once stored.
 export interface Resume {
 	id:        string;
 	title:     string;
