@@ -421,6 +421,23 @@ export function mediaUrl(url: string): string {
 	return encodeURI(/^https?:/.test(url) ? url : API_URL + url);
 }
 
+/**
+ * The API's own reason for a refusal. Every route writes it into the error
+ * body's `message`, so reading it here is what lets a refusal the office has
+ * never heard of still reach the keeper as itself. The fallback covers a
+ * response that says nothing readable: no body at all, or one that isn't JSON.
+ */
+async function refusal(response: Response, fallback: string): Promise<string> {
+	try {
+		const parsed = await response.json();
+		if (parsed && typeof parsed.message === 'string') {
+			return parsed.message;
+		}
+	} catch { /* non-JSON error body, keep the fallback */ }
+
+	return fallback;
+}
+
 async function request<T>(method: string, path: string, body?: unknown, extra?: Record<string, string>): Promise<T> {
 	const headers: Record<string, string> = { ...extra };
 	if (bearer) {
@@ -443,14 +460,7 @@ async function request<T>(method: string, path: string, body?: unknown, extra?: 
 	}
 
 	if (!response.ok) {
-		let message = `${response.status}`;
-		try {
-			const parsed = await response.json();
-			if (parsed && typeof parsed.message === 'string') {
-				message = parsed.message;
-			}
-		} catch { /* non-JSON error body, keep the status code */ }
-		throw new ApiError(response.status, message);
+		throw new ApiError(response.status, await refusal(response, `${response.status}`));
 	}
 
 	// Delete/logout wrappers are parsed but discarded by callers typed void
@@ -784,6 +794,51 @@ export const media = {
 	remove: (id: string) => request<void>('DELETE', `/1/media/${id}`),
 };
 
+// ---- the papers (the resume shelf) ----
+
+// One cut of the keeper's papers: a stored PDF plus the title and notes he
+// writes for his own use, so a senior-engineer cut sits on the shelf beside an
+// architect one. `published` is the whole lifecycle and at most one cut carries
+// it; draft is the absence of publication, not a state of its own, and a shelf
+// with nothing published is a state in its own right, the one the hoist guard
+// refuses on. Filename and url are stamped server-side from the generated name
+// the upload landed under; an edit rides them back over the wire because PUT is
+// full-replace, and the API preserves its own copy either way, because the
+// payload is immutable once stored.
+export interface Resume {
+	id:        string;
+	title:     string;
+	notes:     string;
+	filename:  string;
+	url:       string;       // web_path-relative like MediaItem.url; mediaUrl resolves it
+	published: boolean;
+	createdAt: string;
+	updatedAt: string;
+}
+
+// The title and the notes ride the multipart body beside the file, because the
+// record and its payload are stored in one call. Publish and unpublish are the
+// only two transitions a cut has: publish clears whichever held the shelf in
+// the same call, unpublish takes the live one down without putting anything up
+// in its place. PUT edits the title and notes only; the pdf is immutable, so
+// the stored file and the published flag ride through server-side. DELETE
+// refuses the published cut with a 409 naming unpublish, which the office lets
+// the API answer rather than guarding for it.
+export const resumes = {
+	list:      ()                       => request<Resume[]>('GET', '/1/resume/'),
+	update:    (id: string, doc: Resume) => request<Resume>('PUT', `/1/resume/${id}`, doc),
+	remove:    (id: string)             => request<void>('DELETE', `/1/resume/${id}`),
+	publish:   (id: string)             => request<Resume>('POST', `/1/resume/${id}/publish`),
+	unpublish: (id: string)             => request<Resume>('POST', `/1/resume/${id}/unpublish`),
+	upload:    (file: File, title: string, notes: string) => {
+		const form = new FormData();
+		form.append('file', file);
+		form.append('title', title);
+		form.append('notes', notes);
+		return request<Resume>('POST', '/1/resume/', form);
+	},
+};
+
 // ---- the keeper (profile lives on the user doc) ----
 
 export function getProfile(userId: string): Promise<KeeperProfile> {
@@ -825,9 +880,11 @@ export async function hoist(): Promise<HoistResult> {
 	if (response.status === 202 || response.status === 409) {
 		return { accepted: response.status === 202, status: await response.json() };
 	}
+	// anything else is a refusal the office may never have heard of (the resume
+	// guard's 412 is the first), so it travels in the API's own words
 	throw new ApiError(response.status, response.status === 403
 		? 'the lantern only answers to the keeper'
-		: `hoist failed (${response.status})`);
+		: await refusal(response, `hoist failed (${response.status})`));
 }
 
 export interface RollbackResult {
@@ -850,5 +907,5 @@ export async function lanternRollback(): Promise<RollbackResult> {
 	}
 	throw new ApiError(response.status, response.status === 403
 		? 'the lantern only answers to the keeper'
-		: `rollback failed (${response.status})`);
+		: await refusal(response, `rollback failed (${response.status})`));
 }

@@ -21,6 +21,7 @@ import Marginalia from './screens/Marginalia';
 import ToolBench from './screens/ToolBench';
 import Darkroom from './screens/Darkroom';
 import Keeper from './screens/Keeper';
+import Papers from './screens/Papers';
 import Sidebar from './components/Sidebar';
 import MobileTopbar from './components/MobileTopbar';
 import EditOverlay from './components/EditOverlay';
@@ -46,6 +47,7 @@ const SCREENS: Record<Screen, () => React.JSX.Element> = {
 	bench:      ToolBench,
 	media:      Darkroom,
 	keeper:     Keeper,
+	papers:     Papers,
 };
 
 export default function App() {

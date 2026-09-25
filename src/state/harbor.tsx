@@ -8,14 +8,14 @@ import * as api from '../lib/api';
 import type {
 	ActivityEntry, Block, BlockKind, BlockSet, CaseLog, CaseLogStatus, Carving, Category, Coord, CopyTextField,
 	Doodle, EggFlags, Fact, FigureheadDesign, FigureheadPose,
-	Hobby, HobbyState, KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Revision, Shape,
+	Hobby, HobbyState, KeeperProfile, LanternStatus, Light, Lighthouse, MediaItem, Note, Project, Resume, Revision, Shape,
 	SiteCopy, StoreDrawer, Suggestion, TrafficReport, Watch, WatchBearing,
 } from '../lib/api';
 import { onWatch } from '../lib/api';
 import { htmlToText, textToHtml } from '../lib/paragraphs';
 import { DEFAULT_LIGHT } from '../lib/lightChar';
 
-export type Screen = 'dash' | 'projects' | 'chart' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'watch' | 'shop' | 'media' | 'keeper' | 'marginalia' | 'bench';
+export type Screen = 'dash' | 'projects' | 'chart' | 'hobbies' | 'notes' | 'copy' | 'eggs' | 'watch' | 'shop' | 'media' | 'keeper' | 'marginalia' | 'bench' | 'papers';
 
 // What the shop's editor hands back on save: the document fields a PUT may
 // change (plus pose, which only a POST uses; the server preserves it after).
@@ -619,6 +619,13 @@ interface HarborValue {
 	developPrints: (files: Iterable<File>) => Promise<void>;
 	tearOffPrint:  (m: MediaItem) => Promise<void>;
 
+	resumes:         Resume[];
+	fileResume:      (pdf: File, title: string, notes: string) => Promise<boolean>;
+	editResume:      (r: Resume, title: string, notes: string) => Promise<boolean>;
+	publishResume:   (r: Resume) => Promise<void>;
+	unpublishResume: (r: Resume) => Promise<void>;
+	scrapResume:     (r: Resume) => Promise<void>;
+
 	lantern:        LanternStatus | null;
 	lanternAbsent:  boolean;
 	deploying:      boolean;
@@ -705,6 +712,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 	const [hobbies, setHobbies] = useState<Hobby[]>([]);
 	const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 	const [prints, setPrints] = useState<MediaItem[]>([]);
+	const [resumes, setResumes] = useState<Resume[]>([]);
 	const [copy, setCopy] = useState<SiteCopy>(EMPTY_COPY);
 	const [watch, setWatch] = useState<Watch>(EMPTY_WATCH);
 	const [watchFlash, setWatchFlash] = useState<string | null>(null);
@@ -822,6 +830,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		api.hobbies.list().then((list) => setHobbies([...list].sort(byOrder))).catch(oops);
 		api.suggestions.list().then((list) => setSuggestions([...list].sort((a, b) => a.order - b.order))).catch(oops);
 		api.media.list().then(setPrints).catch(oops);
+		api.resumes.list().then(setResumes).catch(oops);
 		api.figurehead.list().then(setDesigns).catch(oops);
 		api.doodle.list().then(setDoodles).catch(oops);
 		api.carvings.list().then(setCarvings).catch(oops);
@@ -1805,6 +1814,91 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		}
 	}, [projects, hobbies, replaceProject, replaceHobby, showToast, oops, refreshActivity]);
 
+	// ---- the papers (the resume shelf) ----
+
+	// Answers whether the cut was filed, so the form clears itself only once the
+	// shelf actually holds the paper.
+	const fileResume = useCallback(async (pdf: File, title: string, notes: string): Promise<boolean> => {
+		try {
+			const stored = await api.resumes.upload(pdf, title, notes);
+			setResumes((cur) => [stored, ...cur]);
+			showToast('📄 filed. the cut is on the shelf.');
+			refreshActivity();
+			return true;
+		} catch (error) {
+			oops(error);
+			return false;
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	const replaceResume = useCallback((saved: Resume) => {
+		setResumes((cur) => cur.map((cut) => (cut.id === saved.id ? saved : cut)));
+	}, []);
+
+	// Answers whether the edit stuck, so the row knows to close its inputs. The
+	// pdf is immutable and the published flag is the API's, so only the two
+	// fields the keeper writes are ever changed here. The title arrives already
+	// trimmed, the same way the filing panel hands one over: an empty one is a
+	// form's own business and never reaches this far.
+	const editResume = useCallback(async (r: Resume, title: string, notes: string): Promise<boolean> => {
+		// nothing to write, but say so rather than closing on silence: a keep
+		// that looks like an edit and is not one has to read as one, or the
+		// keeper is left guessing whether it took
+		if (title === r.title && notes === r.notes) {
+			showToast('that cut already reads that way');
+			return true;
+		}
+		try {
+			replaceResume(await api.resumes.update(r.id, { ...r, title, notes }));
+			showToast('⚒ the cut reads differently now');
+			refreshActivity();
+			return true;
+		} catch (error) {
+			oops(error);
+			return false;
+		}
+	}, [replaceResume, showToast, oops, refreshActivity]);
+
+	const publishResume = useCallback(async (r: Resume) => {
+		try {
+			const saved = await api.resumes.publish(r.id);
+			// at most one cut is ever published: the API clears whichever held the
+			// shelf in the same call, so mirror that here rather than re-reading
+			setResumes((cur) => cur.map((cut) =>
+				cut.id === saved.id ? saved : cut.published ? { ...cut, published: false } : cut));
+			showToast(`⚑ the papers are out: "${saved.title}" is the live cut now`);
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
+	// Taking the live cut down puts nothing up in its place, which leaves the
+	// shelf with nothing published: the state an empty shelf is already in, and
+	// the one the hoist guard refuses on.
+	const unpublishResume = useCallback(async (r: Resume) => {
+		try {
+			replaceResume(await api.resumes.unpublish(r.id));
+			showToast('⚑ taken down. nothing is out there now.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [replaceResume, showToast, oops, refreshActivity]);
+
+	// No guard on the live cut here: the API refuses that with a 409 naming the
+	// remedy, and duplicating the rule client-side is how the two drift apart.
+	const scrapResume = useCallback(async (r: Resume) => {
+		try {
+			await api.resumes.remove(r.id);
+			setResumes((cur) => cur.filter((cut) => cut.id !== r.id));
+			showToast('🪓 off the shelf. the pdf went with it.');
+			refreshActivity();
+		} catch (error) {
+			oops(error);
+		}
+	}, [showToast, oops, refreshActivity]);
+
 	// ---- the log desk ----
 
 	const regNo = useCallback((projectId: string): string => {
@@ -2331,6 +2425,7 @@ export function HarborProvider({ children }: { children: ReactNode }) {
 		saveDoodle, renameDoodle, deleteDoodle,
 		saveCarving, boltCarving, deleteCarving,
 		printUsage, developPrints, tearOffPrint,
+		resumes, fileResume, editResume, publishResume, unpublishResume, scrapResume,
 		lantern, lanternAbsent, deploying, deployPct, hoistLantern, rollbackLantern,
 		logs, blockSets, regNo,
 		desk, openDesk, closeDesk,

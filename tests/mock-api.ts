@@ -32,6 +32,12 @@ export const LAST_HOISTED = '2026-07-04T20:00:00Z';
 
 const now = () => new Date().toISOString().replace(/\.\d+Z$/, 'Z');
 
+// One text field out of a multipart body. The resume upload is the only route
+// that sends form values beside its file, so this stays a local reader rather
+// than a parser.
+const formValue = (body: string, name: string): string =>
+	new RegExp(`name="${name}"\\r?\\n\\r?\\n([\\s\\S]*?)\\r?\\n--`).exec(body)?.[1] ?? '';
+
 export class MockApi {
 	calls: RecordedCall[] = [];
 
@@ -51,6 +57,12 @@ export class MockApi {
 	// and trafficBroken forces a 500 so specs can drive the error path
 	trafficMounted = true;
 	trafficBroken = false;
+	// a filing failure the API reports in its own words; a permission failure on
+	// the media directory is the real one behind this knob
+	resumeFilingError: string | null = null;
+	// the hoist guard refuses with 412 and a reason when no cut is published,
+	// checked before anything is staged
+	hoistRefusal: string | null = null;
 
 	projects: Doc[] = [
 		{
@@ -491,6 +503,21 @@ export class MockApi {
 			{ subject: 'h4', flares: 5 },
 		],
 	};
+
+	// the papers shelf: two stored cuts, one of them out there. The pdfs
+	// themselves are served static off the media web path, never through the API.
+	resumes: Doc[] = [
+		{
+			id: 'r1', title: 'Senior software engineer', notes: 'the long one. leans on the un-monolithing.',
+			filename: 'a1b2c3.pdf', url: '/media/files/a1b2c3.pdf', published: true,
+			createdAt: '2026-08-01T12:00:00Z', updatedAt: '2026-08-01T12:00:00Z',
+		},
+		{
+			id: 'r2', title: 'Systems architect', notes: '',
+			filename: 'd4e5f6.pdf', url: '/media/files/d4e5f6.pdf', published: false,
+			createdAt: '2026-07-01T12:00:00Z', updatedAt: '2026-07-01T12:00:00Z',
+		},
+	];
 
 	private nextId = 100;
 	private lanternPolls = 0;
@@ -1040,6 +1067,73 @@ export class MockApi {
 			}
 		}
 
+		// ---- the papers (the resume shelf) ----
+		if (/^\/1\/resume\/?$/.test(path)) {
+			if (method === 'GET') {
+				return json(200, this.resumes);
+			}
+			if (method === 'POST') {
+				if (this.resumeFilingError) {
+					return json(500, { status: 'error', code: 500, message: this.resumeFilingError });
+				}
+				const filename = `resume-${this.nextId}.pdf`;
+				const doc = {
+					id: `r${this.nextId++}`,
+					title: formValue(post ?? '', 'title'), notes: formValue(post ?? '', 'notes'),
+					filename, url: `/media/files/${filename}`, published: false,
+					createdAt: now(), updatedAt: now(),
+				};
+				this.resumes.unshift(doc);
+				return json(200, doc);
+			}
+		}
+		if ((match = /^\/1\/resume\/([^/]+)\/(unpublish|publish)\/?$/.exec(path)) && method === 'POST') {
+			const doc = this.resumes.find((r) => r.id === match![1]);
+			if (!doc) {
+				return json(400, { status: 'error', code: 400, message: 'resume not found' });
+			}
+			if (match[2] === 'unpublish') {
+				// takes the live cut down without putting anything up in its place
+				doc.published = false;
+				doc.updatedAt = now();
+				return json(200, doc);
+			}
+			// exactly one published: whichever held the shelf is cleared by the
+			// same call, so the office never has to go and check
+			this.resumes.forEach((r) => { r.published = false; });
+			doc.published = true;
+			doc.updatedAt = now();
+			return json(200, doc);
+		}
+		if ((match = /^\/1\/resume\/([^/]+)$/.exec(path))) {
+			const at = this.resumes.findIndex((r) => r.id === match![1]);
+			if (at === -1) {
+				return json(400, { status: 'error', code: 400, message: 'resume not found' });
+			}
+			if (method === 'PUT') {
+				// the pdf is immutable, so the stored file and the published flag
+				// ride through server-side however full a replace the client sends
+				const existing = this.resumes[at];
+				if (!String(body?.title ?? '').trim()) {
+					return json(400, { status: 'error', code: 400, message: 'a title is required' });
+				}
+				this.resumes[at] = { ...existing, title: body.title, notes: body.notes ?? '', updatedAt: now() };
+				return json(200, this.resumes[at]);
+			}
+			if (method === 'DELETE') {
+				// the published cut is refused outright: it is what keeps a live
+				// record from outliving the pdf behind it
+				if (this.resumes[at].published) {
+					return json(409, {
+						status: 'error', code: 409,
+						message: 'a published resume cannot be deleted; unpublish it first',
+					});
+				}
+				this.resumes.splice(at, 1);
+				return json(200, { status: 'ok', code: 200 });
+			}
+		}
+
 		// ---- the lantern ----
 		if (/^\/1\/lantern/.test(path) && !this.lanternMounted) {
 			return json(404, { message: '404 page not found' });
@@ -1051,6 +1145,11 @@ export class MockApi {
 			return json(200, this.lantern);
 		}
 		if (/^\/1\/lantern\/hoist\/?$/.test(path) && method === 'POST') {
+			// the guard runs before anything is staged, and 412 keeps it clear of
+			// the 409 the office reads as "a hoist is already out"
+			if (this.hoistRefusal) {
+				return json(412, { status: 'error', code: 412, message: this.hoistRefusal });
+			}
 			if (this.hoistBusy || this.lantern.state === 'building') {
 				return json(409, this.lantern.state === 'building' ? this.lantern : { ...this.lantern, state: 'building' });
 			}

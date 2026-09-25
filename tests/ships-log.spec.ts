@@ -276,7 +276,7 @@ test('at 390px the sidebar hides, the topbar chips navigate, and the deploy verb
 	// grouped by the same three upright rules as the rail
 	await expect(page.locator('.office-sidebar')).toBeHidden();
 	await expect(page.locator('.office-topbar')).toBeVisible();
-	await expect(page.locator('.topbar-chip')).toHaveCount(13);
+	await expect(page.locator('.topbar-chip')).toHaveCount(14);
 	await expect(page.locator('.topbar-rule')).toHaveCount(3);
 
 	// a nav chip switches screens

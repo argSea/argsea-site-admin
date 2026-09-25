@@ -17,5 +17,6 @@ export const NAV_ITEMS: { id: Screen; glyph: string; label: string; rule?: true 
 	{ id: 'media', glyph: '❏', label: 'the darkroom' },
 	{ id: 'copy', glyph: '⚑', label: 'signal flags', rule: true },
 	{ id: 'keeper', glyph: '⌂', label: 'the keeper' },
+	{ id: 'papers', glyph: '▤', label: 'the papers' },
 	{ id: 'eggs', glyph: '✧', label: "smuggler's cove" },
 ];
